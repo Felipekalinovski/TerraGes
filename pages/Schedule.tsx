@@ -1,0 +1,513 @@
+import React, { useState, useEffect } from 'react';
+import { Layout } from '../components/Layout';
+import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Calendar as CalendarIcon, MoreHorizontal, Edit2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { scheduleService, type Schedule as SupabaseSchedule } from '../services/scheduleService';
+
+// --- Types & Helpers ---
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  category: 'Escavação' | 'Transporte' | 'Manutenção' | 'Outros';
+  start: Date;
+  end: Date;
+  location: string;
+  responsible: string;
+  color: string;
+  bg: string;
+}
+
+// Gera eventos baseados na data atual para que o calendário sempre tenha dados visíveis
+const generateMockEvents = (baseDate: Date): CalendarEvent[] => {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const today = baseDate.getDate();
+
+  return [
+    {
+      id: '1',
+      title: 'Terraplanagem Lote 12',
+      category: 'Escavação',
+      start: new Date(year, month, today, 8, 0),
+      end: new Date(year, month, today, 12, 0),
+      location: 'Cond. Sol Nascente',
+      responsible: 'Equipe Alpha',
+      color: 'text-primary',
+      bg: 'bg-primary',
+    },
+    {
+      id: '2',
+      title: 'Manutenção Preventiva',
+      category: 'Manutenção',
+      start: new Date(year, month, today, 14, 0),
+      end: new Date(year, month, today, 16, 30),
+      location: 'Oficina Central',
+      responsible: 'Mec. João',
+      color: 'text-blue-400',
+      bg: 'bg-blue-500',
+    },
+    {
+      id: '3',
+      title: 'Transporte de Material',
+      category: 'Transporte',
+      start: new Date(year, month, today + 1, 9, 0),
+      end: new Date(year, month, today + 1, 11, 0),
+      location: 'Setor Norte',
+      responsible: 'Caminhão 05',
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-500',
+    },
+    {
+      id: '4',
+      title: 'Reunião de Segurança',
+      category: 'Outros',
+      start: new Date(year, month, today - 2, 7, 30),
+      end: new Date(year, month, today - 2, 8, 30),
+      location: 'Sede',
+      responsible: 'Téc. Segurança',
+      color: 'text-positive',
+      bg: 'bg-positive',
+    },
+    {
+      id: '5',
+      title: 'Compactação de Solo',
+      category: 'Escavação',
+      start: new Date(year, month, today + 3, 10, 0),
+      end: new Date(year, month, today + 3, 15, 0),
+      location: 'Rodovia BR-101',
+      responsible: 'Equipe Beta',
+      color: 'text-primary',
+      bg: 'bg-primary',
+    },
+  ];
+};
+
+type ViewType = 'month' | 'week' | 'day';
+
+export const Schedule: React.FC = () => {
+  const navigate = useNavigate();
+  const [view, setView] = useState<ViewType>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSchedules();
+  }, []);
+
+  const loadSchedules = async () => {
+    try {
+      setLoading(true);
+      const schedules = await scheduleService.getAll();
+
+      // Convert Supabase schedules to CalendarEvent format
+      const calendarEvents: CalendarEvent[] = schedules.map(schedule => {
+        const categoryMap: Record<string, CalendarEvent['category']> = {
+          'excavation': 'Escavação',
+          'transport': 'Transporte',
+          'maintenance': 'Manutenção',
+          'other': 'Outros'
+        };
+
+        const colorMap: Record<string, { color: string; bg: string }> = {
+          'excavation': { color: 'text-primary', bg: 'bg-primary' },
+          'transport': { color: 'text-yellow-400', bg: 'bg-yellow-500' },
+          'maintenance': { color: 'text-blue-400', bg: 'bg-blue-500' },
+          'other': { color: 'text-positive', bg: 'bg-positive' }
+        };
+
+        const colors = colorMap[schedule.type] || colorMap['other'];
+
+        return {
+          id: schedule.id,
+          title: schedule.title,
+          category: categoryMap[schedule.type] || 'Outros',
+          start: new Date(schedule.start_time),
+          end: schedule.end_time ? new Date(schedule.end_time) : new Date(schedule.start_time),
+          location: 'Local não especificado', // You can add location field to schema if needed
+          responsible: 'Não atribuído', // You can join with operators table if needed
+          color: colors.color,
+          bg: colors.bg,
+        };
+      });
+
+      setEvents(calendarEvents);
+    } catch (error) {
+      console.error('Error loading schedules:', error);
+      alert('Erro ao carregar agendamentos. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Helpers de Data ---
+
+  const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const getFirstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay(); // 0 = Domingo
+
+  const getWeekDays = (date: Date) => {
+    const start = new Date(date);
+    start.setDate(start.getDate() - start.getDay()); // Começa no Domingo
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getDate() === d2.getDate() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getFullYear() === d2.getFullYear();
+  };
+
+  // --- Handlers de Navegação ---
+
+  const handleNext = () => {
+    const newDate = new Date(currentDate);
+    if (view === 'month') newDate.setMonth(newDate.getMonth() + 1);
+    if (view === 'week') newDate.setDate(newDate.getDate() + 7);
+    if (view === 'day') newDate.setDate(newDate.getDate() + 1);
+    setCurrentDate(newDate);
+    if (view === 'day') setSelectedDate(newDate);
+  };
+
+  const handlePrev = () => {
+    const newDate = new Date(currentDate);
+    if (view === 'month') newDate.setMonth(newDate.getMonth() - 1);
+    if (view === 'week') newDate.setDate(newDate.getDate() - 7);
+    if (view === 'day') newDate.setDate(newDate.getDate() - 1);
+    setCurrentDate(newDate);
+    if (view === 'day') setSelectedDate(newDate);
+  };
+
+  const handleDateClick = (day: number) => {
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setSelectedDate(newDate);
+  };
+
+  // --- Título do Cabeçalho ---
+
+  const getHeaderTitle = () => {
+    const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    if (view === 'day') {
+      return `${currentDate.getDate()} de ${monthNames[currentDate.getMonth()]}`;
+    }
+    if (view === 'week') {
+      const weekDays = getWeekDays(currentDate);
+      const first = weekDays[0];
+      const last = weekDays[6];
+      if (first.getMonth() === last.getMonth()) {
+        return `${first.getDate()} - ${last.getDate()} de ${monthNames[first.getMonth()]}`;
+      }
+      return `${first.getDate()} ${monthNames[first.getMonth()].substr(0, 3)} - ${last.getDate()} ${monthNames[last.getMonth()].substr(0, 3)}`;
+    }
+    return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  };
+
+  // --- Renderizadores ---
+
+  const renderMonthView = () => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
+
+    // Espaços vazios antes do dia 1
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-12 w-full" />);
+    }
+
+    // Dias do mês
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateToCheck = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const isSelected = isSameDay(dateToCheck, selectedDate);
+      const isToday = isSameDay(dateToCheck, new Date());
+
+      const dayEvents = events.filter(e => isSameDay(e.start, dateToCheck));
+      const hasEvents = dayEvents.length > 0;
+
+      days.push(
+        <div key={day} className="h-12 w-full flex items-center justify-center relative group">
+          <button
+            onClick={() => handleDateClick(day)}
+            className={`
+              relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all
+              ${isSelected ? 'bg-primary text-white shadow-lg shadow-primary/40' :
+                isToday ? 'bg-surface-dark border border-primary text-primary' :
+                  'text-gray-300 hover:bg-white/10'}
+            `}
+          >
+            {day}
+            {hasEvents && !isSelected && (
+              <div className="absolute bottom-1 flex gap-0.5">
+                {dayEvents.slice(0, 3).map((ev, i) => (
+                  <div key={i} className={`w-1 h-1 rounded-full ${ev.bg}`} />
+                ))}
+              </div>
+            )}
+          </button>
+        </div>
+      );
+    }
+    return days;
+  };
+
+  const renderWeekView = () => {
+    const weekDays = getWeekDays(currentDate);
+    const weekDaysNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    return (
+      <div className="flex flex-col gap-3">
+        {weekDays.map((day, index) => {
+          const dayEvents = events.filter(e => isSameDay(e.start, day));
+          const isToday = isSameDay(day, new Date());
+
+          return (
+            <div key={index} className={`flex gap-3 p-3 rounded-xl border transition-colors ${isToday ? 'bg-surface-dark border-primary/50' : 'bg-surface-dark/50 border-transparent hover:bg-surface-dark'}`}>
+              <div className="flex flex-col items-center justify-center min-w-[50px] border-r border-white/5 pr-3">
+                <span className="text-[10px] text-gray-500 uppercase font-bold">{weekDaysNames[day.getDay()]}</span>
+                <span className={`text-xl font-bold ${isToday ? 'text-primary' : 'text-white'}`}>{day.getDate()}</span>
+              </div>
+
+              <div className="flex-1 space-y-2 py-1">
+                {dayEvents.length === 0 ? (
+                  <div className="h-full flex items-center text-xs text-gray-600 italic">Sem eventos</div>
+                ) : (
+                  dayEvents.map(ev => (
+                    <div
+                      key={ev.id}
+                      className="bg-black/20 border-l-2 border-primary/50 p-2 rounded flex items-center gap-2 cursor-pointer hover:bg-black/30 group"
+                      onClick={() => navigate(`/schedule/edit/${ev.id}`)}
+                    >
+                      <div className={`w-1.5 h-1.5 rounded-full ${ev.bg}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{ev.title}</p>
+                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <Clock size={8} />
+                          {ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
+                          {ev.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <Edit2 size={12} className="text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderDayView = () => {
+    const hours = Array.from({ length: 13 }, (_, i) => i + 6); // 06:00 to 18:00
+    const dayEvents = events.filter(e => isSameDay(e.start, currentDate));
+
+    return (
+      <div className="flex flex-col relative pb-4">
+        {hours.map(hour => {
+          const hourEvents = dayEvents.filter(e => e.start.getHours() === hour);
+
+          return (
+            <div key={hour} className="flex gap-4 group min-h-[60px]">
+              <div className="w-12 text-right text-xs text-gray-500 -mt-2 transform translate-y-2 font-mono">
+                {hour}:00
+              </div>
+
+              <div className="flex-1 relative border-t border-white/5 group-last:border-b">
+                {hourEvents.map(ev => (
+                  <div
+                    key={ev.id}
+                    className={`absolute left-0 right-0 mx-1 p-2 rounded border-l-2 ${ev.bg.replace('bg-', 'border-')} bg-surface-dark shadow-lg z-10 cursor-pointer hover:brightness-110`}
+                    style={{ top: `${(ev.start.getMinutes() / 60) * 100}%` }}
+                    onClick={() => navigate(`/schedule/edit/${ev.id}`)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-white text-xs">{ev.title}</h4>
+                        <p className="text-[10px] text-gray-400">{ev.category}</p>
+                      </div>
+                      <span className="text-[10px] bg-black/30 px-1 rounded text-gray-300">
+                        {ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
+                      <span className="flex items-center gap-0.5"><MapPin size={10} /> {ev.location}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {/* Linha do tempo atual (se for hoje) */}
+        {isSameDay(currentDate, new Date()) && (
+          <div
+            className="absolute left-16 right-0 border-t-2 border-red-500 z-20 flex items-center pointer-events-none"
+            style={{ top: `${((new Date().getHours() - 6) * 60 + new Date().getMinutes())}px` }}
+          >
+            <div className="size-2 bg-red-500 rounded-full -ml-1"></div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSelectedDayEvents = () => {
+    if (view !== 'month') return null; // Só mostra na visão mensal
+
+    const dayEvents = events.filter(e => isSameDay(e.start, selectedDate));
+    const isToday = isSameDay(selectedDate, new Date());
+
+    return (
+      <div className="space-y-3 mt-2">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+            {isToday ? 'Hoje' : selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric' })}
+          </h3>
+          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{dayEvents.length} Eventos</span>
+        </div>
+
+        {dayEvents.length === 0 ? (
+          <div className="py-8 text-center flex flex-col items-center justify-center text-gray-600 bg-surface-dark/30 rounded-xl border border-white/5 border-dashed">
+            <CalendarIcon className="mb-2 opacity-30" size={32} />
+            <p className="text-sm">Nenhum serviço agendado para este dia.</p>
+            <button onClick={() => navigate('/schedule/new')} className="mt-2 text-primary text-xs font-bold hover:underline">Agendar Agora</button>
+          </div>
+        ) : (
+          dayEvents.map(ev => (
+            <div key={ev.id} className={`bg-surface-dark p-3 rounded-xl border-l-4 ${ev.bg.replace('bg-', 'border-')} shadow-sm border-y border-r border-white/5 flex flex-col gap-2 relative group`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-bold text-white text-sm">{ev.title}</h4>
+                  <p className="text-xs text-gray-400">{ev.category}</p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded bg-black/20 text-gray-300`}>
+                  {ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-gray-500 border-t border-white/5 pt-2 mt-1">
+                <span className="flex items-center gap-1"><MapPin size={12} /> {ev.location}</span>
+                <span className="flex items-center gap-1 ml-auto">
+                  <div className={`w-1.5 h-1.5 rounded-full ${ev.bg}`}></div>
+                  {ev.responsible}
+                </span>
+              </div>
+
+              <button
+                onClick={() => navigate(`/schedule/edit/${ev.id}`)}
+                className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <Edit2 size={14} />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Layout title="Agenda" hideNav={false} actions={
+      <button
+        onClick={() => { setView('day'); setCurrentDate(new Date()); }}
+        className="p-2 bg-surface-dark rounded-lg text-white border border-white/10 hover:bg-white/10 transition-colors"
+        title="Ir para Hoje"
+      >
+        <CalendarIcon size={20} />
+      </button>
+    }>
+      <div className="flex flex-col h-full">
+        {/* Switcher de Visualização */}
+        <div className="px-4 py-3">
+          <div className="flex h-10 w-full rounded-xl bg-surface-dark p-1 border border-white/5">
+            <button
+              onClick={() => setView('month')}
+              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'month' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Mês
+            </button>
+            <button
+              onClick={() => setView('week')}
+              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'week' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setView('day')}
+              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'day' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Dia
+            </button>
+          </div>
+        </div>
+
+        {/* Navegação do Calendário */}
+        <div className="flex items-center justify-between px-4 py-2 mb-2">
+          <button onClick={handlePrev} className="p-2 bg-surface-dark rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors border border-white/5">
+            <ChevronLeft size={20} />
+          </button>
+          <h2 className="text-lg font-bold text-white capitalize text-center">
+            {getHeaderTitle()}
+          </h2>
+          <button onClick={handleNext} className="p-2 bg-surface-dark rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors border border-white/5">
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* Área de Conteúdo Dinâmico */}
+        <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 size={40} className="animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              {view === 'month' && (
+                <>
+                  {/* Cabeçalho dos Dias */}
+                  <div className="grid grid-cols-7 mb-2 border-b border-white/5 pb-2">
+                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, idx) => (
+                      <div key={idx} className="text-center text-[10px] font-bold text-gray-500 uppercase">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Grade do Mês */}
+                  <div className="grid grid-cols-7 mb-6">
+                    {renderMonthView()}
+                  </div>
+                  {/* Eventos do Dia Selecionado */}
+                  {renderSelectedDayEvents()}
+                </>
+              )}
+
+              {view === 'week' && renderWeekView()}
+
+              {view === 'day' && renderDayView()}
+            </>
+          )}
+
+        </div>
+
+        {/* Botão Flutuante (FAB) */}
+        <div className="fixed bottom-24 right-4 z-20">
+          <button
+            onClick={() => navigate('/schedule/new')}
+            className="flex items-center gap-2 bg-primary text-white h-14 pl-5 pr-6 rounded-full shadow-lg shadow-primary/30 font-bold hover:bg-primary-hover transition-transform active:scale-95"
+          >
+            <Plus size={24} />
+            <span className="text-base">Novo</span>
+          </button>
+        </div>
+      </div>
+    </Layout>
+  );
+};

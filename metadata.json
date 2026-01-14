@@ -1,0 +1,8 @@
+{
+  "name": "TerraGes",
+  "description": "A comprehensive construction management application featuring fleet management, daily reports (RDO), financial tracking, and AI-powered assistance.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
