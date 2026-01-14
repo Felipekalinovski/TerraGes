@@ -30,6 +30,7 @@ export const AIChat: React.FC = () => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -39,6 +40,15 @@ export const AIChat: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { userService } = await import('../services/userService');
+      const profile = await userService.getCurrentProfile();
+      if (profile?.avatar_url) setUserAvatar(profile.avatar_url);
+    };
+    loadProfile();
+  }, []);
 
   const handleSendMessage = async (text: string = inputText) => {
     if (!text.trim() || isLoading) return;
@@ -112,7 +122,10 @@ export const AIChat: React.FC = () => {
               </div>
 
               {msg.role === 'user' && (
-                <div className="size-8 rounded-full bg-gray-700 flex items-center justify-center shrink-0 bg-cover bg-center border border-white/10" style={{ backgroundImage: "url('https://picsum.photos/200')" }}>
+                <div
+                  className="size-8 rounded-full bg-gray-700 flex items-center justify-center shrink-0 bg-cover bg-center border border-white/10"
+                  style={{ backgroundImage: `url('${userAvatar || 'https://ui-avatars.com/api/?name=U&background=B8860B&color=fff'}')` }}
+                >
                 </div>
               )}
             </div>

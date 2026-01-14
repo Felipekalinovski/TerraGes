@@ -7,7 +7,7 @@ import { generateReport, analyzeDocument } from '../services/geminiService';
 import { Upload } from 'lucide-react';
 import { transactionService, type Transaction as SupabaseTransaction } from '../services/transactionService';
 
-const COLORS = ['#ff6a00', '#39FF14', '#555'];
+const COLORS = ['#9E3D07', '#256611', '#404040'];
 
 export const Finance: React.FC = () => {
   // State for AI Report
@@ -237,7 +237,7 @@ export const Finance: React.FC = () => {
         <button
           onClick={handleGenerateAIReport}
           disabled={isGenerating}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20 disabled:opacity-70 transition-all"
+          className="w-full bg-brand-gradient text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-70 transition-all hover:brightness-110"
         >
           {isGenerating ? (
             <>
@@ -442,10 +442,10 @@ export const Finance: React.FC = () => {
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
                     placeholder="Ex: Compra de Cimento"
                   />
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
                 </div>
               </div>
 
@@ -456,10 +456,10 @@ export const Finance: React.FC = () => {
                     type="text"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
                     placeholder="Ex: Materiais, Combustível"
                   />
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
                 </div>
               </div>
 
@@ -471,9 +471,9 @@ export const Finance: React.FC = () => {
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none"
                   />
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
                 </div>
               </div>
 
@@ -486,17 +486,17 @@ export const Finance: React.FC = () => {
                     step="0.01"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
                     placeholder="0,00"
                   />
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
-                  <div className="flex bg-[#4b3220] p-1 rounded-xl">
+                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, type: 'expense' })}
@@ -507,7 +507,7 @@ export const Finance: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, type: 'income' })}
-                      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${formData.type === 'income' ? 'bg-positive text-black' : 'text-gray-400'}`}
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${formData.type === 'income' ? 'bg-positive text-white' : 'text-gray-400'}`}
                     >
                       Receita
                     </button>
@@ -518,10 +518,10 @@ export const Finance: React.FC = () => {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full h-11 px-3 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full h-11 px-3 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none"
                   >
-                    <option value="paid">Pago / Recebido</option>
-                    <option value="pending">Pendente</option>
+                    <option value="paid" className="bg-surface-dark">Pago / Recebido</option>
+                    <option value="pending" className="bg-surface-dark">Pendente</option>
                   </select>
                 </div>
               </div>

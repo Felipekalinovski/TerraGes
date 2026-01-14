@@ -62,8 +62,8 @@ export const SignUp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-dark p-4 animate-in fade-in duration-500">
-      <div className="w-full max-w-md bg-surface-dark p-8 rounded-2xl shadow-2xl border border-white/5">
+    <div className="min-h-screen flex items-center justify-center bg-brand-gradient p-4 animate-in fade-in duration-500">
+      <div className="w-full max-w-md bg-surface-dark/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/10">
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Hammer className="text-primary" size={32} />
@@ -81,10 +81,10 @@ export const SignUp: React.FC = () => {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-text-gold/50 text-sm"
+                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
                 placeholder="Seu nome"
               />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
             </div>
           </div>
 
@@ -96,10 +96,10 @@ export const SignUp: React.FC = () => {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-text-gold/50 text-sm"
+                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
                 placeholder="seu@email.com"
               />
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
             </div>
           </div>
 
@@ -111,10 +111,10 @@ export const SignUp: React.FC = () => {
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-text-gold/50 text-sm"
+                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
                 placeholder="••••••••"
               />
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
             </div>
           </div>
 
@@ -126,10 +126,10 @@ export const SignUp: React.FC = () => {
                 required
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-text-gold/50 text-sm"
+                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
                 placeholder="••••••••"
               />
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-gold" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
             </div>
           </div>
 
