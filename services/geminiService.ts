@@ -1,67 +1,43 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callOpenRouter } from './openRouterService';
 
-// API Key carregada dinamicamente
-const getApiKey = () => {
-    const key = (import.meta.env?.VITE_GEMINI_API_KEY) ||
-        (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : null) ||
-        (import.meta.env?.GEMINI_API_KEY);
-
-    if (key && !key.includes('sua_chave')) {
-        return key;
-    }
-    return null;
-};
-
-// Inicializar o cliente Gemini
-const getGenAI = () => {
-    const apiKey = getApiKey();
-    if (!apiKey) return null;
-    return new GoogleGenerativeAI(apiKey);
-};
+/**
+ * Esse serviço foi refatorado para usar OpenRouter (Llama 3.3 70B)
+ * Mantemos o nome original para evitar quebra de compatibilidade no app.
+ */
 
 export const generateAIResponse = async (prompt: string, context?: string) => {
-    const genAI = getGenAI();
-    if (!genAI) return "Erro: API Key não configurada.";
-
     try {
-        console.log("🔍 Tentando conectar ao Gemini...");
+        console.log("🔍 Conectando ao OpenRouter (Llama 3.3 70B)...");
 
-        // Usar gemini-2.5-flash que é o modelo mais recente e rápido disponível
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const messages = [
+            ...(context ? [{ role: "system", content: context }] : []),
+            { role: "user", content: prompt }
+        ];
 
-        const systemMessage = context ? `Contexto: ${context}\n\n` : "";
-        const fullPrompt = `${systemMessage}Usuário: ${prompt}`;
-
-        console.log("Modelo: gemini-1.5-flash");
-
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const text = response.text();
-
-        console.log("✅ Resposta recebida com sucesso!");
+        const text = await callOpenRouter(messages, 'text');
+        console.log("✅ Resposta recebida do OpenRouter!");
         return text || "Sem resposta da IA.";
     } catch (error: any) {
-        console.error("❌ Erro ao gerar resposta:", error);
+        console.error("❌ Erro no OpenRouter:", error);
         return `Erro: ${error.message}`;
     }
 };
 
 export const generateReport = async (data: any, type: 'financial' | 'general' = 'general') => {
-    const genAI = getGenAI();
-    if (!genAI) return "API Key ausente.";
-
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("📊 Gerando relatório via OpenRouter...");
 
         const systemInstruction = type === 'financial'
-            ? "Atue como um CFO experiente. Gere um relatório executivo curto."
-            : "Analise os dados e gere um insight curto e direto.";
+            ? "Atue como um CFO experiente. Gere um relatório executivo curto e direto sobre os dados financeiros fornecidos."
+            : "Analise os dados fornecidos e gere um insight estratégico curto e direto.";
 
-        const prompt = `${systemInstruction}\n\nDados:\n${JSON.stringify(data, null, 2)}`;
+        const messages = [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: `Dados:\n${JSON.stringify(data, null, 2)}` }
+        ];
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        return response.text() || "Erro ao gerar relatório.";
+        const text = await callOpenRouter(messages, 'text');
+        return text || "Erro ao gerar relatório.";
     } catch (error: any) {
         console.error("❌ Erro ao gerar relatório:", error);
         return "Erro ao gerar o relatório.";
@@ -69,25 +45,26 @@ export const generateReport = async (data: any, type: 'financial' | 'general' = 
 };
 
 export const analyzeDocument = async (base64Image: string, mimeType: string) => {
-    const genAI = getGenAI();
-    if (!genAI) return "API Key ausente.";
-
     try {
-        // Para análise de imagens, usar gemini-1.5-flash que suporta multimodal
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("📷 Analisando documento via OpenRouter (Llama 3.2 Vision)...");
 
-        const prompt = "Analise esta imagem de documento financeiro e extraia: tipo, data, valor e emissor.";
-
-        const imagePart = {
-            inlineData: {
-                data: base64Image,
-                mimeType: mimeType
+        const messages = [
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: "Analise esta imagem de documento financeiro e extraia: tipo de documento, data, valor total e emissor. Responda de forma direta." },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: `data:${mimeType};base64,${base64Image}`
+                        }
+                    }
+                ]
             }
-        };
+        ];
 
-        const result = await model.generateContent([prompt, imagePart]);
-        const response = await result.response;
-        return response.text() || "Erro na análise.";
+        const text = await callOpenRouter(messages, 'vision');
+        return text || "Erro na análise.";
     } catch (error: any) {
         console.error("❌ Erro ao analisar documento:", error);
         return "Erro ao analisar documento.";

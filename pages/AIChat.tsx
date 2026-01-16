@@ -4,6 +4,7 @@ import { Send, Sparkles, User, Bot, Loader2, Info } from 'lucide-react';
 import { generateAIResponse } from '../services/geminiService';
 
 import { intelligenceService } from '../services/intelligenceService';
+import { scheduleService } from '../services/scheduleService';
 
 interface Message {
   id: string;
@@ -15,8 +16,8 @@ interface Message {
 const SUGGESTIONS = [
   "Resumo financeiro do mês",
   "Status da frota ativa",
-  "Últimas ocorrências no RDO",
-  "Previsão de gastos"
+  "Próximos serviços agendados",
+  "Ocorrências no RDO"
 ];
 
 export const AIChat: React.FC = () => {
@@ -78,6 +79,28 @@ export const AIChat: React.FC = () => {
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Check for actions in the AI response
+      if (responseText.includes('[[CREATE_SCHEDULE:')) {
+        try {
+          const actionMatch = responseText.match(/\[\[CREATE_SCHEDULE:(.*?)\]\]/);
+          if (actionMatch && actionMatch[1]) {
+            const scheduleData = JSON.parse(actionMatch[1]);
+            await scheduleService.create(scheduleData);
+
+            // Add a confirmation message
+            const confirmationMessage: Message = {
+              id: (Date.now() + 2).toString(),
+              role: 'ai',
+              text: `✅ Agendamento "${scheduleData.title}" criado com sucesso para o dia ${new Date(scheduleData.start_time).toLocaleDateString('pt-BR')}!`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, confirmationMessage]);
+          }
+        } catch (e) {
+          console.error("Erro ao processar ação da IA:", e);
+        }
+      }
     } catch (error) {
       console.error('Erro no chat:', error);
       const errorMessage: Message = {
@@ -115,7 +138,7 @@ export const AIChat: React.FC = () => {
                   : 'bg-surface-dark text-gray-200 rounded-tl-none border border-white/5'
                   }`}
               >
-                {msg.text}
+                {msg.text.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/g, '').trim()}
                 <div className={`text-[10px] mt-2 opacity-50 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>

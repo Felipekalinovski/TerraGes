@@ -195,6 +195,15 @@ export const intelligenceService = {
             .eq('status', 'active')
             .limit(3);
 
+        // Fetch upcoming schedules
+        const today = new Date().toISOString();
+        const { data: upcomingSchedules } = await supabase
+            .from('schedules')
+            .select('*')
+            .gte('start_time', today)
+            .order('start_time', { ascending: true })
+            .limit(5);
+
         return `
             Você é o assistente inteligente do TerraGes.
             
@@ -204,9 +213,13 @@ export const intelligenceService = {
             - Saldo Financeiro Atual: R$ ${balance.toLocaleString('pt-BR')}
             - Últimos RDOs: ${recentRDOs?.length || 0} registros recentes.
             - Alertas Ativos: ${activeInsights?.length || 0}
+            - Próximos Agendamentos: ${upcomingSchedules?.length || 0} serviços planejados.
             
             Resumo dos Alertas:
             ${activeInsights?.map(i => `- ${i.content}`).join('\n') || 'Nenhum alerta crítico no momento.'}
+
+            Próximos Agendamentos:
+            ${upcomingSchedules?.map(s => `- ${s.title} (${s.type}) em ${new Date(s.start_time).toLocaleDateString('pt-BR')} às ${new Date(s.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`).join('\n') || 'Nenhum serviço agendado para os próximos dias.'}
 
             Regras de Comportamento:
             1. Nunca invente dados. Se não souber, diga que não tem acesso a essa informação específica.
@@ -216,6 +229,9 @@ export const intelligenceService = {
             5. Use linguagem técnica de gestor de obra/frota, mas de forma clara.
             6. Seja CONCISO: Limite suas respostas a no máximo 3-4 parágrafos curtos. Vá direto ao ponto.
             7. FORMATAÇÃO: Cada parágrafo deve ter no máximo 150 caracteres. Se precisar escrever mais, quebre em múltiplos parágrafos curtos separados por linha em branco.
+            8. AGENDAMENTO: Se o usuário quiser agendar algo, você DEVE sugerir a criação adicionando no FINAL da sua resposta (após o texto) um bloco JSON EXATAMENTE assim:
+               [[CREATE_SCHEDULE:{"title": "...", "type": "excavation|transport|maintenance|other", "start_time": "ISO_DATE", "priority": "low|medium|high|urgent", "notes": "..."}]]
+               Importante: Hoje é ${new Date().toLocaleDateString('pt-BR')}. Use datas no futuro.
         `;
     },
 

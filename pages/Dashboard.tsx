@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import {
   TrendingUp,
@@ -20,6 +21,7 @@ import { maintenanceService } from '../services/maintenanceService';
 import { generateReport } from '../services/geminiService';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     machines: { active: 32, total: 40 }, // Using mockup-like data if real is missing
@@ -109,7 +111,10 @@ export const Dashboard: React.FC = () => {
         {/* Top KPI Cards */}
         <div className="grid grid-cols-2 gap-4">
           {/* Faturamento */}
-          <div className="bg-[#141414] p-4 rounded-2xl border border-white/5 relative overflow-hidden">
+          <div
+            onClick={() => navigate('/finance')}
+            className="bg-[#141414] p-4 rounded-2xl border border-white/5 relative overflow-hidden cursor-pointer hover:bg-white/5 transition-colors group"
+          >
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Faturamento Mês</p>
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-black text-positive">R$</span>
@@ -129,7 +134,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Frota Ativa */}
-          <div className="bg-[#141414] p-4 rounded-2xl border border-white/5">
+          <div
+            onClick={() => navigate('/fleet')}
+            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+          >
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Frota Ativa</p>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-black text-white">{stats.machines.active}/{stats.machines.total}</span>
@@ -143,7 +151,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Obras Ativas */}
-          <div className="bg-[#141414] p-4 rounded-2xl border border-white/5">
+          <div
+            onClick={() => navigate('/rdo')}
+            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+          >
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Obras Ativas</p>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-black text-white">08</span>
@@ -153,7 +164,10 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Consumo Diesel */}
-          <div className="bg-[#141414] p-4 rounded-2xl border border-white/5">
+          <div
+            onClick={() => navigate('/fleet')}
+            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
+          >
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Consumo Diesel</p>
             <div className="flex items-center justify-between">
               <div className="flex items-baseline gap-1">
@@ -169,7 +183,10 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Main Chart - Lucro vs Custo */}
-        <div className="bg-[#141414] p-6 rounded-3xl border border-white/5 shadow-2xl">
+        <div
+          onClick={() => navigate('/finance')}
+          className="bg-[#141414] p-6 rounded-3xl border border-white/5 shadow-2xl cursor-pointer hover:bg-white/5 transition-colors"
+        >
           <div className="flex flex-col mb-8">
             <h3 className="text-sm font-black text-white uppercase tracking-tighter mb-4">Lucro vs Custo</h3>
             <div className="flex gap-4">
@@ -219,14 +236,20 @@ export const Dashboard: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-sm font-black text-white uppercase tracking-tighter">Cronograma de Obras</h3>
-            <button className="text-[10px] font-black text-primary uppercase tracking-tighter flex items-center gap-1">
+            <button
+              onClick={() => navigate('/rdo')}
+              className="text-[10px] font-black text-primary uppercase tracking-tighter flex items-center gap-1 hover:brightness-125"
+            >
               Ver Tudo <ChevronRight size={14} />
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
             {/* Project Card 1 */}
-            <div className="bg-[#141414] p-5 rounded-2xl border border-white/5 flex items-center gap-5">
+            <div
+              onClick={() => navigate('/rdo')}
+              className="bg-[#141414] p-5 rounded-2xl border border-white/5 flex items-center gap-5 cursor-pointer hover:bg-white/5 transition-colors"
+            >
               <div className="relative size-16 shrink-0">
                 <svg className="size-full -rotate-90">
                   <circle cx="32" cy="32" r="28" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
@@ -269,7 +292,10 @@ export const Dashboard: React.FC = () => {
         {/* Alertas de Manutenção */}
         <div className="space-y-4">
           <h3 className="text-sm font-black text-white uppercase tracking-tighter px-1">Alertas de Manutenção</h3>
-          <div className="relative p-0.5 rounded-2xl bg-gradient-to-r from-primary to-transparent">
+          <div
+            onClick={() => navigate('/fleet')}
+            className="relative p-0.5 rounded-2xl bg-gradient-to-r from-primary to-transparent cursor-pointer hover:opacity-90 transition-opacity"
+          >
             <div className="bg-[#141414] rounded-[14px] p-4 flex items-center gap-4">
               <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                 <AlertTriangle size={24} />
