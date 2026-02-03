@@ -61,11 +61,28 @@ export const intelligenceService = {
 
             const aiResponse = await generateAIResponse(prompt, "Você é um especialista em análise de obras e frota pesada.");
 
-            // Extract JSON from AI response (handle potential markdown formatting)
-            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error('Resposta da IA não contém JSON válido');
+            // Extract JSON from AI response (handle markdown code blocks and extra text)
+            let jsonString = aiResponse;
 
-            const analysis: RDOAnalysis = JSON.parse(jsonMatch[0]);
+            // Remove markdown code blocks if present
+            const codeBlockMatch = aiResponse.match(/```json\s*(\{[\s\S]*?\})\s*```/) || aiResponse.match(/```\s*(\{[\s\S]*?\})\s*```/);
+            if (codeBlockMatch) {
+                jsonString = codeBlockMatch[1];
+            } else {
+                // Fallback: Try to find the first { ... } block
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonString = jsonMatch[0];
+                }
+            }
+
+            let analysis: RDOAnalysis;
+            try {
+                analysis = JSON.parse(jsonString);
+            } catch (e) {
+                console.error("Erro ao fazer parse do JSON da IA:", e);
+                throw new Error("Falha ao processar resposta da IA");
+            }
 
             // 3. Save Analysis
             await supabase.from('rdo_ai_analysis').insert({
