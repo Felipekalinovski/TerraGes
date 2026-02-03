@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { Send, Sparkles, User, Bot, Loader2, Info } from 'lucide-react';
-import { generateAIResponse } from '../services/geminiService';
+import { generateAIResponse } from '../services/aiService';
 
 import { intelligenceService } from '../services/intelligenceService';
 import { scheduleService } from '../services/scheduleService';
@@ -49,6 +49,10 @@ export const AIChat: React.FC = () => {
       if (profile?.avatar_url) setUserAvatar(profile.avatar_url);
     };
     loadProfile();
+
+    console.log("=== DEBUG AIChat Mount ===");
+    console.log("All Env Vars:", import.meta.env);
+    console.log("VITE_OPENROUTER_API_KEY:", import.meta.env.VITE_OPENROUTER_API_KEY);
   }, []);
 
   const handleSendMessage = async (text: string = inputText) => {

@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+
     },
     resolve: {
       alias: {
@@ -26,8 +26,7 @@ export default defineConfig(({ mode }) => {
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
             // Supabase em seu próprio chunk
             'supabase-vendor': ['@supabase/supabase-js'],
-            // Google AI em seu próprio chunk (provavelmente o maior)
-            'google-ai-vendor': ['@google/genai', '@google/generative-ai'],
+
             // Recharts (biblioteca de gráficos) separado
             'charts-vendor': ['recharts'],
             // Lucide Icons separado

@@ -18,7 +18,7 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Li
 import { machineService } from '../services/machineService';
 import { transactionService } from '../services/transactionService';
 import { maintenanceService } from '../services/maintenanceService';
-import { generateReport } from '../services/geminiService';
+import { generateReport } from '../services/aiService';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();

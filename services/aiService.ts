@@ -1,8 +1,8 @@
 import { callOpenRouter } from './openRouterService';
 
 /**
- * Esse serviço foi refatorado para usar OpenRouter (Llama 3.3 70B)
- * Mantemos o nome original para evitar quebra de compatibilidade no app.
+ * Service for AI operations using OpenRouter (Llama 3.3/3.2)
+ * Replaces the old Gemini service.
  */
 
 export const generateAIResponse = async (prompt: string, context?: string) => {
@@ -28,8 +28,8 @@ export const generateReport = async (data: any, type: 'financial' | 'general' = 
         console.log("📊 Gerando relatório via OpenRouter...");
 
         const systemInstruction = type === 'financial'
-            ? "Atue como um CFO experiente. Gere um relatório executivo curto e direto sobre os dados financeiros fornecidos."
-            : "Analise os dados fornecidos e gere um insight estratégico curto e direto.";
+            ? "Atue como um CFO experiente. Gere um relatório executivo curto e direto sobre os dados financeiros fornecidos. Use português do Brasil."
+            : "Analise os dados fornecidos e gere um insight estratégico curto e direto. Use português do Brasil.";
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -52,7 +52,7 @@ export const analyzeDocument = async (base64Image: string, mimeType: string) => 
             {
                 role: "user",
                 content: [
-                    { type: "text", text: "Analise esta imagem de documento financeiro e extraia: tipo de documento, data, valor total e emissor. Responda de forma direta." },
+                    { type: "text", text: "Analise esta imagem de documento financeiro e extraia: tipo de documento, data, valor total e emissor. Responda de forma direta em português." },
                     {
                         type: "image_url",
                         image_url: {

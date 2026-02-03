@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { Plus, FileText, ArrowUpRight, ArrowDownLeft, Sparkles, X, Loader2, Copy, Check, Calendar, DollarSign, Tag, Pencil, Trash2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { generateReport, analyzeDocument } from '../services/geminiService';
+import { generateReport, analyzeDocument } from '../services/aiService';
 import { Upload } from 'lucide-react';
 import { transactionService, type Transaction as SupabaseTransaction } from '../services/transactionService';
 

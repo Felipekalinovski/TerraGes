@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { generateAIResponse } from './geminiService';
+import { generateAIResponse } from './aiService';
 
 export interface RDOAnalysis {
     classification: 'atividade produtiva' | 'parada' | 'falha' | 'clima' | 'risco operacional';
