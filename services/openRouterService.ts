@@ -1,59 +1,40 @@
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+import { supabase } from './supabaseClient';
 
-const getApiKey = () => {
-    // Tenta obter a chave de várias maneiras para garantir compatibilidade
-    const key = import.meta.env?.VITE_OPENROUTER_API_KEY;
-
-    if (!key) {
-        console.error("❌ VITE_OPENROUTER_API_KEY não encontrada nas variáveis de ambiente!");
-        console.debug("Env vars disponíveis:", import.meta.env);
-        return null;
-    }
-
-    return key.trim();
-};
-
-const getModel = (type: 'text' | 'vision' = 'text') => {
-    if (type === 'vision') {
-        return "meta-llama/llama-3.2-11b-vision-instruct:free";
-    }
-    return "meta-llama/llama-3.3-70b-instruct:free";
-};
-
+/**
+ * Proxy seguro para a OpenRouter API via Supabase Edge Function.
+ * A API key fica armazenada como secret no servidor — nunca exposta no frontend.
+ */
 export const callOpenRouter = async (messages: any[], type: 'text' | 'vision' = 'text') => {
-    const apiKey = getApiKey();
-
-    if (!apiKey) {
-        throw new Error("API Key da OpenRouter não configurada. Verifique o arquivo .env.local");
-    }
-
     try {
-        console.log("🚀 Enviando requisição para OpenRouter...", { model: getModel(type) });
+        console.log(`🚀 Chamando Edge Function ai-proxy... Tipo: ${type}`);
 
-        const response = await fetch(OPENROUTER_API_URL, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": "https://terrages.app",
-                "X-Title": "TerraGes",
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                model: getModel(type),
-                messages: messages,
-            })
+        const { data, error } = await supabase.functions.invoke('ai-proxy', {
+            body: { messages, type },
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error("❌ Erro na API OpenRouter:", errorData);
-            throw new Error(errorData.error?.message || `Erro OpenRouter: ${response.statusText}`);
+        if (error) {
+            console.error("❌ Erro na Edge Function:", error);
+
+            // FunctionsHttpError contém a resposta do servidor
+            if (error.context && typeof error.context === 'object' && 'json' in error.context) {
+                try {
+                    const errorBody = await (error.context as Response).json();
+                    throw new Error(errorBody.error || error.message);
+                } catch (parseErr) {
+                    // Se não conseguir parsear, usa a mensagem original
+                }
+            }
+
+            throw new Error(error.message || "Erro ao chamar o serviço de IA.");
         }
 
-        const data = await response.json();
-        return data.choices[0]?.message?.content || "";
+        if (!data || !data.content) {
+            throw new Error("A IA não retornou conteúdo.");
+        }
+
+        return data.content;
     } catch (error: any) {
-        console.error("❌ Erro fatal ao chamar OpenRouter:", error);
+        console.error("❌ Erro fatal ao chamar IA:", error);
         throw error;
     }
 };

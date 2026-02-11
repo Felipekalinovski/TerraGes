@@ -36,12 +36,25 @@
       }
     }
   </script>
+  <!-- Service Worker disabled for development to prevent caching issues with Vite
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then(reg => console.log('Service Worker registrado!', reg))
           .catch(err => console.error('Erro ao registrar SW:', err));
+      });
+    }
+  </script>
+  -->
+  <script>
+    // Force unregister existing service workers to fix the "Failed to fetch" error
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+          console.log('Service Worker unregistered to fix dev environment.');
+        }
       });
     }
   </script>

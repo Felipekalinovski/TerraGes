@@ -50,9 +50,7 @@ export const AIChat: React.FC = () => {
     };
     loadProfile();
 
-    console.log("=== DEBUG AIChat Mount ===");
-    console.log("All Env Vars:", import.meta.env);
-    console.log("VITE_OPENROUTER_API_KEY:", import.meta.env.VITE_OPENROUTER_API_KEY);
+
   }, []);
 
   const handleSendMessage = async (text: string = inputText) => {

@@ -185,71 +185,78 @@ export const intelligenceService = {
         }).eq('id', machineId);
     },
 
+
     async getDynamicChatContext(projectId?: string) {
-        // Fetch company info
-        const { data: company } = await supabase.from('company_info').select('*').limit(1).single();
+        try {
+            // Parallelize independent data fetches
+            const [
+                { data: company },
+                { data: machines },
+                { data: recentRDOs },
+                { data: transactions },
+                { data: activeInsights },
+                { data: upcomingSchedules }
+            ] = await Promise.all([
+                // 1. Fetch company info
+                supabase.from('company_info').select('name').limit(1).single(),
 
-        // Fetch fleet status
-        const { data: machines } = await supabase.from('machines').select('*');
-        const activeMachines = machines?.filter(m => m.status === 'active').length || 0;
-        const maintenanceMachines = machines?.filter(m => m.status === 'maintenance').length || 0;
+                // 2. Fetch fleet status
+                supabase.from('machines').select('id, status'),
 
-        // Fetch recent RDOs
-        const { data: recentRDOs } = await supabase
-            .from('rdos')
-            .select('*, rdo_ai_analysis(*)')
-            .order('date', { ascending: false })
-            .limit(5);
+                // 3. Fetch recent RDOs
+                supabase.from('rdos')
+                    .select('date, activities, rdo_ai_analysis(severity)')
+                    .order('date', { ascending: false })
+                    .limit(5),
 
-        // Fetch financial summary (mock or real if transactions table exists)
-        const { data: transactions } = await supabase.from('transactions').select('amount, type');
-        const balance = transactions?.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0) || 0;
+                // 4. Fetch financial summary
+                supabase.from('transactions').select('amount, type'),
 
-        // Fetch active insights
-        const { data: activeInsights } = await supabase
-            .from('insights')
-            .select('*')
-            .eq('status', 'active')
-            .limit(3);
+                // 5. Fetch active insights
+                supabase.from('insights')
+                    .select('content')
+                    .eq('status', 'active')
+                    .limit(3),
 
-        // Fetch upcoming schedules
-        const today = new Date().toISOString();
-        const { data: upcomingSchedules } = await supabase
-            .from('schedules')
-            .select('*')
-            .gte('start_time', today)
-            .order('start_time', { ascending: true })
-            .limit(5);
+                // 6. Fetch upcoming schedules
+                supabase.from('schedules')
+                    .select('title, type, start_time')
+                    .gte('start_time', new Date().toISOString())
+                    .order('start_time', { ascending: true })
+                    .limit(5)
+            ]);
 
-        return `
+            // Process data locally
+            const activeMachines = machines?.filter(m => m.status === 'active').length || 0;
+            const maintenanceMachines = machines?.filter(m => m.status === 'maintenance').length || 0;
+            const balance = transactions?.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0) || 0;
+
+            return `
             Você é o assistente inteligente do TerraGes.
             
-            Dados Reais do Sistema:
+            Dados Reais do Sistema (Atualizado):
             - Empresa: ${company?.name || 'TerraGes Cliente'}
-            - Frota: ${machines?.length || 0} totais (${activeMachines} ativas, ${maintenanceMachines} em manutenção)
-            - Saldo Financeiro Atual: R$ ${balance.toLocaleString('pt-BR')}
-            - Últimos RDOs: ${recentRDOs?.length || 0} registros recentes.
-            - Alertas Ativos: ${activeInsights?.length || 0}
-            - Próximos Agendamentos: ${upcomingSchedules?.length || 0} serviços planejados.
-            
-            Resumo dos Alertas:
-            ${activeInsights?.map(i => `- ${i.content}`).join('\n') || 'Nenhum alerta crítico no momento.'}
+            - Frota: ${machines?.length || 0} máquinas (${activeMachines} ativas, ${maintenanceMachines} manutenção)
+            - Saldo: R$ ${balance.toLocaleString('pt-BR')}
+            - RDOs Recentes: ${recentRDOs?.length || 0}
+            - Alertas: ${activeInsights?.length || 0}
+            - Agenda: ${upcomingSchedules?.length || 0} futuros
 
-            Próximos Agendamentos:
-            ${upcomingSchedules?.map(s => `- ${s.title} (${s.type}) em ${new Date(s.start_time).toLocaleDateString('pt-BR')} às ${new Date(s.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`).join('\n') || 'Nenhum serviço agendado para os próximos dias.'}
+            Alertas Ativos:
+            ${activeInsights?.map(i => `- ${i.content}`).join('\n') || 'Nenhum alerta.'}
 
-            Regras de Comportamento:
-            1. Nunca invente dados. Se não souber, diga que não tem acesso a essa informação específica.
-            2. Sempre justifique alertas com base nos dados (ex: "A máquina X está com health score baixo devido ao último RDO").
-            3. Nunca execute ações críticas (ex: deletar registros).
-            4. Sugira melhorias operacionais com base nos insights.
-            5. Use linguagem técnica de gestor de obra/frota, mas de forma clara.
-            6. Seja CONCISO: Limite suas respostas a no máximo 3-4 parágrafos curtos. Vá direto ao ponto.
-            7. FORMATAÇÃO: Cada parágrafo deve ter no máximo 150 caracteres. Se precisar escrever mais, quebre em múltiplos parágrafos curtos separados por linha em branco.
-            8. AGENDAMENTO: Se o usuário quiser agendar algo, você DEVE sugerir a criação adicionando no FINAL da sua resposta (após o texto) um bloco JSON EXATAMENTE assim:
-               [[CREATE_SCHEDULE:{"title": "...", "type": "excavation|transport|maintenance|other", "start_time": "ISO_DATE", "priority": "low|medium|high|urgent", "notes": "..."}]]
-               Importante: Hoje é ${new Date().toLocaleDateString('pt-BR')}. Use datas no futuro.
-        `;
+            Agenda Próxima:
+            ${upcomingSchedules?.map(s => `- ${s.title} (${s.type}) em ${new Date(s.start_time).toLocaleDateString('pt-BR')}`).join('\n') || 'Nada agendado.'}
+
+            Regras:
+            1. Seja breve e direto. Respostas curtas (máx 2 parágrafos).
+            2. Se for agendar, use JSON no final: [[CREATE_SCHEDULE:{"title":"...","type":"...","start_time":"ISO","priority":"...","notes":"..."}]]
+            3. Hoje é ${new Date().toLocaleDateString('pt-BR')}.
+            `;
+        } catch (error) {
+            console.error("Erro ao gerar contexto do chat:", error);
+            return "Erro ao carregar contexto do sistema. Responda genericamente.";
+        }
     },
 
     async generateWeeklyReport() {

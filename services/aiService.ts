@@ -7,19 +7,16 @@ import { callOpenRouter } from './openRouterService';
 
 export const generateAIResponse = async (prompt: string, context?: string) => {
     try {
-        console.log("🔍 Conectando ao OpenRouter (Llama 3.3 70B)...");
-
         const messages = [
             ...(context ? [{ role: "system", content: context }] : []),
             { role: "user", content: prompt }
         ];
 
         const text = await callOpenRouter(messages, 'text');
-        console.log("✅ Resposta recebida do OpenRouter!");
-        return text || "Sem resposta da IA.";
+        return text || "A IA não retornou conteúdo.";
     } catch (error: any) {
-        console.error("❌ Erro no OpenRouter:", error);
-        return `Erro: ${error.message}`;
+        console.error("❌ Falha na geração de resposta da IA:", error.message);
+        return `Erro ao processar solicitação: ${error.message}`;
     }
 };
 
