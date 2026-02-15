@@ -2,7 +2,7 @@
     "framework": "vite",
     "rewrites": [
         {
-            "source": "/(.*)",
+            "source": "/((?!manifest.json|icon.png|sw.js).*)",
             "destination": "/index.html"
         }
     ]
