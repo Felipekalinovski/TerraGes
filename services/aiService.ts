@@ -1,3 +1,4 @@
+
 import { callOpenRouter } from './openRouterService';
 
 /**
@@ -65,5 +66,35 @@ export const analyzeDocument = async (base64Image: string, mimeType: string) => 
     } catch (error: any) {
         console.error("❌ Erro ao analisar documento:", error);
         return "Erro ao analisar documento.";
+    }
+};
+
+export const analyzeReceipt = async (imageUrl: string) => {
+    try {
+        console.log("📷 Analisando recibo de serviço via OpenRouter...");
+
+        const messages = [
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: "Analise esta imagem de Ordem de Serviço ou Recibo. Extraia os dados em formato JSON estrito com as chaves: 'client' (nome do cliente), 'date' (formato YYYY-MM-DD), 'start_hour' (número), 'end_hour' (número), 'total_hours' (número), 'hourly_rate' (número, se houver). Se não encontrar algum dado, use null. NÃO explique nada, apenas retorne o JSON." },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: imageUrl
+                        }
+                    }
+                ]
+            }
+        ];
+
+        const text = await callOpenRouter(messages, 'vision');
+
+        // Tenta limpar o markdown json se houver
+        const currText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(currText);
+    } catch (error: any) {
+        console.error("❌ Erro ao analisar recibo:", error);
+        return null;
     }
 };

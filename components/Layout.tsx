@@ -20,7 +20,8 @@ import {
   Wrench,
   Users,
   BarChart2,
-  MapPin
+  MapPin,
+  ClipboardList
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -62,6 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { icon: <Truck size={20} />, label: 'Minha Frota', path: '/fleet' },
     { icon: <Wrench size={20} />, label: 'Manutenção', path: '/maintenance' },
     { icon: <Users size={20} />, label: 'Equipe', path: '/employees' },
+    { icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' },
     { icon: <MapPin size={20} />, label: 'Gerenciar Obras', path: '/settings/projects' },
     { icon: <Hammer size={20} />, label: 'Diário de Obra', path: '/rdo' },
     { icon: <DollarSign size={20} />, label: 'Financeiro', path: '/finance' },

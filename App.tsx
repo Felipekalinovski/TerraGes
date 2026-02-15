@@ -27,6 +27,8 @@ import { FleetForm } from './pages/FleetForm';
 import { RDOForm } from './pages/RDOForm';
 import { Reports } from './pages/Reports';
 import { SettingsProjects } from './pages/SettingsProjects';
+import { ServiceOrderList } from './pages/ServiceOrderList';
+import { ServiceOrderForm } from './pages/ServiceOrderForm';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -93,7 +95,12 @@ const App: React.FC = () => {
           <Route path="/settings/integrations" element={<ProtectedRoute><SettingsIntegrations /></ProtectedRoute>} />
           <Route path="/settings/projects" element={<ProtectedRoute><SettingsProjects /></ProtectedRoute>} />
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/service-orders" element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
+          <Route path="/service-orders/new" element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
+          <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
+          <Route path="/employees/new" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
+          <Route path="/employees/edit/:id" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
+          <Route path="/employees/:id" element={<ProtectedRoute><EmployeeDetails /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
