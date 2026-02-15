@@ -286,5 +286,97 @@ export const intelligenceService = {
         `;
 
         return await generateAIResponse(prompt, "Você é um consultor sênior de gestão de obras.");
+    },
+
+    async analyzeServiceOrder(soId: string) {
+        try {
+            // 1. Fetch Service Order with Machine details
+            const { data: so, error } = await supabase
+                .from('service_orders')
+                .select(`
+                    *,
+                    machine:machines(*)
+                `)
+                .eq('id', soId)
+                .single();
+
+            if (error || !so) throw new Error('Ordem de serviço não encontrada');
+            if (so.status !== 'completed') return;
+
+            const machine = so.machine;
+            const currentHours = so.end_hour;
+
+            // 2. Prepare Prompt for Predictive Analysis
+            const prompt = `
+                Analise a utilização da máquina e preveja a próxima manutenção.
+                
+                Máquina: ${machine.name} (${machine.type})
+                Horímetro Atual: ${currentHours}h
+                Última Manutenção: ${machine.last_maintenance || 'Não registrada'}
+                
+                Regras de Negócio:
+                - Troca de óleo/filtros a cada 250h.
+                - Manutenção preventiva pesada a cada 500h e 1000h.
+                - Se faltar menos de 20h para um múltiplo de 250h, gere um alerta.
+                
+                Retorne APENAS um JSON:
+                {
+                    "needs_alert": boolean,
+                    "message": "string (ex: 'Esta retroescavadeira precisa de troca de óleo em 10 horas')",
+                    "severity": "baixa" | "média" | "alta",
+                    "next_estimated_maintenance_hours": número,
+                    "estimated_profitability": {
+                        "gross_value": número,
+                        "estimated_operational_cost": número,
+                        "net_profit": número,
+                        "margin_percent": número
+                    }
+                }
+            `;
+
+            const aiResponse = await generateAIResponse(prompt, "Você é um especialista em manutenção preditiva e análise financeira de frotas pesadas. Considere que o custo operacional médio (combustível, lubrificantes e reserva de manutenção) é de aproximadamente 45% do valor bruto.");
+
+            // Extract JSON
+            let jsonString = aiResponse;
+            const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) jsonString = jsonMatch[0];
+
+            let result: {
+                needs_alert: boolean;
+                message: string;
+                severity: string;
+                next_estimated_maintenance_hours: number;
+                estimated_profitability?: {
+                    gross_value: number;
+                    estimated_operational_cost: number;
+                    net_profit: number;
+                    margin_percent: number;
+                };
+            };
+            try {
+                result = JSON.parse(jsonString);
+            } catch (e) {
+                console.error("Erro ao parsear resposta da IA:", e);
+                return;
+            }
+
+            // 3. Save Profitability (Optional: Could save to a new table or field)
+            // For now, let's just use it in the alert or a log
+            console.log("Profitability Analysis:", result.estimated_profitability);
+
+            // 3. Create Insight if necessary
+            if (result.needs_alert) {
+                await supabase.from('insights').insert({
+                    project_id: null, // Global or machine specific
+                    type: 'MANUTENCAO_PREDITIVA',
+                    content: `[Predição AI] ${machine.name}: ${result.message}`,
+                    status: 'active'
+                });
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Erro na análise preditiva da O.S.:', error);
+        }
     }
 };

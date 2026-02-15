@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User, Clock, DollarSign, Download, Upload } from 'lucide-react';
+import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User, Clock, DollarSign, Download, Upload, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { serviceOrderService, ServiceOrder } from '../services/serviceOrderService';
 
@@ -113,7 +113,7 @@ export const ServiceOrderList: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <Clock size={12} className="text-text-gold" />
-                                        <span>{order.total_hours}h</span>
+                                        <span>{order.total_hours.toFixed(1)}h</span>
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center text-xs text-gray-300">
@@ -127,6 +127,30 @@ export const ServiceOrderList: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Actions Footer */}
+                            <div className="mt-4 pt-3 border-t border-white/5 flex gap-2">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/service-orders/${order.id}/receipt`);
+                                    }}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-colors border border-white/5"
+                                >
+                                    <Download size={14} className="text-primary" />
+                                    Gerar Recibo PDF
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/service-orders/${order.id}`);
+                                    }}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-2 transition-colors border border-white/5"
+                                >
+                                    <Edit2 size={14} className="text-text-gold" />
+                                    Editar O.S.
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -134,3 +158,4 @@ export const ServiceOrderList: React.FC = () => {
         </Layout>
     );
 };
+

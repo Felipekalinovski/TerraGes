@@ -2,6 +2,7 @@
 import { supabase } from './supabaseClient';
 import { Employee } from './employeeService';
 import { Machine } from './machineService';
+import { intelligenceService } from './intelligenceService';
 
 export interface ServiceOrder {
     id: string;
@@ -74,6 +75,12 @@ export const serviceOrderService = {
             throw error;
         }
 
+        if (data.status === 'completed') {
+            intelligenceService.analyzeServiceOrder(data.id).catch(err => {
+                console.error('Erro ao analisar O.S. com IA:', err);
+            });
+        }
+
         return data;
     },
 
@@ -89,6 +96,12 @@ export const serviceOrderService = {
         if (error) {
             console.error('Error updating service order:', error);
             throw error;
+        }
+
+        if (data.status === 'completed') {
+            intelligenceService.analyzeServiceOrder(data.id).catch(err => {
+                console.error('Erro ao analisar O.S. com IA:', err);
+            });
         }
 
         return data;

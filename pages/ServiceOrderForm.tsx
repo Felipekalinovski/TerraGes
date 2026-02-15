@@ -6,7 +6,7 @@ import { serviceOrderService, ServiceOrderFormData } from '../services/serviceOr
 import { machineService, Machine } from '../services/machineService';
 import { employeeService, Employee } from '../services/employeeService';
 import { analyzeReceipt } from '../services/aiService';
-import { ArrowLeft, Save, Loader2, Camera, Upload, ScanLine, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Camera, Upload, ScanLine, CheckCircle2, Download } from 'lucide-react';
 
 export const ServiceOrderForm: React.FC = () => {
     const navigate = useNavigate();
@@ -366,7 +366,7 @@ export const ServiceOrderForm: React.FC = () => {
                         />
                     </div>
 
-                    <div className="pt-4 pb-8">
+                    <div className="pt-4 pb-8 flex flex-col gap-3">
                         <button
                             type="submit"
                             disabled={loading || analyzing}
@@ -375,6 +375,17 @@ export const ServiceOrderForm: React.FC = () => {
                             {loading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
                             {isEditing ? 'Atualizar Ordem de Serviço' : 'Gerar Ordem de Serviço'}
                         </button>
+
+                        {isEditing && (
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/service-orders/${id}/receipt`)}
+                                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-4 rounded-xl flex items-center justify-center transition-all border border-white/5"
+                            >
+                                <Download className="mr-2 text-primary" />
+                                Visualizar / Imprimir Recibo
+                            </button>
+                        )}
                     </div>
                 </form>
             </div>

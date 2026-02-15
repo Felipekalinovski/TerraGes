@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -29,6 +30,7 @@ import { Reports } from './pages/Reports';
 import { SettingsProjects } from './pages/SettingsProjects';
 import { ServiceOrderList } from './pages/ServiceOrderList';
 import { ServiceOrderForm } from './pages/ServiceOrderForm';
+import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
 import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -79,6 +81,7 @@ const App: React.FC = () => {
 
           <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
           <Route path="/employees/new" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
+          <Route path="/employees/edit/:id" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
           <Route path="/employees/:id" element={<ProtectedRoute><EmployeeDetails /></ProtectedRoute>} />
 
           <Route path="/rdo" element={<ProtectedRoute><RDO /></ProtectedRoute>} />
@@ -86,6 +89,11 @@ const App: React.FC = () => {
 
           <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+
+          <Route path="/service-orders" element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
+          <Route path="/service-orders/new" element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
+          <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
+          <Route path="/service-orders/:id/receipt" element={<ProtectedRoute><ServiceOrderReceipt /></ProtectedRoute>} />
 
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/settings/profile" element={<ProtectedRoute><SettingsProfile /></ProtectedRoute>} />
@@ -95,12 +103,7 @@ const App: React.FC = () => {
           <Route path="/settings/integrations" element={<ProtectedRoute><SettingsIntegrations /></ProtectedRoute>} />
           <Route path="/settings/projects" element={<ProtectedRoute><SettingsProjects /></ProtectedRoute>} />
 
-          <Route path="/service-orders" element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
-          <Route path="/service-orders/new" element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
-          <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
-          <Route path="/employees/new" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
-          <Route path="/employees/edit/:id" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
-          <Route path="/employees/:id" element={<ProtectedRoute><EmployeeDetails /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
