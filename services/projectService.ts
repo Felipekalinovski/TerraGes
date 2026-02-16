@@ -36,5 +36,33 @@ export const projectService = {
         }
 
         return data;
+    },
+
+    async update(id: string, project: Partial<Project>): Promise<Project> {
+        const { data, error } = await supabase
+            .from('projects')
+            .update(project)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error updating project:', error);
+            throw error;
+        }
+
+        return data;
+    },
+
+    async delete(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error deleting project:', error);
+            throw error;
+        }
     }
 };
