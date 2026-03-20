@@ -9,8 +9,7 @@
   <link rel="apple-touch-icon" href="/icon.png" />
   <title>TerraGes</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -18,19 +17,26 @@
         extend: {
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
           },
           backgroundImage: {
-            'brand-gradient': 'linear-gradient(180deg, #9E3D07 0%, #256611 100%)',
+            'brand-gradient': 'radial-gradient(circle at top left, #121212, #050505)',
+            'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01))',
           },
           colors: {
-            primary: "#9E3D07",
-            "primary-hover": "#803206",
-            "brand-dark": "#0D0D0D",
-            "surface-dark": "#1A1A1A",
-            "text-gold": "#9E3D07",
-            positive: "#256611",
-            negative: "#991b1b",
-            warning: "#B44A14",
+            primary: "#00E599", // Neon Emerald
+            "primary-hover": "#00CC88",
+            "brand-dark": "#050505",
+            "surface-dark": "#121212",
+            "text-gold": "#00E599", // Repurposing name for compatibility
+            positive: "#00E599",
+            negative: "#FF3B30",
+            warning: "#FF9500",
+            accent: "#00E599",
+          },
+          boxShadow: {
+            'neon': '0 0 15px rgba(0, 229, 153, 0.3)',
+            'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.8)',
           }
         }
       }

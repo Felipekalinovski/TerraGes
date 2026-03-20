@@ -116,137 +116,168 @@ export const SettingsIntegrations: React.FC = () => {
   }, [status]);
 
   return (
-    <Layout title="Integrações" showBack hideNav>
-      <div className="p-4 space-y-4 pb-24">
-        <p className="text-gray-400 text-sm mb-2">Gerencie as conexões do TerraGes com outras ferramentas.</p>
-        
-        {integrations.map((item) => (
-          <div key={item.id} className="bg-surface-dark rounded-xl p-4 border border-white/5 flex items-center justify-between transition-all hover:border-white/10">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl transition-colors ${item.connected ? 'bg-primary/20 text-primary' : 'bg-gray-700 text-gray-400'}`}>
-                {item.icon}
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-sm">{item.name}</h3>
-                <p className="text-gray-500 text-xs">{item.desc}</p>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => handleAction(item.id, item.connected)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all active:scale-95
-                ${item.connected 
-                  ? 'bg-positive/10 text-positive border border-positive/20 hover:bg-positive/20' 
-                  : 'bg-white/10 text-white hover:bg-white/20'
-                }`}
-            >
-              {item.connected ? (
-                <>
-                  <Check size={12} /> Conectado
-                </>
-              ) : (
-                <>
-                  <Plus size={12} /> Conectar
-                </>
-              )}
-            </button>
+    <Layout>
+      <Layout.Header 
+        title="Integrações" 
+        subTitle="Conecte o TerraGes ao seu ecossistema digital"
+        showBack
+      />
+
+      <Layout.Content>
+        <div className="p-4 space-y-4 pb-24 animate-in fade-in duration-700">
+          <div className="px-2 mb-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Conexões Ativas</p>
           </div>
-        ))}
-      </div>
+          
+          {integrations.map((item) => (
+            <div 
+                key={item.id} 
+                className="group bg-surface-dark/40 backdrop-blur-md rounded-[28px] p-5 border border-white/5 flex items-center justify-between transition-all hover:border-primary/20 shadow-glass"
+            >
+              <div className="flex items-center gap-5">
+                <div className={`size-14 rounded-2xl flex items-center justify-center transition-all duration-300 border border-white/5 ${item.connected ? 'bg-primary/10 text-primary shadow-neon-sm' : 'bg-white/5 text-gray-500'}`}>
+                  {item.icon}
+                </div>
+                <div>
+                  <h3 className="text-white font-bold tracking-tight text-base group-hover:text-primary transition-colors">{item.name}</h3>
+                  <p className="text-gray-500 text-[10px] font-medium uppercase tracking-widest mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => handleAction(item.id, item.connected)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border
+                  ${item.connected 
+                    ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shadow-neon-sm' 
+                    : 'bg-white/5 text-white border-white/5 hover:bg-white/10'
+                  }`}
+              >
+                {item.connected ? (
+                  <span className="flex items-center gap-1.5">
+                    <Check size={14} strokeWidth={3} /> Ativo
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <Plus size={14} strokeWidth={3} /> Conectar
+                  </span>
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      </Layout.Content>
 
       {/* Modal Simplificado */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-surface-dark rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm bg-surface-dark/90 rounded-[40px] border border-white/10 shadow-2xl flex flex-col overflow-hidden glass-card">
             
             {/* Header */}
-            <div className="bg-[#4b3220] p-4 flex justify-between items-center">
-                <div className="flex items-center gap-2 text-white">
-                    <MessageCircle size={20} />
-                    <span className="font-bold">Conectar WhatsApp</span>
+            <div className="px-8 pt-8 pb-4 flex justify-between items-center">
+                <div className="space-y-1">
+                    <h3 className="text-xl font-black text-white tracking-tight">WhatsApp API</h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Evolution Instance</p>
                 </div>
-                <button onClick={() => setShowModal(false)} className="text-white/70 hover:text-white">
+                <button 
+                    onClick={() => setShowModal(false)} 
+                    className="size-10 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                >
                     <X size={20} />
                 </button>
             </div>
             
-            <div className="p-6 flex flex-col items-center justify-center min-h-[300px]">
+            <div className="p-8 flex flex-col items-center justify-center min-h-[350px]">
               
               {/* Estado: Carregando / Gerando */}
               {status === 'generating' && (
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <Loader2 size={48} className="text-primary animate-spin" />
-                    <div>
-                        <p className="text-white font-medium">Iniciando Servidor...</p>
-                        <p className="text-xs text-gray-400 mt-1">Isso pode levar alguns segundos.</p>
+                <div className="flex flex-col items-center text-center space-y-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                        <Loader2 size={56} className="text-primary animate-spin relative z-10" strokeWidth={1.5} />
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-white font-bold text-lg tracking-tight">Sincronizando Core...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Aguarde o handshake da API</p>
                     </div>
                 </div>
               )}
 
               {/* Estado: Erro */}
               {status === 'error' && (
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="size-16 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
-                        <X size={32} />
+                <div className="flex flex-col items-center text-center space-y-6">
+                    <div className="size-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20">
+                        <X size={40} strokeWidth={1.5} />
                     </div>
-                    <div>
-                        <p className="text-white font-medium">Falha na Conexão</p>
-                        <p className="text-xs text-gray-400 mt-1 max-w-[200px]">Não foi possível gerar o QR Code. O servidor pode estar indisponível.</p>
+                    <div className="space-y-2">
+                        <p className="text-white font-bold text-lg tracking-tight">Time-out na Conexão</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 max-w-[200px]">O servidor Evolution não respondeu a tempo.</p>
                     </div>
                     <button 
                         onClick={startConnectionProcess}
-                        className="flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-lg text-sm hover:bg-white/20"
+                        className="w-full h-14 bg-white/5 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/5 hover:bg-white/10 flex items-center justify-center gap-2 transition-all active:scale-95"
                     >
-                        <RefreshCw size={16} /> Tentar Novamente
+                        <RefreshCw size={16} /> Reiniciar Fluxo
                     </button>
                 </div>
               )}
 
               {/* Estado: QR Code Pronto */}
               {status === 'waiting_scan' && qrCode && (
-                <div className="flex flex-col items-center space-y-4 animate-in zoom-in duration-300">
-                    <div className="bg-white p-3 rounded-xl shadow-lg">
+                <div className="flex flex-col items-center space-y-6 animate-in zoom-in-95 duration-500">
+                    <div className="p-4 bg-white rounded-[32px] shadow-neon">
                         <img src={qrCode} alt="QR Code" className="size-48 object-contain" />
                     </div>
-                    <div className="text-center space-y-2">
-                        <p className="text-sm text-white font-medium">Escaneie com seu WhatsApp</p>
-                        <ol className="text-xs text-gray-400 text-left space-y-1 list-decimal pl-4">
-                            <li>Abra o WhatsApp no seu celular</li>
-                            <li>Toque em Menu ou Configurações</li>
-                            <li>Selecione Aparelhos Conectados</li>
-                            <li>Toque em Conectar um aparelho</li>
-                        </ol>
+                    <div className="text-center space-y-4">
+                        <div className="space-y-1">
+                            <p className="text-white font-bold text-lg tracking-tight">Pareamento Requerido</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-primary">Ação necessária no mobile</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-left">
+                            <ul className="text-[10px] text-gray-400 space-y-1.5 font-medium">
+                                <li className="flex gap-2">
+                                    <span className="text-primary font-bold">01.</span> Abra o WhatsApp
+                                </li>
+                                <li className="flex gap-2">
+                                    <span className="text-primary font-bold">02.</span> Menu &gt; Aparelhos Conectados
+                                </li>
+                                <li className="flex gap-2">
+                                    <span className="text-primary font-bold">03.</span> Escaneie o código acima
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                     
-                    {/* Botão de simulação de sucesso para a demo */}
                     <button 
                         onClick={() => { setStatus('success'); handleSuccess(); }}
-                        className="w-full bg-positive text-black py-3 rounded-xl font-bold mt-2 shadow-lg shadow-positive/20 hover:bg-positive/90 transition-colors"
+                        className="w-full h-16 bg-primary text-black rounded-[24px] font-black uppercase tracking-widest text-[11px] shadow-neon hover:bg-primary-hover transition-all active:scale-95"
                     >
-                        Já Escaneei
+                        Validar Conexão
                     </button>
                 </div>
               )}
 
               {/* Estado: Sucesso */}
               {status === 'success' && (
-                <div className="flex flex-col items-center text-center space-y-4 animate-in zoom-in duration-300">
-                    <div className="size-20 rounded-full bg-positive/20 flex items-center justify-center text-positive">
-                        <ShieldCheck size={40} />
+                <div className="flex flex-col items-center text-center space-y-6 animate-in zoom-in-95 duration-500">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                        <div className="size-24 rounded-[32px] bg-primary text-black flex items-center justify-center shadow-neon relative z-10">
+                            <ShieldCheck size={56} strokeWidth={1.5} />
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-xl font-bold text-white">Conectado!</p>
-                        <p className="text-sm text-gray-400 mt-1">Seu WhatsApp foi vinculado com sucesso.</p>
+                    <div className="space-y-1">
+                        <p className="text-2xl font-black text-white tracking-tight">Vínculo Ativo</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary">Canal de comunicação liberado</p>
                     </div>
                 </div>
               )}
 
             </div>
             
-            {/* Footer com info de segurança */}
-            <div className="p-3 bg-white/5 border-t border-white/5 flex items-center justify-center gap-2">
-                <Smartphone size={14} className="text-gray-500" />
-                <p className="text-[10px] text-gray-500">Conexão criptografada ponta-a-ponta</p>
+            {/* Footer */}
+            <div className="p-4 bg-white/[0.02] border-t border-white/5 flex items-center justify-center gap-2">
+                <ShieldCheck size={14} className="text-primary shadow-neon-sm" />
+                <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 italic">Security Layer 2.4 - End-to-End Encryption</p>
             </div>
           </div>
         </div>

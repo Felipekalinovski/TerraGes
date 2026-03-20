@@ -117,7 +117,8 @@ export const SettingsProfile: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout title="Perfil do Usuário" showBack hideNav>
+      <Layout>
+        <Layout.Header title="Perfil do Usuário" showBack />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
@@ -126,106 +127,118 @@ export const SettingsProfile: React.FC = () => {
   }
 
   return (
-    <Layout title="Perfil do Usuário" showBack hideNav>
-      <div className="p-4 space-y-6 pb-24">
+    <Layout>
+      <Layout.Header 
+        title="Perfil do Usuário" 
+        subTitle="Mantenha seus dados de contato e foto atualizados"
+        showBack 
+      />
 
-        {/* Avatar Upload */}
-        <div className="flex flex-col items-center gap-3 py-6">
-          <div className="relative">
-            <div
-              className="size-28 rounded-full bg-gray-700 bg-cover bg-center border-4 border-[#4b3220] shadow-xl"
-              style={{ backgroundImage: `url('${formData.avatar_url}')` }}
-            >
-              {uploadingAvatar && (
-                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                  <Loader2 className="animate-spin text-white" size={24} />
-                </div>
-              )}
+      <Layout.Content>
+        <div className="p-4 space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* Avatar Upload */}
+          <div className="flex flex-col items-center gap-4 py-8 relative">
+            <div className="absolute inset-0 bg-primary/5 blur-[100px] rounded-full -z-10" />
+            <div className="relative group">
+              <div
+                className="size-32 rounded-full bg-surface-dark/80 bg-cover bg-center border-2 border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                style={{ backgroundImage: `url('${formData.avatar_url}')` }}
+              >
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                    <Loader2 className="animate-spin text-primary" size={24} />
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleAvatarClick}
+                disabled={uploadingAvatar}
+                className="absolute bottom-1 right-1 p-3 bg-primary text-black rounded-2xl shadow-neon hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-90"
+              >
+                <Camera size={18} strokeWidth={2.5} />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-black text-white tracking-tight">{formData.name || 'Usuário'}</h2>
+              <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">{formData.role}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Nome Completo</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="Nome completo"
+                />
+                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">E-mail Corporativo</label>
+              <div className="relative group">
+                <input
+                  type="email"
+                  value={formData.email}
+                  disabled
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-white/[0.02] border border-white/5 text-gray-500 outline-none cursor-not-allowed italic"
+                />
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-700" size={20} />
+              </div>
+              <p className="text-[9px] font-medium text-gray-600 ml-4 uppercase tracking-tighter">O e-mail não pode ser alterado por segurança</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Telefone de Contato</label>
+              <div className="relative group">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="(00) 00000-0000"
+                />
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4">
             <button
-              onClick={handleAvatarClick}
-              disabled={uploadingAvatar}
-              className="absolute bottom-0 right-0 p-2 bg-primary text-black rounded-full shadow-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full h-16 bg-primary text-black font-black uppercase tracking-widest text-[11px] rounded-3xl shadow-neon flex items-center justify-center gap-3 hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-[0.98]"
             >
-              <Camera size={18} />
+              {saving ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <Save size={20} strokeWidth={2.5} />
+                  Salvar Perfil
+                </>
+              )}
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          </div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-white">{formData.name || 'Usuário'}</h2>
-            <p className="text-sm text-primary">{formData.role}</p>
           </div>
         </div>
-
-        {/* Form Fields */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Nome Completo</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="Digite seu nome"
-              />
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">E-mail</label>
-            <div className="relative">
-              <input
-                type="email"
-                value={formData.email}
-                disabled
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-gray-400 outline-none cursor-not-allowed"
-              />
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">O e-mail não pode ser alterado</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Telefone</label>
-            <div className="relative">
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="(00) 00000-0000"
-              />
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full h-14 bg-primary text-black font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors mt-8 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="animate-spin" size={20} />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save size={20} />
-              Salvar Alterações
-            </>
-          )}
-        </button>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

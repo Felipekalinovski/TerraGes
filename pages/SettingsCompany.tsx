@@ -62,7 +62,8 @@ export const SettingsCompany: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout title="Dados da Empresa" showBack hideNav>
+      <Layout>
+        <Layout.Header title="Dados da Empresa" showBack />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
@@ -71,92 +72,106 @@ export const SettingsCompany: React.FC = () => {
   }
 
   return (
-    <Layout title="Dados da Empresa" showBack hideNav>
-      <div className="p-4 space-y-6 pb-24">
+    <Layout>
+      <Layout.Header 
+        title="Dados da Empresa" 
+        subTitle="Informações corporativas e identidade visual"
+        showBack
+      />
 
-        <div className="bg-surface-dark p-6 rounded-2xl border border-white/5 flex flex-col items-center gap-4">
-          <div className="size-20 bg-white/10 rounded-2xl flex items-center justify-center text-primary border border-white/10">
-            <Building size={40} />
+      <Layout.Content>
+        <div className="p-4 space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+          <div className="relative group p-8 rounded-[40px] bg-surface-dark/40 backdrop-blur-md border border-white/5 flex flex-col items-center gap-4 shadow-glass transition-all duration-500 hover:border-primary/20">
+            <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full opacity-50" />
+            <div className="size-24 bg-white/5 rounded-3xl flex items-center justify-center text-primary border border-white/10 relative z-10 group-hover:scale-110 transition-transform duration-500 shadow-neon">
+              <Building size={48} strokeWidth={1.5} />
+            </div>
+            <div className="text-center relative z-10">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Branding</p>
+              <p className="text-[9px] font-medium text-gray-500 uppercase tracking-widest mt-1">Logo da Corporação</p>
+            </div>
           </div>
-          <p className="text-gray-400 text-sm text-center">Logo da Empresa</p>
+
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Razão Social</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={company.name}
+                  onChange={(e) => setCompany({ ...company, name: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="Nome da empresa"
+                />
+                <Building className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">CNPJ / Documentação</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={company.cnpj}
+                  onChange={(e) => setCompany({ ...company, cnpj: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="00.000.000/0000-00"
+                />
+                <FileText className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Endereço Principal</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={company.address}
+                  onChange={(e) => setCompany({ ...company, address: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="Endereço completo"
+                />
+                <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Website Corporativo</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={company.website}
+                  onChange={(e) => setCompany({ ...company, website: e.target.value })}
+                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
+                  placeholder="www.exemplo.com.br"
+                />
+                <Globe className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full h-16 bg-primary text-black font-black uppercase tracking-widest text-[11px] rounded-3xl shadow-neon flex items-center justify-center gap-3 hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-[0.98]"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Atualizando SGBD...
+                </>
+              ) : (
+                <>
+                  <Save size={20} strokeWidth={2.5} />
+                  Salvar Dados Corporativos
+                </>
+              )}
+            </button>
+          </div>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Razão Social</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={company.name}
-                onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="Nome da empresa"
-              />
-              <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">CNPJ</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={company.cnpj}
-                onChange={(e) => setCompany({ ...company, cnpj: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="00.000.000/0000-00"
-              />
-              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Endereço</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={company.address}
-                onChange={(e) => setCompany({ ...company, address: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="Endereço completo"
-              />
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Site</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={company.website}
-                onChange={(e) => setCompany({ ...company, website: e.target.value })}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none"
-                placeholder="www.exemplo.com.br"
-              />
-              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full h-14 bg-primary text-black font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="animate-spin" size={20} />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save size={20} />
-              Salvar Dados
-            </>
-          )}
-        </button>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

@@ -9,7 +9,7 @@
 Antigravity Kit is a modular system consisting of:
 
 - **20 Specialist Agents** - Role-based AI personas
-- **36 Skills** - Domain-specific knowledge modules
+- **42 Skills** - Domain-specific knowledge modules
 - **11 Workflows** - Slash command procedures
 
 ---
@@ -57,7 +57,7 @@ Specialist AI personas for different domains.
 
 ---
 
-## 🧩 Skills (36)
+## 🧩 Skills (42)
 
 Modular knowledge domains that agents can load on-demand. based on task context.
 
@@ -66,6 +66,8 @@ Modular knowledge domains that agents can load on-demand. based on task context.
 | Skill                   | Description                                                           |
 | ----------------------- | --------------------------------------------------------------------- |
 | `react-best-practices`  | React & Next.js performance optimization (Vercel - 57 rules)          |
+| `composition-patterns` | React composition patterns that scale (Vercel)                        |
+| `nextjs-react-expert`  | Advanced Next.js and React optimization patterns                      |
 | `web-design-guidelines` | Web UI audit - 100+ rules for accessibility, UX, performance (Vercel) |
 | `tailwind-patterns`     | Tailwind CSS v4 utilities                                             |
 | `frontend-design`       | UI/UX patterns, design systems                                        |
@@ -97,9 +99,11 @@ Modular knowledge domains that agents can load on-demand. based on task context.
 
 | Skill                   | Description               |
 | ----------------------- | ------------------------- |
-| `docker-expert`         | Containerization, Compose |
-| `deployment-procedures` | CI/CD, deploy workflows   |
-| `server-management`     | Infrastructure management |
+| `docker-expert`          | Containerization, Compose |
+| `deployment-procedures`  | CI/CD, deploy workflows   |
+| `deploy-to-vercel`       | High-speed Vercel deployments |
+| `vercel-cli-with-tokens` | Vercel management via CLI |
+| `server-management`      | Infrastructure management |
 
 ### Testing & Quality
 
@@ -131,7 +135,8 @@ Modular knowledge domains that agents can load on-demand. based on task context.
 
 | Skill           | Description           |
 | --------------- | --------------------- |
-| `mobile-design` | Mobile UI/UX patterns |
+| `mobile-design`        | Mobile UI/UX patterns |
+| `react-native-skills` | React Native & Expo performance |
 
 ### Game Development
 
@@ -267,7 +272,7 @@ For details, see [scripts/README.md](scripts/README.md)
 | Metric              | Value                         |
 | ------------------- | ----------------------------- |
 | **Total Agents**    | 20                            |
-| **Total Skills**    | 36                            |
+| **Total Skills**    | 42                            |
 | **Total Workflows** | 11                            |
 | **Total Scripts**   | 2 (master) + 18 (skill-level) |
 | **Coverage**        | ~90% web/mobile development   |

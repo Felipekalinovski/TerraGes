@@ -102,13 +102,13 @@ export const EmployeeForm: React.FC = () => {
         role: formData.role!,
         status: formData.status as any || 'active',
         contact: formData.contact || '',
-        email: formData.email,
-        cpf: formData.cpf,
-        birth_date: formData.birth_date,
-        address: formData.address,
-        admission_date: formData.admission_date,
-        certifications: formData.certifications,
-        image_url: formData.image_url
+        email: formData.email || '',
+        cpf: formData.cpf || '',
+        birth_date: formData.birth_date || '',
+        address: formData.address || '',
+        admission_date: formData.admission_date || '',
+        certifications: formData.certifications || [],
+        image_url: formData.image_url || ''
       };
 
       if (isEditing) {
@@ -135,235 +135,286 @@ export const EmployeeForm: React.FC = () => {
   }
 
   return (
-    <Layout title={isEditing ? "Editar Colaborador" : "Novo Colaborador"} showBack hideNav={false}>
-      <div className="p-4 space-y-6 pb-24">
+    <Layout>
+      <Layout.Header 
+        title={isEditing ? "Editar Registro" : "Novo Colaborador"} 
+        subTitle="Gestão de Capital Humano"
+        showBack
+      />
 
-        {/* Photo Upload */}
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="size-24 rounded-full bg-surface-dark border-2 border-dashed border-gray-600 flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-colors cursor-pointer relative overflow-hidden group"
-          >
-            {previewUrl ? (
-              <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-            ) : (
-              <User size={32} />
-            )}
+      <Layout.Content>
+        <div className="px-4 py-8 space-y-10 pb-40 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Photo Upload Section */}
+          <div className="flex flex-col items-center gap-4 group">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="relative cursor-pointer transition-all active:scale-95"
+            >
+              <div className="absolute inset-0 bg-primary/20 rounded-[40px] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div 
+                className="size-32 rounded-[40px] bg-surface-dark border-2 border-dashed border-white/10 flex items-center justify-center text-gray-500 hover:border-primary/50 hover:text-primary transition-all relative overflow-hidden shadow-glass group-hover:shadow-neon-sm"
+              >
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={40} strokeWidth={1.5} />
+                )}
 
-            {uploading && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Loader2 className="animate-spin text-primary" size={24} />
+                {uploading && (
+                  <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-20">
+                    <Loader2 className="animate-spin text-primary" size={32} />
+                  </div>
+                )}
+
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 backdrop-blur-[2px]">
+                  <Camera className="text-white drop-shadow-lg" size={32} />
+                </div>
               </div>
-            )}
-
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="text-white" size={24} />
             </div>
-          </div>
-          <span className="text-sm text-primary font-medium cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            {isEditing ? 'Alterar Foto' : 'Adicionar Foto'}
-          </span>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-        </div>
-
-        {/* Personal Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 pb-2">Dados Pessoais</h3>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Nome Completo</label>
-            <div className="relative">
-              <input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                type="text"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-                placeholder="Ex: Carlos Silva"
-              />
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
+            <div className="text-center">
+              <span 
+                className="text-[10px] font-black text-primary uppercase tracking-[0.2em] cursor-pointer hover:brightness-125 transition-all"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isEditing ? 'Substituir Identidade Visual' : 'Definir Identidade Visual'}
+              </span>
+              <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest mt-1">PNG, JPG ou WEBP • Máx 2MB</p>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">CPF</label>
             <input
-              name="cpf"
-              value={formData.cpf}
-              onChange={handleChange}
-              type="text"
-              className="w-full h-12 px-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-              placeholder="000.000.000-00"
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Data de Nascimento</label>
-            <div className="relative">
-              <input
-                name="birth_date"
-                value={formData.birth_date}
-                onChange={handleChange}
-                type="date"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-              />
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-        </div>
+          {/* Form Grid */}
+          <div className="space-y-12">
+            
+            {/* Personal Data Selection */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 px-1 mb-6">
+                 <div className="h-[2px] w-8 bg-primary shadow-neon-sm"></div>
+                 <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic font-heading">Dados Biométricos</h3>
+              </div>
 
-        {/* Contact Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 pb-2">Contato</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Nome Completo</label>
+                  <div className="relative group">
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      type="text"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
+                      placeholder="Identificação do colaborador..."
+                    />
+                  </div>
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Telefone / WhatsApp</label>
-            <div className="relative">
-              <input
-                name="contact"
-                value={formData.contact}
-                onChange={handleChange}
-                type="tel"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-                placeholder="(00) 00000-0000"
-              />
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">E-mail</label>
-            <div className="relative">
-              <input
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                type="email"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-                placeholder="email@exemplo.com"
-              />
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Endereço</label>
-            <div className="relative">
-              <input
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                type="text"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-                placeholder="Rua, Número, Bairro"
-              />
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-        </div>
-
-        {/* Job Info */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-white/5 pb-2">Dados Contratuais</h3>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Cargo / Função</label>
-            <div className="relative">
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none appearance-none"
-              >
-                <option value="" disabled>Selecione o cargo</option>
-                <option value="Operador de Máquinas">Operador de Máquinas</option>
-                <option value="Engenheiro">Engenheiro</option>
-                <option value="Engenheira Civil">Engenheira Civil</option>
-                <option value="Mecânico">Mecânico</option>
-                <option value="Mecânico Chefe">Mecânico Chefe</option>
-                <option value="Motorista">Motorista</option>
-                <option value="Assistente Adm.">Assistente Adm.</option>
-                <option value="Ajudante Geral">Ajudante Geral</option>
-              </select>
-              <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Status</label>
-            <div className="relative">
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none appearance-none"
-              >
-                <option value="active">Ativo</option>
-                <option value="vacation">Férias</option>
-                <option value="leave">Afastado</option>
-                <option value="inactive">Inativo</option>
-              </select>
-              <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Data de Admissão</label>
-            <div className="relative">
-              <input
-                name="admission_date"
-                value={formData.admission_date}
-                onChange={handleChange}
-                type="date"
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-              />
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Certificações (NRs)</label>
-            <div className="flex flex-wrap gap-2">
-              {['NR-10', 'NR-12', 'NR-35', 'CNH C', 'CNH D', 'CNH E'].map(cert => (
-                <label key={cert} className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer select-none transition-colors ${formData.certifications?.includes(cert) ? 'bg-primary/20 border-primary text-primary' : 'bg-surface-dark border-white/10 text-gray-300 hover:border-primary/50'}`}>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">CPF (Fiscal)</label>
                   <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={formData.certifications?.includes(cert)}
-                    onChange={() => handleCertChange(cert)}
+                    name="cpf"
+                    value={formData.cpf}
+                    onChange={handleChange}
+                    type="text"
+                    className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] px-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
+                    placeholder="000.000.000-00"
                   />
-                  <span className="text-sm">{cert}</span>
-                </label>
-              ))}
-            </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Nascimento</label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="birth_date"
+                      value={formData.birth_date}
+                      onChange={handleChange}
+                      type="date"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Workplace Info */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 px-1 mb-6">
+                 <div className="h-[2px] w-8 bg-primary shadow-neon-sm"></div>
+                 <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic font-heading">Estrutura Operacional</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Cargo / Nível</label>
+                  <div className="relative group">
+                    <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-12 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium appearance-none"
+                    >
+                      <option value="" disabled>Selecione a função...</option>
+                      <option value="Operador de Máquinas">Operador de Máquinas</option>
+                      <option value="Engenheiro">Engenheiro</option>
+                      <option value="Mecânico Chefe">Mecânico Chefe</option>
+                      <option value="Motorista">Motorista</option>
+                      <option value="Assistente Adm.">Assistente Adm.</option>
+                      <option value="Ajudante Geral">Ajudante Geral</option>
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
+                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Status do Vínculo</label>
+                  <div className="relative group">
+                    <CheckCircle className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-12 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium appearance-none"
+                    >
+                      <option value="active">Ativo (Em Operação)</option>
+                      <option value="vacation">Férias (Descanso)</option>
+                      <option value="leave">Afastado (Médico/Outros)</option>
+                      <option value="inactive">Inativo (Desligado)</option>
+                    </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
+                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Admissão</label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="admission_date"
+                      value={formData.admission_date}
+                      onChange={handleChange}
+                      type="date"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Communication & Location Selection */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 px-1 mb-6">
+                 <div className="h-[2px] w-8 bg-primary shadow-neon-sm"></div>
+                 <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic font-heading">Comunicação & Localização</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Telefone / WhatsApp</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="contact"
+                      value={formData.contact}
+                      onChange={handleChange}
+                      type="text"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">E-mail Corporativo</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      type="email"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
+                      placeholder="email@empresa.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">Endereço Residencial</label>
+                  <div className="relative group">
+                    <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                    <input
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      type="text"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
+                      placeholder="Rua, Número, Bairro, Cidade - UF"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Certifications Badge Selection */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 px-1 mb-6">
+                 <div className="h-[2px] w-8 bg-primary shadow-neon-sm"></div>
+                 <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic font-heading">Competências & Cursos</h3>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {['NR-10', 'NR-12', 'NR-35', 'CNH C', 'CNH D', 'CNH E'].map(cert => (
+                  <button 
+                    key={cert} 
+                    type="button"
+                    onClick={() => handleCertChange(cert)}
+                    className={`px-5 py-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      formData.certifications?.includes(cert) 
+                      ? 'bg-primary/20 border-primary shadow-neon-sm text-primary' 
+                      : 'bg-surface-dark/40 border-white/5 text-gray-500 hover:border-white/10 hover:text-gray-300'
+                    }`}
+                  >
+                    <div className={`size-1.5 rounded-full ${formData.certifications?.includes(cert) ? 'bg-primary' : 'bg-gray-700'}`}></div>
+                    {cert}
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
+      </Layout.Content>
 
-      </div>
-
-      {/* Footer Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-brand-dark/95 backdrop-blur-sm border-t border-white/5 z-20">
-        <div className="flex flex-col gap-3 max-w-md mx-auto">
+      {/* Persistence Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-surface-dark/80 backdrop-blur-xl border-t border-white/5 z-50">
+        <div className="max-w-md mx-auto flex flex-col gap-3">
           <button
             onClick={handleSubmit}
             disabled={loading || uploading}
-            className="w-full h-12 bg-primary hover:bg-primary-hover text-black font-bold rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full h-14 bg-primary hover:brightness-110 active:scale-[0.98] text-black font-black uppercase tracking-[0.2em] italic text-xs rounded-[24px] transition-all shadow-neon-sm flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
-            {isEditing ? 'Atualizar Colaborador' : 'Salvar Colaborador'}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} strokeWidth={3} />}
+            {isEditing ? 'Sincronizar Alterações' : 'Finalizar Cadastro'}
           </button>
+          
           <button
             onClick={() => navigate(-1)}
-            disabled={loading}
-            className="w-full h-12 bg-transparent hover:bg-white/5 text-primary font-bold rounded-xl transition-colors"
+            type="button"
+            className="w-full h-12 bg-white/5 hover:bg-white/10 text-gray-400 font-bold uppercase tracking-widest text-[10px] rounded-[24px] transition-all"
           >
-            Cancelar
+            Descartar Edição
           </button>
         </div>
       </div>

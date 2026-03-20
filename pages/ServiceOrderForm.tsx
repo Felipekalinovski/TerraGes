@@ -6,7 +6,7 @@ import { serviceOrderService, ServiceOrderFormData } from '../services/serviceOr
 import { machineService, Machine } from '../services/machineService';
 import { employeeService, Employee } from '../services/employeeService';
 import { analyzeReceipt } from '../services/aiService';
-import { ArrowLeft, Save, Loader2, Camera, Upload, ScanLine, CheckCircle2, Download } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Camera, Upload, ScanLine, CheckCircle2, Download, Sparkles } from 'lucide-react';
 
 export const ServiceOrderForm: React.FC = () => {
     const navigate = useNavigate();
@@ -150,245 +150,305 @@ export const ServiceOrderForm: React.FC = () => {
         return (hours * (Number(formData.hourly_rate) || 0)).toFixed(2);
     };
 
-    return (
-        <Layout title={isEditing ? 'Editar O.S.' : 'Nova Ordem de Serviço'} hideNav={false}>
-            <div className="p-4 pb-24">
-                <button
-                    onClick={() => navigate('/service-orders')}
-                    className="flex items-center text-gray-400 mb-6 hover:text-white transition-colors"
+  return (
+    <Layout>
+      <Layout.Header 
+        title={isEditing ? 'Editar O.S.' : 'Nova Ordem de Serviço'} 
+        subTitle="Módulo de faturamento e registro operacional de campo"
+        showBack={true}
+        onBackClick={() => navigate('/service-orders')}
+      />
+
+      <Layout.Content>
+        <div className="p-4 pb-32 animate-in slide-in-from-bottom-4 duration-700">
+          <form onSubmit={handleSubmit} className="space-y-8">
+
+            {/* AI HUB: Digitalização Inteligente */}
+            <div className="bg-surface-dark/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+                    <ScanLine size={120} className="text-primary rotate-12" />
+                </div>
+                
+                <h3 className="text-lg font-black text-white italic uppercase tracking-widest mb-6 flex items-center gap-3">
+                  <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <Sparkles size={18} />
+                  </div>
+                  TerraScan <span className="text-primary/50 text-xs ml-1 font-medium">Digitalização AI</span>
+                </h3>
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative z-10 border-2 border-dashed rounded-[24px] p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all duration-500 overflow-hidden ${
+                    analyzing ? 'border-primary/50 bg-primary/5' : 
+                    formData.receipt_url ? 'border-positive/30 bg-positive/5' : 
+                    'border-white/5 hover:border-primary/30 hover:bg-white/[0.02]'
+                  }`}
                 >
-                    <ArrowLeft size={20} className="mr-2" />
-                    Voltar
-                </button>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-
-                    {/* OCR / Receipt Upload */}
-                    <div className="bg-surface-dark p-4 rounded-xl border border-white/5 space-y-4">
-                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                            <ScanLine size={20} className="text-primary" />
-                            Digitalizar Comprovante
-                        </h3>
-                        <div
-                            onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-white/5 transition-all text-gray-400 hover:text-primary"
-                        >
-                            {analyzing ? (
-                                <>
-                                    <Loader2 className="animate-spin text-primary" size={32} />
-                                    <span className="text-sm">Analisando imagem com IA...</span>
-                                </>
-                            ) : formData.receipt_url ? (
-                                <>
-                                    <img src={formData.receipt_url} alt="Comprovante" className="h-32 object-contain rounded-lg border border-white/10" />
-                                    <span className="text-xs text-positive flex items-center gap-1 mt-2">
-                                        <CheckCircle2 size={12} /> Imagem salva (Clique para alterar)
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <Camera size={32} />
-                                    <span className="text-sm font-medium">Tirar foto ou carregar imagem</span>
-                                    <span className="text-xs text-gray-500">A IA preencherá os dados automaticamente</span>
-                                </>
-                            )}
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                className="hidden"
-                                accept="image/*"
-                            />
-                        </div>
+                  {analyzing ? (
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-black text-primary uppercase tracking-[0.2em] animate-pulse">Processando Neuronios...</span>
+                        <span className="text-[10px] text-gray-500 font-medium italic mt-1">Extraindo dados técnicos da imagem</span>
+                      </div>
                     </div>
-
-
-                    {/* Header: Client & Date */}
-                    <div className="bg-surface-dark p-4 rounded-xl border border-white/5 space-y-4">
-                        <h3 className="text-lg font-bold text-white mb-2">Dados do Serviço</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Cliente / Obra</label>
-                                <input
-                                    type="text"
-                                    name="client"
-                                    required
-                                    value={formData.client}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                    placeholder="Ex: Fazenda Santa Cruz"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Data</label>
-                                <input
-                                    type="date"
-                                    name="date"
-                                    required
-                                    value={formData.date}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                />
-                            </div>
-                        </div>
+                  ) : formData.receipt_url ? (
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <div className="relative group/img shadow-2xl rounded-2xl overflow-hidden border-2 border-primary/20">
+                        <img src={formData.receipt_url} alt="Comprovante" className="h-48 object-cover transition-transform group-hover/img:scale-105" />
+                        <div className="absolute inset-0 bg-primary/20 mix-blend-overlay opacity-0 group-hover/img:opacity-100 transition-opacity"></div>
+                      </div>
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-[10px] font-black text-positive uppercase tracking-widest flex items-center gap-2 px-4 py-2 bg-positive/10 rounded-full border border-positive/20">
+                          <CheckCircle2 size={12} /> Digitalização Analisada
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Clique para substituir imagem</span>
+                      </div>
                     </div>
-
-                    {/* Resources: Machine & Operator */}
-                    <div className="bg-surface-dark p-4 rounded-xl border border-white/5 space-y-4">
-                        <h3 className="text-lg font-bold text-white mb-2">Recursos</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Máquina</label>
-                                <select
-                                    name="machine_id"
-                                    required
-                                    value={formData.machine_id}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                >
-                                    <option value="">Selecione...</option>
-                                    {machines.map(m => (
-                                        <option key={m.id} value={m.id}>{m.name} - {m.type}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Operador</label>
-                                <select
-                                    name="operator_id"
-                                    required
-                                    value={formData.operator_id}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                >
-                                    <option value="">Selecione...</option>
-                                    {employees.map(e => (
-                                        <option key={e.id} value={e.id}>{e.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4 text-center py-6">
+                      <div className="size-20 rounded-full bg-white/5 flex items-center justify-center text-primary border border-white/5 group-hover:scale-110 group-hover:shadow-neon transition-all duration-500">
+                        <Camera size={38} strokeWidth={1.5} />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-black text-white uppercase tracking-widest">Carregar Comprovante</span>
+                        <span className="text-[10px] text-gray-500 font-bold italic">A IA preencherá os campos automaticamente</span>
+                      </div>
                     </div>
-
-                    {/* Metrics & Finance */}
-                    <div className="bg-surface-dark p-4 rounded-xl border border-white/5 space-y-4">
-                        <h3 className="text-lg font-bold text-white mb-2">Horímetro e Valores</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Início (Horímetro)</label>
-                                <input
-                                    type="number"
-                                    name="start_hour"
-                                    step="0.1"
-                                    required
-                                    value={formData.start_hour}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Fim (Horímetro)</label>
-                                <input
-                                    type="number"
-                                    name="end_hour"
-                                    step="0.1"
-                                    required
-                                    value={formData.end_hour}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Valor Hora (R$)</label>
-                                <input
-                                    type="number"
-                                    name="hourly_rate"
-                                    step="0.01"
-                                    required
-                                    value={formData.hourly_rate}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Total Calculado</label>
-                                <div className="w-full bg-brand-dark/50 border border-white/10 rounded-lg p-2.5 text-positive font-bold text-right">
-                                    R$ {calculateTotal()}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment & Status */}
-                    <div className="bg-surface-dark p-4 rounded-xl border border-white/5 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Forma de Pagamento</label>
-                                <select
-                                    name="payment_method"
-                                    required
-                                    value={formData.payment_method}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                >
-                                    <option value="Pix">Pix</option>
-                                    <option value="Cartão">Cartão</option>
-                                    <option value="Boleto">Boleto</option>
-                                    <option value="Faturado">Faturado</option>
-                                    <option value="Dinheiro">Dinheiro</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Status da O.S.</label>
-                                <select
-                                    name="status"
-                                    required
-                                    value={formData.status}
-                                    onChange={handleChange}
-                                    className="w-full bg-brand-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none"
-                                >
-                                    <option value="pending">Pendente</option>
-                                    <option value="completed">Concluída</option>
-                                    <option value="cancelled">Cancelada</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm text-gray-400 mb-1">Observações</label>
-                        <textarea
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows={3}
-                            className="w-full bg-surface-dark border border-white/10 rounded-lg p-2.5 text-white focus:ring-1 focus:ring-primary outline-none resize-none"
-                            placeholder="Detalhes adicionais do serviço..."
-                        />
-                    </div>
-
-                    <div className="pt-4 pb-8 flex flex-col gap-3">
-                        <button
-                            type="submit"
-                            disabled={loading || analyzing}
-                            className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center transition-all active:scale-[0.98] disabled:opacity-50"
-                        >
-                            {loading ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2" />}
-                            {isEditing ? 'Atualizar Ordem de Serviço' : 'Gerar Ordem de Serviço'}
-                        </button>
-
-                        {isEditing && (
-                            <button
-                                type="button"
-                                onClick={() => navigate(`/service-orders/${id}/receipt`)}
-                                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-4 rounded-xl flex items-center justify-center transition-all border border-white/5"
-                            >
-                                <Download className="mr-2 text-primary" />
-                                Visualizar / Imprimir Recibo
-                            </button>
-                        )}
-                    </div>
-                </form>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </div>
             </div>
-        </Layout>
-    );
+
+            {/* FORM SECTIONS: Grid Design */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Seção: Identificação */}
+              <div className="bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="size-1.5 rounded-full bg-primary shadow-neon"></div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Identificação do Serviço</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="group">
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Cliente / Local</label>
+                      <input
+                        type="text"
+                        name="client"
+                        required
+                        value={formData.client}
+                        onChange={handleChange}
+                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all placeholder:text-gray-700"
+                        placeholder="Ex: Condomínio Terras Altas"
+                      />
+                    </div>
+                    
+                    <div className="group">
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Data de Execução</label>
+                      <input
+                        type="date"
+                        name="date"
+                        required
+                        value={formData.date}
+                        onChange={handleChange}
+                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+              </div>
+
+              {/* Seção: Recursos */}
+              <div className="bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass space-y-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="size-1.5 rounded-full bg-primary shadow-neon"></div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Alocação de Recursos</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="group">
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Equipamento Utilizado</label>
+                      <select
+                        name="machine_id"
+                        required
+                        value={formData.machine_id}
+                        onChange={handleChange}
+                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
+                      >
+                        <option value="" className="bg-brand-dark">Selecionar Máquina...</option>
+                        {machines.map(m => (
+                          <option key={m.id} value={m.id} className="bg-brand-dark">{m.name} - {m.type}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Operador Responsável</label>
+                      <select
+                        name="operator_id"
+                        required
+                        value={formData.operator_id}
+                        onChange={handleChange}
+                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
+                      >
+                        <option value="" className="bg-brand-dark">Selecionar Colaborador...</option>
+                        {employees.map(e => (
+                          <option key={e.id} value={e.id} className="bg-brand-dark">{e.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+              </div>
+
+              {/* Seção: Horímetro & Performance */}
+              <div className="md:col-span-2 bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="size-1.5 rounded-full bg-primary shadow-neon"></div>
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Métricas de Produção & Faturamento</span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Inicial</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="start_hour"
+                        step="0.1"
+                        required
+                        value={formData.start_hour}
+                        onChange={handleChange}
+                        className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-lg text-white font-black italic tracking-tighter focus:ring-2 focus:ring-primary/40 outline-none transition-all"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 uppercase">INÍCIO</span>
+                    </div>
+                  </div>
+
+                  <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Final</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="end_hour"
+                        step="0.1"
+                        required
+                        value={formData.end_hour}
+                        onChange={handleChange}
+                        className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-lg text-white font-black italic tracking-tighter focus:ring-2 focus:ring-primary/40 outline-none transition-all"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 uppercase">TÉRMINO</span>
+                    </div>
+                  </div>
+
+                  <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Valor/Hora (BRL)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="hourly_rate"
+                        step="0.01"
+                        required
+                        value={formData.hourly_rate}
+                        onChange={handleChange}
+                        className="w-full h-14 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-lg text-primary font-black italic tracking-tighter focus:ring-2 focus:ring-primary/40 outline-none transition-all"
+                      />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-primary opacity-0 group-focus-within:opacity-100 transition-opacity">R$</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-end">
+                    <div className="h-14 bg-primary/5 border border-primary/20 rounded-2xl flex flex-col items-center justify-center p-2 relative group overflow-hidden">
+                       <div className="absolute top-0 left-0 w-full h-[1px] bg-primary animate-pulse"></div>
+                       <span className="text-[8px] font-black text-primary uppercase tracking-[0.2em] mb-1">Total Consolidado</span>
+                       <div className="text-xl font-black text-white italic tracking-tighter">
+                         R$ {calculateTotal()}
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção: Pagamento e Status */}
+              <div className="md:col-span-2 bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Método de Liquidação</label>
+                    <select
+                      name="payment_method"
+                      required
+                      value={formData.payment_method}
+                      onChange={handleChange}
+                      className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
+                    >
+                      <option value="Pix" className="bg-brand-dark">Pix (Imediato)</option>
+                      <option value="Cartão" className="bg-brand-dark">Cartão Débito/Crédito</option>
+                      <option value="Boleto" className="bg-brand-dark">Boleto Bancário</option>
+                      <option value="Faturado" className="bg-brand-dark">Faturamento Mensal</option>
+                      <option value="Dinheiro" className="bg-brand-dark">Espécie</option>
+                    </select>
+                  </div>
+
+                  <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Fluxo da Ordem</label>
+                    <select
+                      name="status"
+                      required
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
+                    >
+                      <option value="pending" className="bg-brand-dark text-warning">Aguardando Aprovação / Pendente</option>
+                      <option value="completed" className="bg-brand-dark text-positive">Finalizada / Entregue</option>
+                      <option value="cancelled" className="bg-brand-dark text-red-500">Cancelada / Abortada</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="group">
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={4}
+                    className="w-full bg-white/[0.03] border border-white/5 rounded-[24px] p-5 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all resize-none placeholder:text-gray-700 italic"
+                    placeholder="Incluir detalhes técnicos, ocorrências ou anomalias durante o serviço..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Persistent Control Bar */}
+            <div className="fixed bottom-10 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto">
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/service-orders/${id}/receipt`)}
+                  className="h-16 bg-white/5 backdrop-blur-xl border border-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-[24px] flex items-center justify-center gap-3 transition-all hover:bg-white/10 active:scale-95 shadow-glass"
+                >
+                  <Download className="text-primary" size={20} />
+                  Emitir / Visualizar Folha OS
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || analyzing}
+                className="h-18 bg-primary text-black font-black uppercase tracking-[0.2em] text-sm rounded-[24px] shadow-neon flex items-center justify-center gap-4 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} strokeWidth={2.5} />}
+                {isEditing ? 'Sincronizar Protocolo' : 'Gerar Ordem de Serviço'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Layout.Content>
+    </Layout>
+  );
 };

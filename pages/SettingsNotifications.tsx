@@ -60,26 +60,27 @@ export const SettingsNotifications: React.FC = () => {
     checked: boolean,
     onChange: () => void
   }) => (
-    <div className="flex items-center justify-between p-4 bg-surface-dark rounded-xl border border-white/5">
-      <div className="flex items-center gap-4 flex-1">
-        <div className="p-2 bg-[#4b3220] rounded-lg text-text-gold">
+    <div className="flex items-center justify-between p-5 bg-surface-dark/40 backdrop-blur-md rounded-[28px] border border-white/5 transition-all hover:border-primary/20 shadow-glass group">
+      <div className="flex items-center gap-5 flex-1">
+        <div className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-400 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 border border-white/5">
           {icon}
         </div>
-        <div>
-          <h3 className="text-white font-medium text-sm">{title}</h3>
-          <p className="text-gray-500 text-xs">{desc}</p>
+        <div className="space-y-0.5">
+          <h3 className="text-white font-bold tracking-tight text-sm">{title}</h3>
+          <p className="text-gray-500 text-[10px] font-medium uppercase tracking-widest">{desc}</p>
         </div>
       </div>
-      <label className="relative inline-flex items-center cursor-pointer">
+      <label className="relative inline-flex items-center cursor-pointer active:scale-95 transition-transform">
         <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
-        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+        <div className="w-12 h-6.5 bg-white/5 rounded-full peer peer-checked:after:translate-x-[22px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-gray-500 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-black peer-checked:after:shadow-neon border border-white/5"></div>
       </label>
     </div>
   );
 
   if (loading) {
     return (
-      <Layout title="Notificações" showBack hideNav>
+      <Layout>
+        <Layout.Header title="Notificações" showBack />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
@@ -88,50 +89,62 @@ export const SettingsNotifications: React.FC = () => {
   }
 
   return (
-    <Layout title="Notificações" showBack hideNav>
-      <div className="p-4 space-y-6 pb-24">
+    <Layout>
+      <Layout.Header 
+        title="Notificações" 
+        subTitle="Gerencie como e quando você recebe alertas"
+        showBack 
+      />
 
-        <div className="space-y-4">
-          <h2 className="text-gray-400 text-xs font-bold uppercase tracking-wider px-1">Alertas do Sistema</h2>
+      <Layout.Content>
+        <div className="p-4 space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="space-y-4">
+            <div className="px-4 flex items-center gap-2">
+              <div className="size-1.5 bg-primary rounded-full shadow-neon" />
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Alertas de Operação</h2>
+            </div>
 
-          <ToggleItem
-            icon={<AlertTriangle size={20} />}
-            title="Alertas de Manutenção"
-            desc="Avisar quando uma máquina precisar de reparo"
-            checked={settings.pushMaintenance}
-            onChange={() => handleToggle('pushMaintenance')}
-          />
+            <ToggleItem
+              icon={<AlertTriangle size={20} />}
+              title="Manutenção Preditiva"
+              desc="Alertas de fadiga e reparo de máquinas"
+              checked={settings.pushMaintenance}
+              onChange={() => handleToggle('pushMaintenance')}
+            />
 
-          <ToggleItem
-            icon={<Calendar size={20} />}
-            title="Agenda e Serviços"
-            desc="Lembretes de serviços agendados"
-            checked={settings.pushSchedule}
-            onChange={() => handleToggle('pushSchedule')}
-          />
+            <ToggleItem
+              icon={<Calendar size={20} />}
+              title="Escala & Cronograma"
+              desc="Atualizações de agenda e check-ins"
+              checked={settings.pushSchedule}
+              onChange={() => handleToggle('pushSchedule')}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="px-4 flex items-center gap-2">
+              <div className="size-1.5 bg-primary rounded-full shadow-neon" />
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Fluxo de Dados</h2>
+            </div>
+
+            <ToggleItem
+              icon={<Mail size={20} />}
+              title="Relatórios de Performance"
+              desc="Resumo semanal financeiro e RDO"
+              checked={settings.emailReports}
+              onChange={() => handleToggle('emailReports')}
+            />
+
+            <ToggleItem
+              icon={<MessageSquare size={20} />}
+              title="Alertas Críticos (SMS)"
+              desc="Notificações de alta prioridade"
+              checked={settings.smsAlerts}
+              onChange={() => handleToggle('smsAlerts')}
+            />
+          </div>
         </div>
-
-        <div className="space-y-4">
-          <h2 className="text-gray-400 text-xs font-bold uppercase tracking-wider px-1">Comunicação</h2>
-
-          <ToggleItem
-            icon={<Mail size={20} />}
-            title="Relatórios por E-mail"
-            desc="Receber resumo semanal financeiro e RDO"
-            checked={settings.emailReports}
-            onChange={() => handleToggle('emailReports')}
-          />
-
-          <ToggleItem
-            icon={<MessageSquare size={20} />}
-            title="Alertas SMS"
-            desc="Para notificações urgentes e críticas"
-            checked={settings.smsAlerts}
-            onChange={() => handleToggle('smsAlerts')}
-          />
-        </div>
-
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

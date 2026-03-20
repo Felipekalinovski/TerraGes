@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { Calendar, Clock, AlertCircle, Loader2, Trash2 } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { scheduleService } from '../services/scheduleService';
 
@@ -125,165 +125,198 @@ export const ScheduleForm: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout title={isEditing ? "Editar Serviço" : "Agendar Serviço"} showBack hideNav={false}>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={40} className="animate-spin text-primary" />
-        </div>
+      <Layout>
+        <Layout.Header title={isEditing ? "Editar Operação" : "Nova Operação"} showBack />
+        <Layout.Content>
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <div className="relative">
+              <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse" size={24} />
+            </div>
+          </div>
+        </Layout.Content>
       </Layout>
     );
   }
 
   return (
-    <Layout title={isEditing ? "Editar Serviço" : "Agendar Serviço"} showBack hideNav={false}>
-      <form onSubmit={handleSubmit} className="p-4 space-y-6 pb-24">
+    <Layout>
+      <Layout.Header 
+        title={isEditing ? "Editar Operação" : "Programação Técnica"} 
+        subTitle="Parametrização de cronograma e prioridades"
+        showBack 
+      />
 
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">Nome do Serviço/Tarefa *</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            placeholder="Ex: Escavação do Lote 12"
-            className="w-full h-12 px-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-          />
-        </div>
+      <Layout.Content>
+        <form onSubmit={handleSubmit} className="px-4 space-y-10 pb-40 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Main Info Section */}
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading px-1">Identificação do Escopo</h3>
+            
+            <div className="group">
+              <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Título da Atividade</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  placeholder="Ex: Escavação do Setor Alpha"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none placeholder:text-gray-600 transition-all shadow-glass-sm"
+                />
+                <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
+              </div>
+            </div>
 
-        {/* Type */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">Tipo de Serviço *</label>
-          <div className="relative">
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              required
-              className="w-full h-12 px-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none appearance-none"
-            >
-              <option value="" disabled>Selecione o tipo</option>
-              <option value="excavation">Escavação</option>
-              <option value="transport">Transporte</option>
-              <option value="maintenance">Manutenção</option>
-              <option value="other">Outros</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-gold">
-              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div className="group">
+              <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Classificação Técnica</label>
+              <div className="relative">
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  required
+                  className="w-full h-14 pl-12 pr-10 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none transition-all shadow-glass-sm"
+                >
+                  <option value="" disabled>Selecione a categoria</option>
+                  <option value="excavation" className="bg-surface-dark">Escavação Operacional</option>
+                  <option value="transport" className="bg-surface-dark">Logística & Transporte</option>
+                  <option value="maintenance" className="bg-surface-dark">Manutenção Sistêmica</option>
+                  <option value="other" className="bg-surface-dark">Outros Serviços</option>
+                </select>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                  <AlertCircle size={20} />
+                </div>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Dates */}
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Data e Hora de Início *</label>
-            <div className="relative">
-              <input
-                type="datetime-local"
-                name="start_time"
-                value={formData.start_time}
+          {/* Temporal Section */}
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading px-1">Janela Temporal</h3>
+            
+            <div className="grid grid-cols-1 gap-6">
+              <div className="group">
+                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Start (Início)</label>
+                <div className="relative">
+                  <input
+                    type="datetime-local"
+                    name="start_time"
+                    value={formData.start_time}
+                    onChange={handleChange}
+                    required
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all shadow-glass-sm"
+                  />
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Deadline Final (Opcional)</label>
+                <div className="relative">
+                  <input
+                    type="datetime-local"
+                    name="end_time"
+                    value={formData.end_time}
+                    onChange={handleChange}
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all shadow-glass-sm"
+                  />
+                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Strategic Info */}
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading px-1">Alocação & Complexidade</h3>
+            
+            <div className="group">
+              <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Nível de Prioridade</label>
+              <div className="relative">
+                <select
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  className="w-full h-14 pl-12 pr-10 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none transition-all shadow-glass-sm"
+                >
+                  <option value="low" className="bg-surface-dark">Fila de Espera (Baixa)</option>
+                  <option value="medium" className="bg-surface-dark">Fluxo Normal (Média)</option>
+                  <option value="high" className="bg-surface-dark">Prioridade Técnica (Alta)</option>
+                  <option value="urgent" className="bg-surface-dark">Resposta Imediata (Urgente)</option>
+                </select>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                  <Loader2 size={20} />
+                </div>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="group">
+              <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Memória Operacional</label>
+              <textarea
+                name="notes"
+                value={formData.notes}
                 onChange={handleChange}
-                required
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-              />
-              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
+                className="w-full h-32 p-4 rounded-2xl bg-surface-dark/40 border border-white/5 text-white font-medium text-sm focus:ring-2 focus:ring-primary/50 outline-none placeholder:text-gray-600 transition-all shadow-glass-sm resize-none"
+                placeholder="Detalhes críticos, condições climáticas ou requisitos de pessoal..."
+              ></textarea>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Data e Hora de Término <span className="text-gray-500 font-normal">(Opcional)</span></label>
-            <div className="relative">
-              <input
-                type="datetime-local"
-                name="end_time"
-                value={formData.end_time}
-                onChange={handleChange}
-                className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50"
-              />
-              <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-gold" size={20} />
-            </div>
-          </div>
-        </div>
+        </form>
 
-        {/* Priority */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">Prioridade</label>
-          <div className="relative">
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className="w-full h-12 px-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none appearance-none"
+        {/* Action Bar (Glass Persistence) */}
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-surface-dark/60 backdrop-blur-xl border-t border-white/5 z-50">
+          <div className="max-w-md mx-auto flex flex-col gap-4">
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="w-full h-14 bg-primary text-black font-black uppercase tracking-[0.2em] italic text-xs rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-neon flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              <option value="low">Baixa</option>
-              <option value="medium">Média</option>
-              <option value="high">Alta</option>
-              <option value="urgent">Urgente</option>
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-gold">
-              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
+              {saving ? (
+                <div className="size-5 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <Sparkles size={18} />
+                  {isEditing ? 'Atualizar Atividade' : 'Confirmar Programação'}
+                </>
+              )}
+            </button>
 
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">Observações</label>
-          <textarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            className="w-full h-32 p-4 rounded-xl bg-[#4b3220] border-none text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-text-gold/50 resize-none"
-            placeholder="Adicione detalhes importantes sobre o serviço..."
-          ></textarea>
-        </div>
-
-      </form>
-
-      {/* Footer Actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-brand-dark/95 backdrop-blur-sm border-t border-white/5 z-20">
-        <div className="flex flex-col gap-3 max-w-md mx-auto">
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="w-full h-12 bg-primary hover:bg-primary-hover text-black font-bold rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 size={20} className="animate-spin" />
-            ) : (
-              <>
-                <AlertCircle size={20} />
-                {isEditing ? 'Atualizar Serviço' : 'Agendar Serviço'}
-              </>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="w-full h-14 bg-red-500/10 text-red-500 font-black uppercase tracking-[0.2em] italic text-[10px] rounded-2xl border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                <Trash2 size={18} />
+                Excluir Registro
+              </button>
             )}
-          </button>
 
-          {isEditing && (
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => navigate(-1)}
               disabled={saving}
-              className="w-full h-12 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full h-10 text-gray-500 font-black uppercase tracking-widest text-[9px] hover:text-white transition-colors"
             >
-              <Trash2 size={20} />
-              Excluir Agendamento
+              Abortar Operação
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            disabled={saving}
-            className="w-full h-12 bg-transparent hover:bg-white/5 text-primary font-bold rounded-xl transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
+          </div>
         </div>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

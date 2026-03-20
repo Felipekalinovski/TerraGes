@@ -20,11 +20,13 @@ import { transactionService } from '../services/transactionService';
 import { maintenanceService } from '../services/maintenanceService';
 import { generateReport } from '../services/aiService';
 
-export const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
+// Custom Hook for Dashboard Data
+const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
+  const [loadingAi, setLoadingAi] = useState(false);
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [stats, setStats] = useState({
-    machines: { active: 32, total: 40 }, // Using mockup-like data if real is missing
+    machines: { active: 32, total: 40 },
     finance: { totalIncome: 1250000, totalExpense: 850000, balance: 400000 },
     alerts: [] as any[],
     chartData: [
@@ -36,14 +38,8 @@ export const Dashboard: React.FC = () => {
       { name: 'JUN', lucro: 5200, custo: 3200 },
     ]
   });
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const [mStats, tStats, recentMaintenance] = await Promise.all([
@@ -59,14 +55,9 @@ export const Dashboard: React.FC = () => {
         alerts: recentMaintenance.slice(0, 3),
       }));
 
-      generateAIInsight({
-        machines: mStats,
-        finance: tStats,
-        recentMaintenance
-      });
-
+      generateAIInsight({ machines: mStats, finance: tStats, recentMaintenance });
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
+      console.error('Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -78,257 +69,180 @@ export const Dashboard: React.FC = () => {
       const insight = await generateReport(data, 'general');
       setAiInsight(insight);
     } catch (error) {
-      console.error('Erro ao gerar insight da IA:', error);
+      console.error('Erro ao gerar insight:', error);
     } finally {
       setLoadingAi(false);
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return { loading, stats, aiInsight, loadingAi, refetch: fetchData };
+};
+
+export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { loading, stats, aiInsight, loadingAi } = useDashboardData();
+
   if (loading) {
     return (
-      <Layout title="TerraGes" subTitle="Premium Dashboard">
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="animate-spin text-primary" size={40} />
-        </div>
+      <Layout>
+        <Layout.Header title="TerraGes" subTitle="Dashboard Principal" />
+        <Layout.Content>
+          <div className="flex items-center justify-center h-[60vh]">
+            <Loader2 className="animate-spin text-primary" size={40} />
+          </div>
+        </Layout.Content>
       </Layout>
     );
   }
 
   return (
-    <Layout
-      title="TerraGes"
-      subTitle="Premium Dashboard"
-      hideNav={false}
-      actions={
-        <div className="relative mr-2">
-          <Bell size={20} className="text-gray-400 cursor-pointer hover:text-white transition-colors" />
-          <div className="absolute -top-1 -right-1 size-3 bg-primary border-2 border-brand-dark rounded-full"></div>
-        </div>
-      }
-    >
-      <div className="px-4 pb-10 pt-4 space-y-8">
+    <Layout>
+      <Layout.Header 
+        title="TerraGes" 
+        subTitle="Status em Tempo Real"
+        actions={
+          <div className="relative mr-2">
+            <Bell size={20} className="text-gray-400 cursor-pointer hover:text-white transition-colors" />
+            <div className="absolute -top-1 -right-1 size-2.5 bg-primary shadow-neon rounded-full border border-brand-dark" />
+          </div>
+        }
+      />
+      
+      <Layout.Content>
+        <div className="px-4 pb-12 pt-4 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Dashboard Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Card Faturamento */}
+            <div onClick={() => navigate('/finance')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 relative overflow-hidden cursor-pointer hover:border-primary/20 transition-all group shadow-glass">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-positive/5 blur-2xl rounded-full" />
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Faturamento /mês</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-bold text-positive">R$</span>
+                <span className="text-2xl font-black text-white">1.25M</span>
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <ArrowUpRight size={12} className="text-positive" />
+                <span className="text-[10px] text-positive font-black">+14.2%</span>
+              </div>
+            </div>
 
-        {/* Top KPI Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Faturamento */}
-          <div
-            onClick={() => navigate('/finance')}
-            className="bg-[#141414] p-4 rounded-2xl border border-white/5 relative overflow-hidden cursor-pointer hover:bg-white/5 transition-colors group"
-          >
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Faturamento Mês</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black text-positive">R$</span>
-              <span className="text-2xl font-black text-positive">1.25M</span>
+            {/* Card Frota */}
+            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Frota Ativa</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-white">{stats.machines.active}</span>
+                <span className="text-xs font-bold text-gray-500">/ {stats.machines.total}</span>
+              </div>
+              <div className="mt-3 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary shadow-neon" 
+                  style={{ width: `${(stats.machines.active / stats.machines.total) * 100}%` }} 
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-1 mt-1">
-              <ArrowUpRight size={12} className="text-positive" />
-              <span className="text-[10px] text-positive font-bold">+14.2%</span>
+
+            {/* Obras */}
+            <div onClick={() => navigate('/rdo')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Obras em Andamento</p>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-white">08</span>
+                <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <Home size={18} />
+                </div>
+              </div>
+              <p className="text-[10px] text-primary/70 font-bold mt-2">2 entregas esta semana</p>
             </div>
-            <div className="absolute bottom-4 right-4 w-12 h-8 opacity-50">
+
+            {/* Diesel */}
+            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Consumo Diesel</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-white">12.5</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase">kL</span>
+                </div>
+                <Fuel size={20} className="text-gray-600" />
+              </div>
+              <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-positive w-3/4 shadow-neonShadow" />
+              </div>
+            </div>
+          </div>
+
+          {/* AI Intelligence Card */}
+          <div className="bg-brand-gradient/20 p-6 rounded-[32px] border border-primary/20 relative overflow-hidden backdrop-blur-3xl shadow-neon">
+            <div className="absolute top-0 right-0 p-4">
+              <Sparkles className="text-primary animate-pulse" size={24} />
+            </div>
+            <h3 className="text-xs font-black text-primary uppercase tracking-widest mb-3">Inteligência Estratégica AI</h3>
+            {loadingAi ? (
+              <div className="flex items-center gap-3 text-gray-400 text-xs italic">
+                <Loader2 size={16} className="animate-spin text-primary" />
+                Sincronizando dados dos canteiros...
+              </div>
+            ) : (
+              <p className="text-white/80 text-sm font-medium leading-relaxed">
+                {aiInsight || "Eficiência operacional em 92%. A Escavadeira #04 apresenta desgaste prematuro nas juntas hidráulicas. Recomendo realocar custos do Fundo de Reserva para manutenção preventiva imediata."}
+              </p>
+            )}
+          </div>
+
+          {/* Chart Section */}
+          <div className="bg-surface-dark/40 p-6 rounded-[32px] border border-white/5 shadow-glass">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className="text-lg font-heading font-black text-white uppercase italic">Financeiro</h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Lucro vs Custo (Últimos 6 meses)</p>
+              </div>
+            </div>
+            
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={[{ v: 10 }, { v: 15 }, { v: 12 }, { v: 18 }, { v: 20 }]}>
-                  <Line type="monotone" dataKey="v" stroke="#39FF14" strokeWidth={2} dot={false} />
-                </LineChart>
+                <BarChart data={stats.chartData} barGap={6}>
+                  <XAxis dataKey="name" stroke="#333" fontSize={10} fontWeight="900" tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: 'rgba(255,255,255,0.03)' }} 
+                    contentStyle={{ backgroundColor: '#050505', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} 
+                  />
+                  <Bar dataKey="lucro" radius={[6, 6, 0, 0]} barSize={10}>
+                    {stats.chartData.map((_, i) => <Cell key={i} fill="#00E599" className="drop-shadow-neon" />)}
+                  </Bar>
+                  <Bar dataKey="custo" radius={[6, 6, 0, 0]} barSize={10}>
+                    {stats.chartData.map((_, i) => <Cell key={i} fill="#333" />)}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Frota Ativa */}
-          <div
-            onClick={() => navigate('/fleet')}
-            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
-          >
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Frota Ativa</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-white">{stats.machines.active}/{stats.machines.total}</span>
+          {/* Recent Maintenance / Alerts */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Alertas Críticos</h3>
+              <ArrowUpRight size={16} className="text-primary" />
             </div>
-            <div className="mt-3 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary"
-                style={{ width: `${(stats.machines.active / stats.machines.total) * 100}%` }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Obras Ativas */}
-          <div
-            onClick={() => navigate('/rdo')}
-            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
-          >
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Obras Ativas</p>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-black text-white">08</span>
-              <Home size={20} className="text-primary opacity-50" />
-            </div>
-            <p className="text-[10px] text-gray-500 mt-1">2 finalizando esta semana</p>
-          </div>
-
-          {/* Consumo Diesel */}
-          <div
-            onClick={() => navigate('/fleet')}
-            className="bg-[#141414] p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-white/5 transition-colors"
-          >
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Consumo Diesel</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-white">1.2k</span>
-                <span className="text-sm font-bold text-gray-400 text-white">L</span>
-              </div>
-              <Fuel size={20} className="text-primary opacity-50" />
-            </div>
-            <div className="mt-3 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-positive w-3/4"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Chart - Lucro vs Custo */}
-        <div
-          onClick={() => navigate('/finance')}
-          className="bg-[#141414] p-6 rounded-3xl border border-white/5 shadow-2xl cursor-pointer hover:bg-white/5 transition-colors"
-        >
-          <div className="flex flex-col mb-8">
-            <h3 className="text-sm font-black text-white uppercase tracking-tighter mb-4">Lucro vs Custo</h3>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="size-2 rounded-full bg-positive shadow-[0_0_8px_#39FF14]"></div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lucro</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="size-2 rounded-full bg-primary shadow-[0_0_8px_#9E3D07]"></div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Custo Operacional</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData} barGap={8}>
-                <XAxis
-                  dataKey="name"
-                  stroke="#333"
-                  fontSize={10}
-                  fontWeight="bold"
-                  tickLine={false}
-                  axisLine={false}
-                  dy={10}
-                />
-                <Tooltip
-                  cursor={{ fill: 'transparent' }}
-                  contentStyle={{ backgroundColor: '#0D0D0D', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
-                />
-                <Bar dataKey="lucro" fill="#39FF14" radius={[4, 4, 0, 0]} barSize={12}>
-                  {stats.chartData.map((entry, index) => (
-                    <Cell key={`cell-lucro-${index}`} fill="#39FF14" className="filter drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]" />
-                  ))}
-                </Bar>
-                <Bar dataKey="custo" fill="#9E3D07" radius={[4, 4, 0, 0]} barSize={12}>
-                  {stats.chartData.map((entry, index) => (
-                    <Cell key={`cell-custo-${index}`} fill="#9E3D07" className="filter drop-shadow-[0_0_146px_rgba(158,61,7,0.4)]" />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Cronograma de Obras */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black text-white uppercase tracking-tighter">Cronograma de Obras</h3>
-            <button
-              onClick={() => navigate('/rdo')}
-              className="text-[10px] font-black text-primary uppercase tracking-tighter flex items-center gap-1 hover:brightness-125"
-            >
-              Ver Tudo <ChevronRight size={14} />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {/* Project Card 1 */}
-            <div
-              onClick={() => navigate('/rdo')}
-              className="bg-[#141414] p-5 rounded-2xl border border-white/5 flex items-center gap-5 cursor-pointer hover:bg-white/5 transition-colors"
-            >
-              <div className="relative size-16 shrink-0">
-                <svg className="size-full -rotate-90">
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="#39FF14" strokeWidth="6" strokeDasharray="175.9" strokeDashoffset={175.9 * (1 - 0.65)} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-black text-white">65%</span>
+            
+            <div className="space-y-3">
+              <div className="group bg-surface-dark/60 p-4 rounded-2xl border-l-4 border-l-negative border-r border-t border-b border-white/5 flex items-center gap-4 transition-all hover:bg-surface-dark">
+                <div className="size-12 rounded-xl bg-negative/10 flex items-center justify-center text-negative">
+                  <AlertTriangle size={24} />
                 </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-bold text-white truncate">Condomínio Terra Alta</h4>
-                  <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[8px] font-black uppercase">Fase 2</span>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-white truncate">Escavadeira CAT-320 #04</h4>
+                  <p className="text-[10px] text-gray-500 font-medium italic">Falha crítica no sistema hidráulico</p>
                 </div>
-                <p className="text-[10px] text-gray-500">Prazo: 12 Ago</p>
+                <ChevronRight size={18} className="text-gray-700 group-hover:text-primary transition-colors" />
               </div>
             </div>
+          </section>
 
-            {/* Project Card 2 */}
-            <div className="bg-[#141414] p-5 rounded-2xl border border-white/5 flex items-center gap-5 opacity-60">
-              <div className="relative size-16 shrink-0">
-                <svg className="size-full -rotate-90">
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="#9E3D07" strokeWidth="6" strokeDasharray="175.9" strokeDashoffset={175.9 * (1 - 0.25)} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-black text-white">25%</span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-bold text-white truncate">Acesso Rodovia SP-1</h4>
-                </div>
-                <p className="text-[10px] text-gray-500">Prazo: 05 Set</p>
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Alertas de Manutenção */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-black text-white uppercase tracking-tighter px-1">Alertas de Manutenção</h3>
-          <div
-            onClick={() => navigate('/fleet')}
-            className="relative p-0.5 rounded-2xl bg-gradient-to-r from-primary to-transparent cursor-pointer hover:opacity-90 transition-opacity"
-          >
-            <div className="bg-[#141414] rounded-[14px] p-4 flex items-center gap-4">
-              <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <AlertTriangle size={24} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white truncate">Escavadeira CAT-320 #04</h4>
-                <p className="text-xs text-gray-500">Pressão hidráulica crítica detectada</p>
-              </div>
-              <div className="size-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 shadow-lg shadow-primary/30">
-                <ChevronRight size={20} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Insight Card (Moved to bottom or kept as is) */}
-        <div className="bg-brand-gradient/10 p-5 rounded-3xl border border-white/5 relative overflow-hidden backdrop-blur-3xl">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="text-primary" size={18} />
-            <h3 className="font-black text-white text-[10px] uppercase tracking-widest">Análise Estratégica IA</h3>
-          </div>
-          {loadingAi ? (
-            <div className="flex items-center gap-2 text-gray-400 text-[10px] animate-pulse">
-              <Loader2 size={12} className="animate-spin" />
-              Processando inteligência de obra...
-            </div>
-          ) : (
-            <p className="text-gray-400 text-[11px] leading-relaxed font-medium">
-              {aiInsight || "Sua frota está operando com 85% de eficiência. Recomendamos antecipar a troca de óleo da Escavadeira #04 para evitar paradas não planejadas."}
-            </p>
-          )}
-        </div>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

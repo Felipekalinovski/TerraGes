@@ -206,188 +206,227 @@ export const Finance: React.FC = () => {
   }));
 
   return (
-    <Layout title="Financeiro" hideNav={false}>
-      {/* Actions */}
-      <div className="px-4 py-3 flex flex-col gap-3">
-        <div className="flex gap-3">
-          <button
-            onClick={openAddModal}
-            className="flex-1 bg-primary hover:bg-primary-hover transition-colors text-black h-12 rounded-lg font-bold flex items-center justify-center gap-2"
-          >
-            <Plus size={18} /> Transação
-          </button>
-          <button
-            onClick={() => alert("Funcionalidade de exportação de PDF em desenvolvimento.")}
-            className="flex-1 bg-surface-dark border border-white/10 h-12 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
-          >
-            <FileText size={18} /> Relatório
-          </button>
-          <label className="flex-1 bg-surface-dark border border-white/10 h-12 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-white/5 transition-colors cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageUpload}
-              disabled={isAnalyzing}
-            />
-            {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-            {isAnalyzing ? "Analisando..." : "Analisar Doc"}
-          </label>
-        </div>
-        <button
-          onClick={handleGenerateAIReport}
-          disabled={isGenerating}
-          className="w-full bg-brand-gradient text-white h-12 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-70 transition-all hover:brightness-110"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 size={18} className="animate-spin" /> Gerando Análise...
-            </>
-          ) : (
-            <>
-              <Sparkles size={18} /> Gerar Relatório com IA
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="px-4 grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-surface-dark p-3 rounded-xl border border-white/5">
-          <p className="text-xs text-gray-400">Saldo Atual</p>
-          <p className="text-xl font-bold mt-1 text-white">
-            R$ {(stats.balance / 1000).toFixed(1)}k
-          </p>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${stats.balance >= 0 ? 'text-positive bg-positive/10' : 'text-negative bg-negative/10'}`}>
-            {stats.balance >= 0 ? '+' : ''}{((stats.balance / stats.totalIncome) * 100 || 0).toFixed(1)}%
-          </span>
-        </div>
-        <div className="bg-surface-dark p-3 rounded-xl border border-white/5">
-          <p className="text-xs text-gray-400">Lucro (Total)</p>
-          <p className="text-xl font-bold mt-1 text-white">
-            R$ {(stats.balance / 1000).toFixed(1)}k
-          </p>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded ${stats.balance >= 0 ? 'text-positive bg-positive/10' : 'text-negative bg-negative/10'}`}>
-            {stats.totalIncome > 0 ? ((stats.balance / stats.totalIncome) * 100).toFixed(1) : '0.0'}%
-          </span>
-        </div>
-      </div>
-
-      {/* Chart */}
-      <div className="px-4 mb-6">
-        <div className="bg-surface-dark rounded-xl p-4 border border-white/5 flex items-center">
-          <div className="w-1/2 h-32 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={chartData} innerRadius={35} outerRadius={50} paddingAngle={5} dataKey="value" stroke="none">
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-              <span className="text-xs text-gray-500">Total</span>
-              <span className="font-bold text-white">
-                {((stats.totalIncome + stats.totalExpense) / 1000).toFixed(0)}k
-              </span>
-            </div>
-          </div>
-          <div className="w-1/2 space-y-2 pl-4">
-            {chartData.slice(0, 3).map((item, index) => (
-              <div key={item.name} className="flex items-center gap-2 text-xs text-gray-300">
-                <div className="size-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                {item.name}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Transactions */}
-      <div className="px-4 pb-6">
-        <h3 className="font-bold mb-3 flex justify-between items-center text-white">
-          Últimas Transações
-          <span className="text-primary text-xs cursor-pointer hover:underline">Ver Tudo</span>
-        </h3>
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 size={32} className="animate-spin text-primary" />
-          </div>
-        ) : transactions.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-400">Nenhuma transação registrada.</p>
+    <Layout>
+      <Layout.Header 
+        title="Financeiro" 
+        subTitle="Fluxo de Caixa & IA"
+        actions={
+          <div className="flex gap-2">
+            <button
+              onClick={handleGenerateAIReport}
+              disabled={isGenerating}
+              className="bg-brand-gradient text-white p-2 rounded-xl shadow-neon-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              title="Gerar Relatório IA"
+            >
+              {isGenerating ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+            </button>
             <button
               onClick={openAddModal}
-              className="mt-4 text-primary font-bold hover:underline"
+              className="bg-primary text-black p-2 rounded-xl shadow-neon-sm hover:brightness-110 active:scale-95 transition-all"
+              title="Nova Transação"
             >
-              Adicionar primeira transação
+              <Plus size={20} strokeWidth={3} />
             </button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {transactions.map(t => (
-              <div key={t.id} className="bg-surface-dark p-3 rounded-xl border border-white/5 flex items-center gap-3 group">
-                <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${t.type === 'income' ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'}`}>
-                  {t.type === 'income' ? <ArrowUpRight size={20} /> : <ArrowDownLeft size={20} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate text-white">{t.title}</p>
-                  <p className="text-xs text-gray-400">{formatDate(t.date)}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className={`font-bold text-sm ${t.type === 'income' ? 'text-positive' : 'text-negative'}`}>
-                      {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className={`text-[10px] capitalize ${t.status === 'paid' ? 'text-gray-500' : 'text-yellow-500'}`}>{t.status === 'paid' ? 'Pago' : 'Pendente'}</p>
-                  </div>
+        }
+      />
 
-                  {/* Edit/Delete Actions */}
-                  <div className="flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEditModal(t)} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(t.id)} className="p-1 rounded bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+      <Layout.Content>
+        {/* Quick Actions / AI Analysis */}
+        <div className="px-4 py-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex gap-3 mb-4">
+             <label className="flex-1 bg-surface-dark/40 backdrop-blur-md border border-white/5 h-12 rounded-2xl font-black uppercase tracking-tighter text-[10px] flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/10 transition-all cursor-pointer text-gray-400 hover:text-white">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={isAnalyzing}
+              />
+              {isAnalyzing ? <Loader2 size={16} className="animate-spin text-primary" /> : <Upload size={16} />}
+              {isAnalyzing ? "Analisando..." : "Analisar Comprovante"}
+            </label>
+            <button
+              onClick={() => alert("Exportação em breve.")}
+              className="bg-surface-dark/40 backdrop-blur-md border border-white/5 h-12 px-5 rounded-2xl font-black uppercase tracking-tighter text-[10px] flex items-center justify-center gap-2 hover:bg-white/10 border-white/10 transition-all text-gray-400 hover:text-white"
+            >
+              <FileText size={16} /> PDF
+            </button>
+          </div>
+        </div>
+
+        {/* Summary Summary */}
+        <div className="px-4 grid grid-cols-2 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-5 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+              <DollarSign size={40} className="text-white" />
+            </div>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Saldo em Caixa</p>
+            <p className="text-2xl font-black text-white drop-shadow-neon-sm">
+              R$ {(stats.balance / 1000).toFixed(1)}k
+            </p>
+            <div className="mt-2 flex items-center gap-1.5">
+               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${stats.balance >= 0 ? 'text-positive bg-positive/10' : 'text-negative bg-negative/10'}`}>
+                {stats.balance >= 0 ? 'Positivo' : 'Negativo'}
+              </span>
+              <span className="text-[9px] font-bold text-gray-600">MTD</span>
+            </div>
+          </div>
+          
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-5 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+              <ArrowUpRight size={40} className="text-positive" />
+            </div>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Receita Total</p>
+            <p className="text-2xl font-black text-positive">
+              R$ {(stats.totalIncome / 1000).toFixed(1)}k
+            </p>
+            <div className="mt-2 flex items-center gap-1.5 text-[9px] font-bold text-gray-600 uppercase tracking-tighter">
+              Aproveitamento: <span className="text-white">{((stats.balance / stats.totalIncome) * 100 || 0).toFixed(0)}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart Analysis */}
+        <div className="px-4 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="bg-surface-dark/30 backdrop-blur-md rounded-[40px] p-8 border border-white/5 shadow-glass relative overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+               <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Distribuição de Gastos</h3>
+               <div className="flex items-center gap-1 text-gray-500 text-[10px] font-bold uppercase">
+                  Top 5 Categorias
+               </div>
+            </div>
+            
+            <div className="flex items-center gap-8">
+              <div className="relative size-32 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={chartData} innerRadius={42} outerRadius={56} paddingAngle={8} dataKey="value" stroke="none">
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                  <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Total</span>
+                  <span className="text-lg font-black text-white">
+                    {((stats.totalIncome + stats.totalExpense) / 1000).toFixed(0)}k
+                  </span>
                 </div>
               </div>
-            ))}
+              
+              <div className="flex-1 space-y-3">
+                {chartData.slice(0, 3).map((item, index) => (
+                  <div key={item.name} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className="size-2 rounded-full shadow-neon-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">{item.name}</span>
+                    </div>
+                    <span className="text-[10px] font-black text-white italic">
+                       {stats.totalExpense > 0 ? (((item.value as number) / stats.totalExpense) * 100).toFixed(0) : '0'}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+
+        {/* Transactions List */}
+        <div className="px-4 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="flex justify-between items-end mb-6 px-2">
+            <h3 className="text-xs font-black text-white uppercase tracking-[0.3em] font-heading italic">Fluxo Recente</h3>
+            <span className="text-[10px] font-black text-primary uppercase tracking-widest cursor-pointer hover:brightness-125 transition-all">Ver Histórico</span>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 size={32} className="animate-spin text-primary" />
+              <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Sincronizando transações...</p>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-20 bg-surface-dark/10 rounded-[48px] border border-dashed border-white/5">
+              <p className="text-gray-500 text-xs font-black uppercase tracking-widest italic">Caixa vazio.</p>
+              <button
+                onClick={openAddModal}
+                className="mt-6 text-primary font-black uppercase tracking-tighter text-[10px] hover:brightness-125 transition-all"
+              >
+                Lançar Transação Inicial +
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map(t => (
+                <div key={t.id} className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[28px] border border-white/5 flex items-center gap-4 group hover:border-white/10 transition-all shadow-glass">
+                  <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${t.type === 'income' ? 'bg-positive/10 text-positive shadow-neon-sm' : 'bg-negative/10 text-negative'}`}>
+                    {t.type === 'income' ? <ArrowUpRight size={22} strokeWidth={2.5} /> : <ArrowDownLeft size={22} strokeWidth={2.5} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-heading font-black text-sm uppercase italic tracking-tighter text-white truncate mb-0.5 group-hover:text-primary transition-colors">{t.title}</p>
+                    <div className="flex items-center gap-2">
+                       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{formatDate(t.date)}</span>
+                       <span className="opacity-20 text-white text-[8px]">•</span>
+                       <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">{t.category}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className={`text-sm font-black italic tracking-tighter ${t.type === 'income' ? 'text-positive' : 'text-negative'}`}>
+                        {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                      <span className={`text-[8px] font-black uppercase tracking-widest ${t.status === 'paid' ? 'text-gray-600' : 'text-warning'}`}>
+                        {t.status === 'paid' ? 'Liquidado' : 'Pendente'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                      <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                        <Pencil size={12} strokeWidth={3} />
+                      </button>
+                      <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg bg-negative/5 hover:bg-negative/20 text-negative/60 hover:text-negative transition-colors">
+                        <Trash2 size={12} strokeWidth={3} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Layout.Content>
 
       {/* AI Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-surface-dark rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Sparkles className="text-primary" size={20} />
-                <h2 className="font-bold text-white">Relatório Financeiro Inteligente</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-surface-dark/80 backdrop-blur-2xl rounded-[40px] border border-white/10 shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-neon-sm">
+                  <Sparkles size={20} strokeWidth={2.5} />
+                </div>
+                <h2 className="font-heading font-black text-xl text-white uppercase italic tracking-tighter">Análise Antigravity IA</h2>
               </div>
-              <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X size={20} />
+              <button onClick={() => setShowReportModal(false)} className="text-gray-500 hover:text-white transition-colors p-2">
+                <X size={24} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-sans">
+            <div className="flex-1 overflow-y-auto p-8 text-sm text-gray-300 leading-relaxed italic whitespace-pre-wrap font-sans selection:bg-primary selection:text-black">
               {report}
             </div>
-            <div className="p-4 border-t border-white/10 flex gap-3">
+            <div className="p-6 border-t border-white/5 flex gap-4">
               <button
                 onClick={copyToClipboard}
-                className="flex-1 bg-surface-dark border border-white/10 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                className="flex-1 bg-surface-dark border border-white/10 text-white py-4 rounded-[20px] font-black uppercase italic tracking-tighter text-xs flex items-center justify-center gap-2 hover:bg-white/5 transition-all"
               >
                 {copied ? <Check size={18} className="text-positive" /> : <Copy size={18} />}
-                {copied ? "Copiado!" : "Copiar"}
+                {copied ? "Copiado!" : "Copiar Texto"}
               </button>
               <button
                 onClick={() => setShowReportModal(false)}
-                className="flex-1 bg-primary text-black py-3 rounded-lg font-bold hover:bg-primary-hover transition-colors"
+                className="flex-1 bg-primary text-black py-4 rounded-[20px] font-black uppercase italic tracking-tighter text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-neon"
               >
-                Fechar
+                Entendido
               </button>
             </div>
           </div>
@@ -396,26 +435,28 @@ export const Finance: React.FC = () => {
 
       {/* Analysis Result Modal */}
       {showAnalysisModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-surface-dark rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Sparkles className="text-primary" size={20} />
-                <h2 className="font-bold text-white">Análise de Documento</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6 animate-in fade-in duration-300">
+           <div className="w-full max-w-lg bg-surface-dark/80 backdrop-blur-2xl rounded-[40px] border border-white/10 shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-neon-sm">
+                  <FileText size={20} strokeWidth={2.5} />
+                </div>
+                <h2 className="font-heading font-black text-xl text-white uppercase italic tracking-tighter">Documento Analisado</h2>
               </div>
-              <button onClick={() => setShowAnalysisModal(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X size={20} />
+              <button onClick={() => setShowAnalysisModal(false)} className="text-gray-500 hover:text-white transition-colors p-2">
+                <X size={24} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 text-sm text-gray-200 leading-relaxed whitespace-pre-wrap font-sans">
+            <div className="flex-1 overflow-y-auto p-8 text-sm text-gray-300 leading-relaxed italic whitespace-pre-wrap font-sans">
               {analysisResult}
             </div>
-            <div className="p-4 border-t border-white/10 flex gap-3">
+            <div className="p-6 border-t border-white/5">
               <button
                 onClick={() => setShowAnalysisModal(false)}
-                className="flex-1 bg-primary text-black py-3 rounded-lg font-bold hover:bg-primary-hover transition-colors"
+                className="w-full bg-primary text-black py-4 rounded-[20px] font-black uppercase italic tracking-tighter text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-neon"
               >
-                Fechar
+                Concluir
               </button>
             </div>
           </div>
@@ -424,122 +465,114 @@ export const Finance: React.FC = () => {
 
       {/* Add/Edit Transaction Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-surface-dark rounded-2xl border border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h2 className="font-bold text-white text-lg">{editingId ? 'Editar Transação' : 'Nova Transação'}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X size={20} />
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-surface-dark/90 backdrop-blur-3xl rounded-[40px] border border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-bottom-20 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300 overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-white/5">
+              <h2 className="font-heading font-black text-xl text-white uppercase italic tracking-tighter">{editingId ? 'Editar Registro' : 'Lançamento'}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white transition-colors p-2">
+                <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveTransaction} className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
-                <div className="relative">
+            <form onSubmit={handleSaveTransaction} className="p-6 space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Descrição do Item</label>
+                <div className="relative group">
                   <input
                     type="text"
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
-                    placeholder="Ex: Compra de Cimento"
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:text-white/20 transition-all"
+                    placeholder="Ex: Nota Fiscal de Insumo"
                   />
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Categoria</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
-                    placeholder="Ex: Materiais, Combustível"
-                  />
-                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Data</label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none"
-                  />
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Valor (R$)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none placeholder:text-white/30"
-                    placeholder="0,00"
-                  />
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
+                  <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/60 group-focus-within:text-primary transition-colors" size={18} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
-                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Natureza</label>
+                  <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-14">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, type: 'expense' })}
-                      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${formData.type === 'expense' ? 'bg-negative text-white' : 'text-gray-400'}`}
+                      className={`flex-1 py-1 text-[9px] font-black uppercase tracking-tighter rounded-xl transition-all ${formData.type === 'expense' ? 'bg-negative text-white shadow-neon-sm' : 'text-gray-500 hover:text-white'}`}
                     >
                       Despesa
                     </button>
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, type: 'income' })}
-                      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${formData.type === 'income' ? 'bg-positive text-white' : 'text-gray-400'}`}
+                      className={`flex-1 py-1 text-[9px] font-black uppercase tracking-tighter rounded-xl transition-all ${formData.type === 'income' ? 'bg-positive text-white shadow-neon-sm' : 'text-gray-500 hover:text-white'}`}
                     >
                       Receita
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full h-11 px-3 rounded-xl bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full h-14 px-4 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-white uppercase tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all appearance-none italic"
                   >
-                    <option value="paid" className="bg-surface-dark">Pago / Recebido</option>
-                    <option value="pending" className="bg-surface-dark">Pendente</option>
+                    <option value="paid" className="bg-surface-dark">Liquidado</option>
+                    <option value="pending" className="bg-surface-dark">Agendado</option>
                   </select>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full bg-primary text-black h-12 rounded-xl font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 mt-2 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  editingId ? 'Atualizar Transação' : 'Salvar Transação'
-                )}
-              </button>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Data</label>
+                  <div className="relative group">
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all appearance-none"
+                    />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/60 group-focus-within:text-primary transition-colors" size={18} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Valor (BRL)</label>
+                  <div className="relative group">
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm font-black text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:text-white/20 transition-all font-mono"
+                      placeholder="0.00"
+                    />
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/60 group-focus-within:text-primary transition-colors" size={18} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full bg-primary text-black h-16 rounded-[24px] font-heading font-black uppercase italic tracking-tighter hover:brightness-110 active:scale-95 transition-all shadow-neon disabled:opacity-50 flex items-center justify-center gap-3"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 size={24} strokeWidth={3} className="animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      {editingId ? <Check size={24} strokeWidth={3} /> : <ArrowUpRight size={24} strokeWidth={3} />}
+                      {editingId ? 'Confirmar Edição' : 'Efetivar Lançamento'}
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>

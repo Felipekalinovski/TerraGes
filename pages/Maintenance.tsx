@@ -88,108 +88,143 @@ export const Maintenance: React.FC = () => {
   };
 
   return (
-    <Layout title="Gestão de Manutenção" hideNav={false}>
+    <Layout>
+      <Layout.Header 
+        title="Gestão de Manutenção" 
+        subTitle="Controle preventivo e corretivo da frota"
+        actions={
+          <button
+            onClick={() => navigate('/maintenance/new')}
+            className="bg-primary text-black p-2.5 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-neon-sm"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Nova Manutenção</span>
+          </button>
+        }
+      />
 
-      {/* Overview Cards */}
-      <div className="px-4 py-4 grid grid-cols-2 gap-3">
-        <div className="bg-surface-dark p-4 rounded-xl border border-white/5 shadow-sm">
-          <div className="flex items-start justify-between mb-2">
-            <span className="p-2 bg-warning/10 rounded-lg text-warning">
-              <Wrench size={20} />
-            </span>
-            <span className="text-2xl font-bold text-white">{stats.inMaintenance}</span>
-          </div>
-          <p className="text-xs text-gray-400">Máquinas em Manutenção</p>
-        </div>
-
-        <div className="bg-surface-dark p-4 rounded-xl border border-white/5 shadow-sm">
-          <div className="flex items-start justify-between mb-2">
-            <span className="p-2 bg-negative/10 rounded-lg text-negative">
-              <AlertOctagon size={20} />
-            </span>
-            <span className="text-2xl font-bold text-white">{stats.overdue}</span>
-          </div>
-          <p className="text-xs text-gray-400">Atrasadas / Críticas</p>
-        </div>
-
-        <div className="bg-surface-dark p-4 rounded-xl border border-white/5 shadow-sm col-span-2">
-          <div className="flex justify-between items-center mb-1">
-            <p className="text-sm text-gray-400">Custo Total (Mês)</p>
-          </div>
-          <p className="text-3xl font-bold text-white">{formatCurrency(stats.totalCost)}</p>
-        </div>
-      </div>
-
-      {/* Action Bar */}
-      <div className="px-4 mb-6">
-        <button
-          onClick={() => navigate('/maintenance/new')}
-          className="w-full h-14 bg-primary text-black font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:bg-primary-hover transition-colors"
-        >
-          <Plus size={22} /> Nova Manutenção
-        </button>
-      </div>
-
-      {/* List Header */}
-      <div className="px-4 flex items-center justify-between mb-3">
-        <h3 className="font-bold text-lg text-white">Manutenções Recentes</h3>
-        <button className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-          <Filter size={18} />
-        </button>
-      </div>
-
-      {/* Maintenance List */}
-      <div className="px-4 space-y-3 pb-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={40} className="animate-spin text-primary" />
-          </div>
-        ) : maintenances.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-gray-400">Nenhuma manutenção registrada.</p>
-            <button
-              onClick={() => navigate('/maintenance/new')}
-              className="mt-4 text-primary font-bold hover:underline"
-            >
-              Registrar primeira manutenção
-            </button>
-          </div>
-        ) : (
-          maintenances.map((item) => (
-            <div
-              key={item.id}
-              className="bg-surface-dark p-4 rounded-xl border border-white/5 flex items-center gap-4 hover:border-white/10 transition-colors group relative"
-            >
-              <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 
-                ${item.type === 'corrective' ? 'bg-negative/20 text-negative' : 'bg-blue-500/20 text-blue-400'}`}>
-                <Wrench size={24} />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="font-bold text-white text-sm truncate pr-2">
-                    {machines.get(item.machine_id) || 'Máquina não encontrada'}
-                  </h4>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-surface-dark border border-white/10 text-gray-400">
-                    {formatDate(item.date)}
-                  </span>
+      <Layout.Content>
+        <div className="px-4 space-y-6 pb-32">
+          {/* Overview Stats */}
+          <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 shadow-glass group hover:border-primary/20 transition-all">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="size-8 rounded-xl bg-warning/10 flex items-center justify-center text-warning">
+                  <Wrench size={18} strokeWidth={2.5} />
                 </div>
-                <p className="text-xs text-text-gold">{getTypeLabel(item.type)}</p>
-                {item.cost > 0 && (
-                  <p className="text-xs text-gray-400 mt-1">{formatCurrency(item.cost)}</p>
-                )}
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-warning transition-colors">Em Curso</span>
               </div>
+              <p className="text-3xl font-black text-white italic font-heading tracking-tighter">{stats.inMaintenance.toString().padStart(2, '0')}</p>
+            </div>
+            
+            <div className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 shadow-glass group hover:border-primary/20 transition-all">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="size-8 rounded-xl bg-negative/10 flex items-center justify-center text-negative">
+                  <AlertOctagon size={18} strokeWidth={2.5} />
+                </div>
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-negative transition-colors">Críticas</span>
+              </div>
+              <p className="text-3xl font-black text-white italic font-heading tracking-tighter">{stats.overdue.toString().padStart(2, '0')}</p>
+            </div>
 
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate(`/maintenance/edit/${item.id}`); }}
-                className="p-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Edit2 size={18} />
+            <div className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[40px] border border-white/5 shadow-glass group hover:border-primary/20 transition-all col-span-2 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <CheckCircle size={80} strokeWidth={1} />
+              </div>
+              <div className="relative z-10 text-center py-2">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3">Investimento este Mês</p>
+                <p className="text-4xl font-black text-white italic font-heading tracking-tight drop-shadow-neon-sm">
+                  {formatCurrency(stats.totalCost)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Section */}
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="flex items-center justify-between px-1 mb-6">
+              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading flex items-center gap-2">
+                <Clock size={14} className="text-primary" />
+                Manutenções Recentes
+              </h3>
+              <button className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-white/10">
+                <Filter size={18} />
               </button>
             </div>
-          ))
-        )}
-      </div>
+
+            <div className="space-y-4">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 text-primary gap-4">
+                  <Loader2 size={48} className="animate-spin" />
+                  <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Sincronizando Dados...</span>
+                </div>
+              ) : maintenances.length === 0 ? (
+                <div className="bg-surface-dark/20 border-2 border-dashed border-white/5 rounded-[40px] py-20 flex flex-col items-center justify-center text-center px-6">
+                  <div className="p-4 bg-white/5 rounded-full mb-4">
+                    <Wrench size={40} className="text-gray-600" />
+                  </div>
+                  <h4 className="text-white font-black italic uppercase tracking-widest mb-2">Zero Manutenções</h4>
+                  <p className="text-gray-500 text-xs mb-8">Sua frota está em dia. Nenhuma atividade registrada recentemente.</p>
+                  <button
+                    onClick={() => navigate('/maintenance/new')}
+                    className="text-primary text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:gap-4 transition-all"
+                  >
+                    Registrar Primeira <ChevronRight size={16} />
+                  </button>
+                </div>
+              ) : (
+                maintenances.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 flex items-center gap-4 hover:border-primary/20 transition-all group relative overflow-hidden shadow-glass"
+                  >
+                    <div className="absolute top-0 right-0 h-full w-1.5 bg-gradient-to-b from-transparent via-white/5 to-transparent"></div>
+                    
+                    <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 shadow-glass-sm border border-white/5 transition-transform group-hover:scale-110 ${
+                      item.type === 'corrective' ? 'bg-negative/10 text-negative' : 
+                      item.type === 'preventive' ? 'bg-primary/10 text-primary' : 'bg-blue-500/10 text-blue-400'
+                    }`}>
+                      <Wrench size={24} strokeWidth={2} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1.5">
+                        <h4 className="font-black text-white text-sm truncate uppercase tracking-tight italic font-heading">
+                          {machines.get(item.machine_id) || 'Máquina não encontrada'}
+                        </h4>
+                        <span className="text-[8px] font-black px-2 py-0.5 rounded-full uppercase bg-white/5 border border-white/10 text-gray-500 tracking-widest">
+                          {formatDate(item.date)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border ${
+                          item.type === 'corrective' ? 'bg-negative/10 border-negative/30 text-negative' : 
+                          item.type === 'preventive' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                        } text-[8px] font-black uppercase tracking-widest`}>
+                           {getTypeLabel(item.type)}
+                        </div>
+                        {item.cost > 0 && (
+                          <span className="text-[10px] font-bold text-gray-400 italic">
+                            {formatCurrency(item.cost)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/maintenance/edit/${item.id}`); }}
+                      className="size-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </Layout.Content>
     </Layout>
   );
 };

@@ -118,99 +118,123 @@ export const AIChat: React.FC = () => {
   };
 
   return (
-    <Layout title="Assistente IA" hideNav={false}>
-      <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <Layout>
+      <Layout.Header 
+        title="Assistente IA" 
+        subTitle="Análise preditiva e automação por voz/texto"
+      />
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.role === 'ai' && (
-                <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
-                  <Sparkles size={14} className="text-primary" />
-                </div>
-              )}
-
+      <Layout.Content>
+        <div className="flex flex-col h-[calc(100vh-12rem)] relative">
+          
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto px-4 py-8 space-y-8 no-scrollbar scroll-smooth">
+            {messages.map((msg) => (
               <div
-                className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                  ? 'bg-primary text-white rounded-tr-none'
-                  : 'bg-surface-dark text-gray-200 rounded-tl-none border border-white/5'
-                  }`}
+                key={msg.id}
+                className={`flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.text.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/g, '').trim()}
-                <div className={`text-[10px] mt-2 opacity-50 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {msg.role === 'ai' && (
+                  <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-neon-sm self-end mb-4">
+                    <Sparkles size={18} className="text-primary" />
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[85%] p-5 rounded-[28px] text-sm leading-relaxed relative group transition-all ${msg.role === 'user'
+                    ? 'bg-primary text-black font-bold rounded-br-none shadow-neon'
+                    : 'bg-surface-dark/40 backdrop-blur-md text-gray-200 rounded-bl-none border border-white/5 shadow-glass'
+                    }`}
+                >
+                  {msg.text.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/g, '').trim()}
+                  
+                  <div className={`text-[9px] mt-3 font-black uppercase tracking-widest opacity-40 ${msg.role === 'user' ? 'text-black/60' : 'text-gray-500'}`}>
+                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+
+                  {/* Bubble Tail Replacement (Stylized) */}
+                  <div className={`absolute bottom-0 size-4 ${msg.role === 'user' ? '-right-1 bg-primary' : '-left-1 bg-surface-dark/40 border-l border-b border-white/5'} transform rotate-45 -z-10`} />
+                </div>
+
+                {msg.role === 'user' && (
+                  <div
+                    className="size-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 bg-cover bg-center self-end mb-4 shadow-glass"
+                    style={{ backgroundImage: `url('${userAvatar || 'https://ui-avatars.com/api/?name=U&background=00E599&color=000'}')` }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex gap-4 justify-start">
+                <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 animate-pulse">
+                  <Sparkles size={18} className="text-primary" />
+                </div>
+                <div className="bg-surface-dark/40 backdrop-blur-md border border-white/5 px-6 py-4 rounded-[28px] rounded-bl-none flex items-center gap-3 shadow-glass">
+                  <div className="flex gap-1">
+                    <span className="size-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="size-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="size-1.5 bg-primary rounded-full animate-bounce" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Processando Inteligência...</span>
                 </div>
               </div>
+            )}
 
-              {msg.role === 'user' && (
-                <div
-                  className="size-8 rounded-full bg-gray-700 flex items-center justify-center shrink-0 bg-cover bg-center border border-white/10"
-                  style={{ backgroundImage: `url('${userAvatar || 'https://ui-avatars.com/api/?name=U&background=B8860B&color=fff'}')` }}
-                >
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
+
+          {/* Input Area (Sticky-ish) */}
+          <div className="p-4 bg-transparent mt-auto">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {/* Suggestions */}
+              {messages.length < 3 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar px-2">
+                  {SUGGESTIONS.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(suggestion)}
+                      className="whitespace-nowrap px-4 py-2 rounded-xl bg-surface-dark/60 backdrop-blur-md border border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-primary/40 hover:text-primary transition-all duration-300 active:scale-95 shadow-glass"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
               )}
-            </div>
-          ))}
 
-          {isLoading && (
-            <div className="flex gap-3 justify-start animate-pulse">
-              <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
-                <Sparkles size={14} className="text-primary" />
-              </div>
-              <div className="bg-surface-dark border border-white/5 px-4 py-3 rounded-2xl rounded-tl-none flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin text-primary" />
-                <span className="text-xs text-gray-400">Analisando dados...</span>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-background-dark border-t border-white/5">
-          {/* Suggestions */}
-          {messages.length < 3 && (
-            <div className="flex gap-2 overflow-x-auto pb-3 no-scrollbar mb-1">
-              {SUGGESTIONS.map((suggestion, idx) => (
+              <div className="relative flex items-center group">
+                {/* Glow behind input */}
+                <div className="absolute inset-0 bg-primary/5 blur-xl rounded-[32px] group-focus-within:bg-primary/10 transition-all duration-500" />
+                
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Comando para o TerraGes..."
+                  className="w-full h-16 bg-surface-dark/80 backdrop-blur-xl text-white placeholder:text-gray-600 rounded-[32px] pl-8 pr-20 text-sm border border-white/5 focus:outline-none focus:border-primary/30 transition-all shadow-glass relative z-10 font-medium"
+                  disabled={isLoading}
+                />
+                
                 <button
-                  key={idx}
-                  onClick={() => handleSendMessage(suggestion)}
-                  className="whitespace-nowrap px-3 py-1.5 rounded-full bg-surface-dark border border-white/10 text-xs text-gray-300 hover:border-primary/50 hover:text-primary transition-colors"
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputText.trim() || isLoading}
+                  className="absolute right-3 size-12 bg-primary text-black rounded-2xl flex items-center justify-center hover:bg-primary-hover disabled:opacity-20 disabled:grayscale transition-all shadow-neon active:scale-90 z-20"
                 >
-                  {suggestion}
+                  <Send size={20} strokeWidth={3} />
                 </button>
-              ))}
+              </div>
+              
+              <div className="flex items-center justify-center gap-2 px-4 opacity-30">
+                <Info size={10} className="text-gray-500" />
+                <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">
+                  IA em Beta: Análise de dados reais sujeita a variações
+                </p>
+              </div>
             </div>
-          )}
-
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Digite sua mensagem..."
-              className="w-full bg-surface-dark text-white placeholder:text-gray-500 rounded-xl py-3.5 pl-4 pr-12 text-sm border border-white/10 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all shadow-lg"
-              disabled={isLoading}
-            />
-            <button
-              onClick={() => handleSendMessage()}
-              disabled={!inputText.trim() || isLoading}
-              className="absolute right-2 p-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
-            >
-              <Send size={18} />
-            </button>
           </div>
-          <p className="text-[10px] text-gray-600 text-center mt-2">
-            A IA pode cometer erros. Verifique informações importantes.
-          </p>
         </div>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };

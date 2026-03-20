@@ -15,13 +15,17 @@ export const callOpenRouter = async (messages: any[], type: 'text' | 'vision' = 
         if (error) {
             console.error("❌ Erro na Edge Function:", error);
 
-            // FunctionsHttpError contém a resposta do servidor
-            if (error.context && typeof error.context === 'object' && 'json' in error.context) {
+            // Tenta obter a mensagem de erro estruturada da função
+            if (error.status) {
                 try {
-                    const errorBody = await (error.context as Response).json();
-                    throw new Error(errorBody.error || error.message);
+                    // O erro de função do Supabase pode conter a resposta direta se for capturada corretamente
+                    const response = (error as any).context;
+                    if (response && typeof response.json === 'function') {
+                        const errorBody = await response.json();
+                        throw new Error(errorBody.error || error.message);
+                    }
                 } catch (parseErr) {
-                    // Se não conseguir parsear, usa a mensagem original
+                    console.warn("⚠️ Não foi possível processar o corpo do erro da função:", parseErr);
                 }
             }
 

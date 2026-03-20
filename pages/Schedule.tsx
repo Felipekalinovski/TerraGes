@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Calendar as CalendarIcon, MoreHorizontal, Edit2, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Calendar as CalendarIcon, MoreHorizontal, Edit2, Loader2, Sparkles, Filter, BarChart2, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { scheduleService, type Schedule as SupabaseSchedule } from '../services/scheduleService';
 
@@ -414,100 +414,129 @@ export const Schedule: React.FC = () => {
   };
 
   return (
-    <Layout title="Agenda" hideNav={false} actions={
-      <button
-        onClick={() => { setView('day'); setCurrentDate(new Date()); }}
-        className="p-2 bg-surface-dark rounded-lg text-white border border-white/10 hover:bg-white/10 transition-colors"
-        title="Ir para Hoje"
+    <Layout>
+      <Layout.Header 
+        title="Agenda Operacional" 
+        subTitle="Gestão de prazos e alocação de recursos"
       >
-        <CalendarIcon size={20} />
-      </button>
-    }>
-      <div className="flex flex-col h-full">
-        {/* Switcher de Visualização */}
-        <div className="px-4 py-3">
-          <div className="flex h-10 w-full rounded-xl bg-surface-dark p-1 border border-white/5">
-            <button
-              onClick={() => setView('month')}
-              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'month' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+        <button
+          onClick={() => { setView('day'); setCurrentDate(new Date()); }}
+          className="size-10 bg-white/5 rounded-xl flex items-center justify-center text-gray-400 hover:text-primary transition-colors border border-white/5 active:scale-95 shadow-glass-sm"
+          title="Hoje"
+        >
+          <CalendarIcon size={20} />
+        </button>
+      </Layout.Header>
+
+      <Layout.Content>
+        <div className="flex flex-col h-full animate-in fade-in duration-700">
+          {/* Custom Segmented Control */}
+          <div className="px-4 py-6">
+            <div className="flex h-12 w-full rounded-2xl bg-surface-dark/40 backdrop-blur-md p-1.5 border border-white/5 shadow-glass">
+              {(['month', 'week', 'day'] as ViewType[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`flex-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 italic ${
+                    view === v 
+                      ? 'bg-primary text-black shadow-neon-sm translate-y-[-1px]' 
+                      : 'text-gray-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Premium Calendar Navigation */}
+          <div className="flex items-center justify-between px-4 pb-6">
+            <button 
+              onClick={handlePrev} 
+              className="size-11 bg-surface-dark/40 backdrop-blur-md rounded-2xl text-gray-400 hover:text-primary transition-all border border-white/5 active:scale-90 flex items-center justify-center group shadow-glass-sm"
             >
-              Mês
+              <ChevronLeft size={22} className="group-hover:-translate-x-0.5 transition-transform" />
             </button>
-            <button
-              onClick={() => setView('week')}
-              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'week' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            
+            <div className="flex flex-col items-center">
+              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] italic font-heading">
+                {getHeaderTitle()}
+              </h2>
+              {view === 'month' && (
+                <div className="w-12 h-1 bg-primary/20 rounded-full mt-1.5 overflow-hidden">
+                   <div className="h-full bg-primary w-1/3 animate-pulse"></div>
+                </div>
+              )}
+            </div>
+
+            <button 
+              onClick={handleNext} 
+              className="size-11 bg-surface-dark/40 backdrop-blur-md rounded-2xl text-gray-400 hover:text-primary transition-all border border-white/5 active:scale-90 flex items-center justify-center group shadow-glass-sm"
             >
-              Semana
+              <ChevronRight size={22} className="group-hover:translate-x-0.5 transition-transform" />
             </button>
+          </div>
+
+          {/* Dynamic Content Area */}
+          <div className="flex-1 overflow-y-auto px-4 pb-32 no-scrollbar">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                <div className="relative">
+                  <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                  <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary animate-pulse" size={24} />
+                </div>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] animate-pulse">Sincronizando Escopos...</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {view === 'month' && (
+                  <div className="bg-surface-dark/20 backdrop-blur-md p-6 rounded-[32px] border border-white/5 shadow-glass">
+                    {/* Days Header */}
+                    <div className="grid grid-cols-7 mb-4">
+                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day, idx) => (
+                        <div key={idx} className="text-center text-[9px] font-black text-gray-500 uppercase tracking-widest italic">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Month Grid */}
+                    <div className="grid grid-cols-7 gap-y-1">
+                      {renderMonthView()}
+                    </div>
+                    {/* Selected Day Context */}
+                    <div className="mt-10 animate-in slide-in-from-top-4 duration-500">
+                      {renderSelectedDayEvents()}
+                    </div>
+                  </div>
+                )}
+
+                {view === 'week' && (
+                  <div className="space-y-4 animate-in fade-in duration-500">
+                    {renderWeekView()}
+                  </div>
+                )}
+
+                {view === 'day' && (
+                  <div className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 shadow-glass animate-in zoom-in-95 duration-500">
+                    {renderDayView()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Floating Action Button (FAB) */}
+          <div className="fixed bottom-28 right-6 z-40 group">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500 animate-pulse"></div>
             <button
-              onClick={() => setView('day')}
-              className={`flex-1 rounded-lg text-sm font-medium transition-all ${view === 'day' ? 'bg-primary text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              onClick={() => navigate('/schedule/new')}
+              className="relative flex items-center justify-center size-16 bg-primary text-black rounded-full shadow-neon border border-white/10 hover:scale-105 active:scale-95 transition-all duration-300"
             >
-              Dia
+              <Plus size={28} strokeWidth={3} />
             </button>
           </div>
         </div>
-
-        {/* Navegação do Calendário */}
-        <div className="flex items-center justify-between px-4 py-2 mb-2">
-          <button onClick={handlePrev} className="p-2 bg-surface-dark rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors border border-white/5">
-            <ChevronLeft size={20} />
-          </button>
-          <h2 className="text-lg font-bold text-white capitalize text-center">
-            {getHeaderTitle()}
-          </h2>
-          <button onClick={handleNext} className="p-2 bg-surface-dark rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors border border-white/5">
-            <ChevronRight size={20} />
-          </button>
-        </div>
-
-        {/* Área de Conteúdo Dinâmico */}
-        <div className="flex-1 overflow-y-auto px-4 pb-24 no-scrollbar">
-
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 size={40} className="animate-spin text-primary" />
-            </div>
-          ) : (
-            <>
-              {view === 'month' && (
-                <>
-                  {/* Cabeçalho dos Dias */}
-                  <div className="grid grid-cols-7 mb-2 border-b border-white/5 pb-2">
-                    {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, idx) => (
-                      <div key={idx} className="text-center text-[10px] font-bold text-gray-500 uppercase">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-                  {/* Grade do Mês */}
-                  <div className="grid grid-cols-7 mb-6">
-                    {renderMonthView()}
-                  </div>
-                  {/* Eventos do Dia Selecionado */}
-                  {renderSelectedDayEvents()}
-                </>
-              )}
-
-              {view === 'week' && renderWeekView()}
-
-              {view === 'day' && renderDayView()}
-            </>
-          )}
-
-        </div>
-
-        {/* Botão Flutuante (FAB) */}
-        <div className="fixed bottom-24 right-4 z-20">
-          <button
-            onClick={() => navigate('/schedule/new')}
-            className="flex items-center gap-2 bg-primary text-white h-14 pl-5 pr-6 rounded-full shadow-lg shadow-primary/30 font-bold hover:bg-primary-hover transition-transform active:scale-95"
-          >
-            <Plus size={24} />
-            <span className="text-base">Novo</span>
-          </button>
-        </div>
-      </div>
+      </Layout.Content>
     </Layout>
   );
 };
