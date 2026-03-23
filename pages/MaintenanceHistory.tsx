@@ -31,7 +31,7 @@ export const MaintenanceHistory: React.FC = () => {
         actions={
           <button
             onClick={() => navigate('/maintenance/new')}
-            className="bg-primary text-black p-2.5 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-neon-sm"
+            className="bg-primary text-black p-2.5 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-md"
           >
             <Plus size={18} strokeWidth={2.5} />
             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Nova Manutenção</span>
@@ -62,7 +62,7 @@ export const MaintenanceHistory: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Acumulado do Período</p>
                   <div className="flex items-baseline gap-3">
-                    <p className="text-4xl font-black text-white italic font-heading tracking-tight drop-shadow-neon-sm">R$ 8.450,00</p>
+                    <p className="text-4xl font-black text-white italic font-heading tracking-tight">R$ 8.450,00</p>
                     <span className="text-[10px] text-positive font-black flex items-center gap-1 bg-positive/10 px-2 py-0.5 rounded-full border border-positive/20">
                       <TrendingUp size={12} /> +15.2%
                     </span>
@@ -76,8 +76,8 @@ export const MaintenanceHistory: React.FC = () => {
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorCusto" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00E599" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#00E599" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <XAxis 
@@ -104,7 +104,7 @@ export const MaintenanceHistory: React.FC = () => {
                     <Area 
                       type="monotone" 
                       dataKey="custo" 
-                      stroke="#00E599" 
+                      stroke="#10B981" 
                       strokeWidth={4} 
                       fillOpacity={1} 
                       fill="url(#colorCusto)" 
@@ -124,11 +124,11 @@ export const MaintenanceHistory: React.FC = () => {
             </h3>
             
             {history.map((item) => (
-              <div key={item.id} className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 flex flex-col gap-5 hover:border-primary/20 transition-all group shadow-glass relative overflow-hidden">
+              <div key={item.id} className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 flex flex-col gap-5 hover:border-primary/20 transition-all group shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 h-full w-1 bg-gradient-to-b from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 
                 <div className="flex items-start gap-5">
-                  <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 shadow-glass-sm transition-transform group-hover:scale-110 ${
+                  <div className={`size-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 shadow-sm transition-transform group-hover:scale-110 ${
                     item.type === 'Corretiva' ? 'bg-negative/10 text-negative' : 'bg-primary/10 text-primary'
                   }`}>
                     {item.type === 'Preventiva' ? 

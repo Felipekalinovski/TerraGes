@@ -14,16 +14,22 @@ export interface Employee {
     admission_date?: string;
     certifications?: string[];
     image_url?: string;
+    company_id?: string;
     created_at?: string;
 }
 
 export const employeeService = {
     // Buscar todos os funcionários
-    async getAll(): Promise<Employee[]> {
-        const { data, error } = await supabase
+    async getAll(companyId?: string): Promise<Employee[]> {
+        let query = supabase
             .from('employees')
-            .select('*')
-            .order('name', { ascending: true });
+            .select('*');
+        
+        if (companyId) {
+            query = query.eq('company_id', companyId);
+        }
+
+        const { data, error } = await query.order('name', { ascending: true });
 
         if (error) {
             console.error('Error fetching employees:', error);

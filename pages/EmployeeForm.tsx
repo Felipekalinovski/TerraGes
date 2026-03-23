@@ -4,8 +4,10 @@ import { Layout } from '../components/Layout';
 import { User, Phone, Mail, MapPin, Briefcase, Calendar, CheckCircle, Loader2, Camera, Upload } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { employeeService, Employee } from '../services/employeeService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const EmployeeForm: React.FC = () => {
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
@@ -108,7 +110,8 @@ export const EmployeeForm: React.FC = () => {
         address: formData.address || '',
         admission_date: formData.admission_date || '',
         certifications: formData.certifications || [],
-        image_url: formData.image_url || ''
+        image_url: formData.image_url || '',
+        company_id: profile?.company_id
       };
 
       if (isEditing) {

@@ -16,6 +16,7 @@ import { SettingsNotifications } from './pages/SettingsNotifications';
 import { SettingsSecurity } from './pages/SettingsSecurity';
 import { SettingsIntegrations } from './pages/SettingsIntegrations';
 import { AIChat } from './pages/AIChat';
+import { IntelligenceHub } from './pages/IntelligenceHub';
 import { Schedule } from './pages/Schedule';
 import { ScheduleForm } from './pages/ScheduleForm';
 import { MaintenanceForm } from './pages/MaintenanceForm';
@@ -33,8 +34,8 @@ import { ServiceOrderForm } from './pages/ServiceOrderForm';
 import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session, loading } = useAuth();
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string }> = ({ children, requiredRole }) => {
+  const { session, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -46,6 +47,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && profile?.role !== requiredRole && profile?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -64,6 +69,7 @@ const App: React.FC = () => {
           {/* Private Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+          <Route path="/intelligence" element={<ProtectedRoute><IntelligenceHub /></ProtectedRoute>} />
           <Route path="/aichat" element={<Navigate to="/chat" replace />} />
 
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
@@ -95,13 +101,13 @@ const App: React.FC = () => {
           <Route path="/service-orders/:id" element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
           <Route path="/service-orders/:id/receipt" element={<ProtectedRoute><ServiceOrderReceipt /></ProtectedRoute>} />
 
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
           <Route path="/settings/profile" element={<ProtectedRoute><SettingsProfile /></ProtectedRoute>} />
-          <Route path="/settings/company" element={<ProtectedRoute><SettingsCompany /></ProtectedRoute>} />
+          <Route path="/settings/company" element={<ProtectedRoute requiredRole="admin"><SettingsCompany /></ProtectedRoute>} />
           <Route path="/settings/notifications" element={<ProtectedRoute><SettingsNotifications /></ProtectedRoute>} />
           <Route path="/settings/security" element={<ProtectedRoute><SettingsSecurity /></ProtectedRoute>} />
-          <Route path="/settings/integrations" element={<ProtectedRoute><SettingsIntegrations /></ProtectedRoute>} />
-          <Route path="/settings/projects" element={<ProtectedRoute><SettingsProjects /></ProtectedRoute>} />
+          <Route path="/settings/integrations" element={<ProtectedRoute requiredRole="admin"><SettingsIntegrations /></ProtectedRoute>} />
+          <Route path="/settings/projects" element={<ProtectedRoute requiredRole="admin"><SettingsProjects /></ProtectedRoute>} />
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

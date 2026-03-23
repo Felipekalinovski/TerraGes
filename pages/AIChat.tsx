@@ -135,15 +135,15 @@ export const AIChat: React.FC = () => {
                 className={`flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'ai' && (
-                  <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-neon-sm self-end mb-4">
+                  <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-sm self-end mb-4">
                     <Sparkles size={18} className="text-primary" />
                   </div>
                 )}
 
                 <div
                   className={`max-w-[85%] p-5 rounded-[28px] text-sm leading-relaxed relative group transition-all ${msg.role === 'user'
-                    ? 'bg-primary text-black font-bold rounded-br-none shadow-neon'
-                    : 'bg-surface-dark/40 backdrop-blur-md text-gray-200 rounded-bl-none border border-white/5 shadow-glass'
+                    ? 'bg-primary text-black font-bold rounded-br-none shadow-md'
+                    : 'bg-surface-dark text-gray-200 rounded-bl-none border border-white/5 shadow-md'
                     }`}
                 >
                   {msg.text.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/g, '').trim()}
@@ -158,8 +158,8 @@ export const AIChat: React.FC = () => {
 
                 {msg.role === 'user' && (
                   <div
-                    className="size-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 bg-cover bg-center self-end mb-4 shadow-glass"
-                    style={{ backgroundImage: `url('${userAvatar || 'https://ui-avatars.com/api/?name=U&background=00E599&color=000'}')` }}
+                    className="size-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 bg-cover bg-center self-end mb-4 shadow-sm"
+                    style={{ backgroundImage: `url('${userAvatar || 'https://ui-avatars.com/api/?name=U&background=10B981&color=000'}')` }}
                   />
                 )}
               </div>
@@ -170,7 +170,7 @@ export const AIChat: React.FC = () => {
                 <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 animate-pulse">
                   <Sparkles size={18} className="text-primary" />
                 </div>
-                <div className="bg-surface-dark/40 backdrop-blur-md border border-white/5 px-6 py-4 rounded-[28px] rounded-bl-none flex items-center gap-3 shadow-glass">
+                <div className="bg-surface-dark border border-white/5 px-6 py-4 rounded-[28px] rounded-bl-none flex items-center gap-3 shadow-md">
                   <div className="flex gap-1">
                     <span className="size-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
                     <span className="size-1.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
@@ -194,7 +194,7 @@ export const AIChat: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(suggestion)}
-                      className="whitespace-nowrap px-4 py-2 rounded-xl bg-surface-dark/60 backdrop-blur-md border border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-primary/40 hover:text-primary transition-all duration-300 active:scale-95 shadow-glass"
+                      className="whitespace-nowrap px-4 py-2 rounded-xl bg-surface-dark border border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:border-primary/40 hover:text-primary transition-all duration-300 active:scale-95 shadow-sm"
                     >
                       {suggestion}
                     </button>
@@ -203,23 +203,20 @@ export const AIChat: React.FC = () => {
               )}
 
               <div className="relative flex items-center group">
-                {/* Glow behind input */}
-                <div className="absolute inset-0 bg-primary/5 blur-xl rounded-[32px] group-focus-within:bg-primary/10 transition-all duration-500" />
-                
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Comando para o TerraGes..."
-                  className="w-full h-16 bg-surface-dark/80 backdrop-blur-xl text-white placeholder:text-gray-600 rounded-[32px] pl-8 pr-20 text-sm border border-white/5 focus:outline-none focus:border-primary/30 transition-all shadow-glass relative z-10 font-medium"
+                  className="w-full h-16 bg-surface-dark text-white placeholder:text-gray-600 rounded-[32px] pl-8 pr-20 text-sm border border-white/5 focus:outline-none focus:border-primary/30 transition-all shadow-md relative z-10 font-medium"
                   disabled={isLoading}
                 />
                 
                 <button
                   onClick={() => handleSendMessage()}
                   disabled={!inputText.trim() || isLoading}
-                  className="absolute right-3 size-12 bg-primary text-black rounded-2xl flex items-center justify-center hover:bg-primary-hover disabled:opacity-20 disabled:grayscale transition-all shadow-neon active:scale-90 z-20"
+                  className="absolute right-3 size-12 bg-primary text-black rounded-2xl flex items-center justify-center hover:bg-primary-hover disabled:opacity-20 disabled:grayscale transition-all shadow-lg active:scale-90 z-20"
                 >
                   <Send size={20} strokeWidth={3} />
                 </button>

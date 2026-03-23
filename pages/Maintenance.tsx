@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Filter, ChevronRight, AlertOctagon, Edit2, Loader2 } from 'lucide-react';
+import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, Filter, ChevronRight, AlertOctagon, Edit2, Loader2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { maintenanceService, type MaintenanceRecord as SupabaseMaintenanceRecord } from '../services/maintenanceService';
 import { machineService } from '../services/machineService';
@@ -95,7 +95,7 @@ export const Maintenance: React.FC = () => {
         actions={
           <button
             onClick={() => navigate('/maintenance/new')}
-            className="bg-primary text-black p-2.5 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-neon-sm"
+            className="bg-primary text-black p-2.5 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-md"
           >
             <Plus size={18} strokeWidth={2.5} />
             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Nova Manutenção</span>
@@ -197,19 +197,25 @@ export const Maintenance: React.FC = () => {
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-3">
-                        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border ${
-                          item.type === 'corrective' ? 'bg-negative/10 border-negative/30 text-negative' : 
-                          item.type === 'preventive' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                        } text-[8px] font-black uppercase tracking-widest`}>
-                           {getTypeLabel(item.type)}
+                        <div className={`flex items-center gap-3`}>
+                          <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border ${
+                            item.type === 'corrective' ? 'bg-negative/10 border-negative/30 text-negative' : 
+                            item.type === 'preventive' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                          } text-[8px] font-black uppercase tracking-widest`}>
+                             {getTypeLabel(item.type)}
+                          </div>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); navigate('/intelligence'); }}
+                            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-[8px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all font-heading italic"
+                          >
+                            <Sparkles size={10} /> IA Diagnostic
+                          </button>
+                          {item.cost > 0 && (
+                            <span className="text-[10px] font-bold text-gray-400 italic">
+                              {formatCurrency(item.cost)}
+                            </span>
+                          )}
                         </div>
-                        {item.cost > 0 && (
-                          <span className="text-[10px] font-bold text-gray-400 italic">
-                            {formatCurrency(item.cost)}
-                          </span>
-                        )}
-                      </div>
                     </div>
 
                     <button

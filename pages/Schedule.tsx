@@ -3,6 +3,7 @@ import { Layout } from '../components/Layout';
 import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Calendar as CalendarIcon, MoreHorizontal, Edit2, Loader2, Sparkles, Filter, BarChart2, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { scheduleService, type Schedule as SupabaseSchedule } from '../services/scheduleService';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Types & Helpers ---
 
@@ -87,20 +88,30 @@ type ViewType = 'month' | 'week' | 'day';
 
 export const Schedule: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [view, setView] = useState<ViewType>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+
   useEffect(() => {
-    loadSchedules();
-  }, []);
+    if (profile) {
+      loadSchedules();
+    }
+  }, [profile]);
 
   const loadSchedules = async () => {
     try {
       setLoading(true);
-      const schedules = await scheduleService.getAll();
+      let schedules = await scheduleService.getAll();
+
+      // RBAC Filter: If not admin, show only own schedules
+      if (!isAdmin && profile?.id) {
+          schedules = schedules.filter(s => s.operator_id === profile.id);
+      }
 
       // Convert Supabase schedules to CalendarEvent format
       const calendarEvents: CalendarEvent[] = schedules.map(schedule => {
@@ -126,8 +137,8 @@ export const Schedule: React.FC = () => {
           category: categoryMap[schedule.type] || 'Outros',
           start: new Date(schedule.start_time),
           end: schedule.end_time ? new Date(schedule.end_time) : new Date(schedule.start_time),
-          location: 'Local não especificado', // You can add location field to schema if needed
-          responsible: 'Não atribuído', // You can join with operators table if needed
+          location: 'Local não especificado',
+          responsible: 'Não atribuído',
           color: colors.color,
           bg: colors.bg,
         };

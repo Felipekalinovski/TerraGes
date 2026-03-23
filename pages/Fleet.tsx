@@ -64,15 +64,15 @@ const FleetList: React.FC = () => {
       <Layout.Content>
         {/* Overview Overview */}
         <div className="px-4 py-6 grid grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-glass">
+          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-md">
             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Ativas</p>
-            <p className="text-2xl font-black text-positive drop-shadow-neon">{stats.active}</p>
+            <p className="text-2xl font-black text-positive">{stats.active}</p>
           </div>
-          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-glass">
+          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-md">
             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Manut.</p>
             <p className="text-2xl font-black text-warning">{stats.maintenance}</p>
           </div>
-          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-glass">
+          <div className="bg-surface-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 text-center shadow-md">
             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Total</p>
             <p className="text-2xl font-black text-white">{stats.total}</p>
           </div>
@@ -121,7 +121,7 @@ const FleetList: React.FC = () => {
               <div
                 key={machine.id}
                 onClick={() => navigate(`/fleet/${machine.id}`)}
-                className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-3xl border border-white/5 active:scale-[0.98] transition-all cursor-pointer relative group hover:border-primary/20 shadow-glass"
+                className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-3xl border border-white/5 active:scale-[0.98] transition-all cursor-pointer relative group hover:border-primary/20 shadow-lg"
               >
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/fleet/edit/${machine.id}`); }}
@@ -140,7 +140,7 @@ const FleetList: React.FC = () => {
                       <h3 className="font-heading font-black text-white text-lg truncate uppercase italic tracking-tight">{machine.name}</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                       <span className={`size-2 rounded-full ${machine.status === 'active' ? 'bg-positive shadow-neon' : machine.status === 'maintenance' ? 'bg-warning' : 'bg-gray-600'}`} />
+                       <span className={`size-2 rounded-full ${machine.status === 'active' ? 'bg-positive' : machine.status === 'maintenance' ? 'bg-warning' : 'bg-gray-600'}`} />
                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                          {machine.status === 'active' ? 'Operacional' : machine.status === 'maintenance' ? 'Em Reparo' : 'Indisponível'}
                        </span>
@@ -154,7 +154,7 @@ const FleetList: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full ${(machine.health_score || 0) > 75 ? 'bg-positive shadow-neon' : (machine.health_score || 0) > 40 ? 'bg-warning' : 'bg-negative'}`}
+                          className={`h-full rounded-full ${(machine.health_score || 0) > 75 ? 'bg-positive' : (machine.health_score || 0) > 40 ? 'bg-warning' : 'bg-negative'}`}
                           style={{ width: `${machine.health_score || 100}%` }}
                         />
                       </div>
@@ -181,7 +181,7 @@ const FleetList: React.FC = () => {
         <div className="fixed bottom-26 right-6 z-20">
           <button
             onClick={() => navigate('/fleet/add')}
-            className="flex items-center gap-3 bg-primary text-black h-16 pl-6 pr-8 rounded-[24px] shadow-neon font-heading font-black uppercase italic tracking-tighter hover:scale-105 active:scale-95 transition-all group"
+            className="flex items-center gap-3 bg-primary text-black h-16 pl-6 pr-8 rounded-[24px] shadow-lg font-heading font-black uppercase italic tracking-tighter hover:scale-105 active:scale-95 transition-all group"
           >
             <Plus size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
             <span>Novo Ativo</span>
@@ -261,27 +261,27 @@ const FleetDetails: React.FC = () => {
               </span>
               <span className="text-[10px] font-bold text-white/60 tracking-widest uppercase">{machine.type}</span>
             </div>
-            <h2 className="text-4xl font-heading font-black text-white uppercase italic tracking-tighter drop-shadow-neon">{machine.name}</h2>
+            <h2 className="text-4xl font-heading font-black text-white uppercase italic tracking-tighter">{machine.name}</h2>
           </div>
         </div>
 
         <div className="px-6 space-y-8 -mt-4 relative z-10 pb-32">
           {/* Health Score Premium Card */}
-          <div className="bg-surface-dark/60 backdrop-blur-2xl rounded-[32px] p-8 border border-white/5 shadow-glass">
+          <div className="bg-surface-dark/60 backdrop-blur-2xl rounded-[32px] p-8 border border-white/5 shadow-lg">
             <div className="flex justify-between items-center mb-6">
               <div className="space-y-1">
                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Saúde do Equipamento</h3>
                 <p className="text-xs text-white/80 font-medium italic">{machine.health_reason || 'Análise estrutural pendente.'}</p>
               </div>
               <div className="text-right">
-                <p className={`text-5xl font-heading font-black ${(machine.health_score || 0) > 75 ? 'text-positive drop-shadow-neon' : 'text-warning'}`}>
+                <p className={`text-5xl font-heading font-black ${(machine.health_score || 0) > 75 ? 'text-positive' : 'text-warning'}`}>
                   {machine.health_score || 100}<span className="text-2xl font-bold opacity-50">%</span>
                 </p>
               </div>
             </div>
             <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mb-2">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ${(machine.health_score || 0) > 75 ? 'bg-positive shadow-neon' : 'bg-warning'}`}
+                className={`h-full rounded-full transition-all duration-1000 ${(machine.health_score || 0) > 75 ? 'bg-positive' : 'bg-warning'}`}
                 style={{ width: `${machine.health_score || 100}%` }}
               />
             </div>
@@ -304,7 +304,7 @@ const FleetDetails: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => navigate('/maintenance/new')} className="bg-primary text-black py-4 rounded-2xl font-black uppercase italic tracking-tighter flex items-center justify-center gap-2 shadow-neon active:scale-95 transition-all">
+            <button onClick={() => navigate('/maintenance/new')} className="bg-primary text-black py-4 rounded-2xl font-black uppercase italic tracking-tighter flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
               <PenTool size={20} strokeWidth={2.5} /> Reparar
             </button>
             <button onClick={() => navigate(`/fleet/${machine.id}/history`)} className="bg-surface-dark/40 text-white py-4 rounded-2xl font-black uppercase italic tracking-tighter flex items-center justify-center gap-2 border border-white/5 active:scale-95 transition-all">

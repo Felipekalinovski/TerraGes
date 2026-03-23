@@ -3,19 +3,31 @@ import { Layout } from '../components/Layout';
 import { Plus, Calendar, MapPin, User, Eye, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { rdoService, RDO as RDOType } from '../services/rdoService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const RDO: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+
   useEffect(() => {
-    fetchRDOs();
-  }, []);
+    if (profile) {
+      fetchRDOs();
+    }
+  }, [profile]);
 
   const fetchRDOs = async () => {
     try {
-      const data = await rdoService.getAll();
+      let data = await rdoService.getAll();
+      
+      // RBAC Filter: If not admin, show only own RDOs
+      if (!isAdmin && profile?.id) {
+        data = data.filter(log => log.operator_id === profile.id);
+      }
+      
       setLogs(data);
     } catch (error) {
       console.error('Erro ao carregar RDOs:', error);
@@ -23,7 +35,6 @@ export const RDO: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleDelete = async (id: string) => {
     if (confirm('Deseja realmente excluir este Diário de Obra?')) {
       try {

@@ -14,22 +14,28 @@ export const callOpenRouter = async (messages: any[], type: 'text' | 'vision' = 
 
         if (error) {
             console.error("❌ Erro na Edge Function:", error);
+            let errorMessage = error.message;
+            const status = (error as any).status || error.name === 'FunctionsHttpError' ? 429 : null; // Fallback se não detectar status
 
-            // Tenta obter a mensagem de erro estruturada da função
-            if (error.status) {
-                try {
-                    // O erro de função do Supabase pode conter a resposta direta se for capturada corretamente
-                    const response = (error as any).context;
-                    if (response && typeof response.json === 'function') {
-                        const errorBody = await response.json();
-                        throw new Error(errorBody.error || error.message);
+            try {
+                // Tenta buscar o contexto (Response) e extrair o JSON do erro
+                const response = (error as any).context;
+                if (response && typeof response.json === 'function') {
+                    const errorBody = await response.json();
+                    if (errorBody && (errorBody.error || errorBody.message)) {
+                        errorMessage = errorBody.error || errorBody.message;
                     }
-                } catch (parseErr) {
-                    console.warn("⚠️ Não foi possível processar o corpo do erro da função:", parseErr);
                 }
+            } catch (parseErr) {
+                console.warn("⚠️ Não foi possível processar o corpo do erro da função:", parseErr);
             }
 
-            throw new Error(error.message || "Erro ao chamar o serviço de IA.");
+            // Dica de Rate Limit baseada na mensagem ou status
+            if (errorMessage.includes("429") || errorMessage.includes("Too Many Requests") || status === 429) {
+                errorMessage = "Limite de requisições da IA atingido. Por favor, aguarde alguns instantes (30-60s) ou adicione créditos à sua conta OpenRouter para usar modelos pagos.";
+            }
+
+            throw new Error(errorMessage || "Erro ao chamar o serviço de IA.");
         }
 
         if (!data || !data.content) {

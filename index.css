@@ -1,12 +1,39 @@
 :root {
-  --primary: #00E599;
-  --primary-glow: rgba(0, 229, 153, 0.4);
-  --surface-dark: #050505;
-  --surface-light: #1A1A1A;
-  --border-glass: rgba(255, 255, 255, 0.1);
+  /* Common */
+  --primary: #10B981;
+  --primary-hover: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.1);
   --error: #FF3B3B;
   --warning: #FFB800;
-  --positive: #00E599;
+  --positive: #10B981;
+  --negative: #EF4444;
+
+  /* Dark Theme (Default) */
+  --bg-app: #050505;
+  --text-main: #FFFFFF;
+  --text-muted: #9CA3AF;
+  --surface: #050505;
+  --surface-light: #1A1A1A;
+  --surface-hover: #111111;
+  --surface-glass: rgba(5, 5, 5, 0.4);
+  --border-main: rgba(255, 255, 255, 0.05);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+  --invert-icon: 0;
+}
+
+[data-theme='light'] {
+  --bg-app: #F3F4F6;
+  --text-main: #111827;
+  --text-muted: #4B5563;
+  --surface: #FFFFFF;
+  --surface-light: #F9FAFB;
+  --surface-hover: #F3F4F6;
+  --surface-glass: rgba(255, 255, 255, 0.7);
+  --border-main: rgba(0, 0, 0, 0.05);
+  --border-glass: rgba(0, 0, 0, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+  --invert-icon: 1;
 }
 
 body {
@@ -16,54 +43,61 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #050505;
-  color: white;
+  -moz-osx-osx-font-smoothing: grayscale;
+  background-color: var(--bg-app);
+  color: var(--text-main);
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Glassmorphism Utilities (Compatibilidade com as classes usadas nos components) */
-.bg-surface-dark { background-color: #050505; }
-.bg-surface-dark\/50 { background-color: rgba(5, 5, 5, 0.5); }
-.bg-surface-dark\/40 { background-color: rgba(5, 5, 5, 0.4); }
-.bg-surface-dark\/60 { background-color: rgba(5, 5, 5, 0.6); }
+/* Base Classes */
+.bg-surface-dark { background-color: var(--surface); }
+.bg-surface-dark\/50 { background-color: var(--surface-glass); }
+.bg-surface-dark\/40 { background-color: var(--surface-glass); }
+.bg-surface-dark\/60 { background-color: var(--surface-glass); }
+.bg-brand-dark { background-color: var(--bg-app); }
+.bg-brand-dark\/80 { background-color: var(--surface-glass); }
 
 .bg-primary { background-color: var(--primary); }
-.bg-primary\/10 { background-color: rgba(0, 229, 153, 0.1); }
-.bg-primary\/20 { background-color: rgba(0, 229, 153, 0.2); }
+.bg-primary\/10 { background-color: rgba(16, 185, 129, 0.1); }
+.bg-primary\/20 { background-color: rgba(16, 185, 129, 0.2); }
 
 .text-primary { color: var(--primary); }
-.text-primary\/70 { color: rgba(0, 229, 153, 0.7); }
-.text-positive { color: #00E599; }
-.text-warning { color: #FFB800; }
-.text-negative { color: #FF3B3B; }
+.text-primary\/70 { color: rgba(16, 185, 129, 0.7); }
+.text-positive { color: var(--positive); }
+.text-warning { color: var(--warning); }
+.text-negative { color: var(--negative); }
+.text-muted { color: var(--text-muted); }
+.text-white { color: var(--text-main); }
 
-.border-white\/5 { border-color: rgba(255, 255, 255, 0.05); }
-.border-primary\/20 { border-color: rgba(0, 229, 153, 0.2); }
-.border-primary\/50 { border-color: rgba(0, 229, 153, 0.5); }
+.border-white\/5 { border-color: var(--border-main); }
+.border-primary\/20 { border-color: rgba(16, 185, 129, 0.2); }
+.border-primary\/50 { border-color: rgba(16, 185, 129, 0.5); }
 
 .shadow-glass { 
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px 0 var(--glass-shadow);
+  border: 1px solid var(--border-glass);
 }
 
 .shadow-glass-sm { 
-  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px 0 var(--glass-shadow);
+  border: 1px solid var(--border-glass);
+}
+
+.shadow-subtle {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .shadow-neon {
-  box-shadow: 0 0 20px var(--primary-glow);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.shadow-neonShadow {
-  box-shadow: 0 0 15px rgba(0, 229, 153, 0.3);
+.shadow-neon-sm {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 @keyframes fadeIn {
@@ -84,16 +118,16 @@ body {
 .fade-in { animation-name: fadeIn; }
 .slide-in-from-bottom-4 { animation-name: slideInFromBottom; }
 
-/* Adicionando classes auxiliares para Tailwind simulation */
-.backdrop-blur-md { backdrop-filter: blur(12px); }
-.backdrop-blur-xl { backdrop-filter: blur(24px); }
-.backdrop-blur-2xl { backdrop-filter: blur(40px); }
-.backdrop-blur-3xl { backdrop-filter: blur(64px); }
+.backdrop-blur-md { backdrop-filter: blur(4px); }
+.backdrop-blur-xl { backdrop-filter: blur(8px); }
+.backdrop-blur-2xl { backdrop-filter: blur(12px); }
+.backdrop-blur-3xl { backdrop-filter: blur(16px); }
 
 .rounded-2xl { border-radius: 1rem; }
 .rounded-3xl { border-radius: 1.5rem; }
 .rounded-\[32px\] { border-radius: 32px; }
 
 .drop-shadow-neon {
-  filter: drop-shadow(0 0 8px var(--primary-glow));
-}
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+

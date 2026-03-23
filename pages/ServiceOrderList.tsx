@@ -1,22 +1,35 @@
-
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
 import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User, Clock, DollarSign, Download, Upload, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { serviceOrderService, ServiceOrder } from '../services/serviceOrderService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const ServiceOrderList: React.FC = () => {
     const navigate = useNavigate();
+    const { profile } = useAuth();
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+
     useEffect(() => {
-        loadOrders();
-    }, []);
+        if (profile) {
+            loadOrders();
+        }
+    }, [profile]);
 
     const loadOrders = async () => {
         try {
-            const data = await serviceOrderService.getAll();
+            let data = await serviceOrderService.getAll();
+            
+            // RBAC Filter: If not admin, show only own orders
+            if (!isAdmin && profile?.id) {
+                // In a real app, this should be filtered on the server (RLS)
+                // For now, we perform frontend filtering as a first layer
+                data = data.filter(order => order.operator_id === profile.id);
+            }
+            
             setOrders(data);
         } catch (error) {
             console.error('Error loading service orders:', error);

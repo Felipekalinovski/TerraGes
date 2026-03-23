@@ -6,6 +6,8 @@ export interface UserProfile {
     email: string;
     phone?: string;
     role?: string;
+    company_id?: string;
+    company_name?: string;
     avatar_url?: string;
     created_at?: string;
     updated_at?: string;
@@ -25,13 +27,16 @@ class UserService {
 
             const { data, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('*, company:company_info(name)')
                 .eq('id', user.id)
                 .single();
 
             if (error) throw error;
 
-            return data;
+            return {
+                ...data,
+                company_name: data.company?.name
+            };
         } catch (error) {
             console.error('Error fetching profile:', error);
             return null;

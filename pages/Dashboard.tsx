@@ -107,7 +107,7 @@ export const Dashboard: React.FC = () => {
         actions={
           <div className="relative mr-2">
             <Bell size={20} className="text-gray-400 cursor-pointer hover:text-white transition-colors" />
-            <div className="absolute -top-1 -right-1 size-2.5 bg-primary shadow-neon rounded-full border border-brand-dark" />
+            <div className="absolute -top-1 -right-1 size-2.5 bg-primary rounded-full border border-brand-dark" />
           </div>
         }
       />
@@ -118,8 +118,7 @@ export const Dashboard: React.FC = () => {
           {/* Dashboard Grid */}
           <div className="grid grid-cols-2 gap-4">
             {/* Card Faturamento */}
-            <div onClick={() => navigate('/finance')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 relative overflow-hidden cursor-pointer hover:border-primary/20 transition-all group shadow-glass">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-positive/5 blur-2xl rounded-full" />
+            <div onClick={() => navigate('/finance')} className="bg-surface-dark/50 p-5 rounded-2xl border border-white/5 relative overflow-hidden cursor-pointer hover:border-primary/20 transition-all group shadow-lg">
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Faturamento /mês</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-sm font-bold text-positive">R$</span>
@@ -132,7 +131,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Card Frota */}
-            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-md">
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Frota Ativa</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-white">{stats.machines.active}</span>
@@ -140,14 +139,14 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="mt-3 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-primary shadow-neon" 
+                  className="h-full bg-primary" 
                   style={{ width: `${(stats.machines.active / stats.machines.total) * 100}%` }} 
                 />
               </div>
             </div>
 
             {/* Obras */}
-            <div onClick={() => navigate('/rdo')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+            <div onClick={() => navigate('/rdo')} className="bg-surface-dark/50 p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-lg">
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Obras em Andamento</p>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-black text-white">08</span>
@@ -159,7 +158,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Diesel */}
-            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 backdrop-blur-md p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-glass">
+            <div onClick={() => navigate('/fleet')} className="bg-surface-dark/50 p-5 rounded-2xl border border-white/5 cursor-pointer hover:border-primary/20 transition-all shadow-lg">
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Consumo Diesel</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-baseline gap-1">
@@ -169,13 +168,13 @@ export const Dashboard: React.FC = () => {
                 <Fuel size={20} className="text-gray-600" />
               </div>
               <div className="mt-4 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-positive w-3/4 shadow-neonShadow" />
+                <div className="h-full bg-positive w-3/4" />
               </div>
             </div>
           </div>
 
           {/* AI Intelligence Card */}
-          <div className="bg-brand-gradient/20 p-6 rounded-[32px] border border-primary/20 relative overflow-hidden backdrop-blur-3xl shadow-neon">
+          <div className="bg-brand-gradient/10 p-6 rounded-[32px] border border-white/5 relative overflow-hidden shadow-lg">
             <div className="absolute top-0 right-0 p-4">
               <Sparkles className="text-primary animate-pulse" size={24} />
             </div>
@@ -193,7 +192,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Chart Section */}
-          <div className="bg-surface-dark/40 p-6 rounded-[32px] border border-white/5 shadow-glass">
+          <div className="bg-surface-dark/40 p-6 rounded-[32px] border border-white/5 shadow-lg">
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h3 className="text-lg font-heading font-black text-white uppercase italic">Financeiro</h3>
@@ -210,7 +209,7 @@ export const Dashboard: React.FC = () => {
                     contentStyle={{ backgroundColor: '#050505', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} 
                   />
                   <Bar dataKey="lucro" radius={[6, 6, 0, 0]} barSize={10}>
-                    {stats.chartData.map((_, i) => <Cell key={i} fill="#00E599" className="drop-shadow-neon" />)}
+                    {stats.chartData.map((_, i) => <Cell key={i} fill="#10B981" />)}
                   </Bar>
                   <Bar dataKey="custo" radius={[6, 6, 0, 0]} barSize={10}>
                     {stats.chartData.map((_, i) => <Cell key={i} fill="#333" />)}

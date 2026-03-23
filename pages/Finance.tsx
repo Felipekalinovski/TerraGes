@@ -215,14 +215,14 @@ export const Finance: React.FC = () => {
             <button
               onClick={handleGenerateAIReport}
               disabled={isGenerating}
-              className="bg-brand-gradient text-white p-2 rounded-xl shadow-neon-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              className="bg-brand-gradient text-white p-2 rounded-xl shadow-md hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
               title="Gerar Relatório IA"
             >
               {isGenerating ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
             </button>
             <button
               onClick={openAddModal}
-              className="bg-primary text-black p-2 rounded-xl shadow-neon-sm hover:brightness-110 active:scale-95 transition-all"
+              className="bg-primary text-black p-2 rounded-xl shadow-md hover:brightness-110 active:scale-95 transition-all"
               title="Nova Transação"
             >
               <Plus size={20} strokeWidth={3} />
@@ -248,7 +248,7 @@ export const Finance: React.FC = () => {
             </label>
             <button
               onClick={() => alert("Exportação em breve.")}
-              className="bg-surface-dark/40 backdrop-blur-md border border-white/5 h-12 px-5 rounded-2xl font-black uppercase tracking-tighter text-[10px] flex items-center justify-center gap-2 hover:bg-white/10 border-white/10 transition-all text-gray-400 hover:text-white"
+              className="bg-surface-dark/40 border border-white/5 h-12 px-5 rounded-2xl font-black uppercase tracking-tighter text-[10px] flex items-center justify-center gap-2 hover:bg-white/10 border-white/10 transition-all text-gray-400 hover:text-white"
             >
               <FileText size={16} /> PDF
             </button>
@@ -257,12 +257,12 @@ export const Finance: React.FC = () => {
 
         {/* Summary Summary */}
         <div className="px-4 grid grid-cols-2 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="bg-surface-dark/50 backdrop-blur-xl p-5 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
+          <div className="bg-surface-dark/50 p-5 rounded-[32px] border border-white/5 shadow-lg relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <DollarSign size={40} className="text-white" />
             </div>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Saldo em Caixa</p>
-            <p className="text-2xl font-black text-white drop-shadow-neon-sm">
+            <p className="text-2xl font-black text-white">
               R$ {(stats.balance / 1000).toFixed(1)}k
             </p>
             <div className="mt-2 flex items-center gap-1.5">
@@ -273,7 +273,7 @@ export const Finance: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-surface-dark/50 backdrop-blur-xl p-5 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-5 rounded-[32px] border border-white/5 shadow-lg relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <ArrowUpRight size={40} className="text-positive" />
             </div>
@@ -289,7 +289,7 @@ export const Finance: React.FC = () => {
 
         {/* Chart Analysis */}
         <div className="px-4 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="bg-surface-dark/30 backdrop-blur-md rounded-[40px] p-8 border border-white/5 shadow-glass relative overflow-hidden">
+          <div className="bg-surface-dark/30 rounded-[40px] p-8 border border-white/5 shadow-lg relative overflow-hidden">
             <div className="flex items-center justify-between mb-6">
                <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">Distribuição de Gastos</h3>
                <div className="flex items-center gap-1 text-gray-500 text-[10px] font-bold uppercase">
@@ -358,8 +358,8 @@ export const Finance: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {transactions.map(t => (
-                <div key={t.id} className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[28px] border border-white/5 flex items-center gap-4 group hover:border-white/10 transition-all shadow-glass">
-                  <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${t.type === 'income' ? 'bg-positive/10 text-positive shadow-neon-sm' : 'bg-negative/10 text-negative'}`}>
+                <div key={t.id} className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[28px] border border-white/5 flex items-center gap-4 group hover:border-white/10 transition-all shadow-md">
+                  <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 ${t.type === 'income' ? 'bg-positive/10 text-positive shadow-sm' : 'bg-negative/10 text-negative'}`}>
                     {t.type === 'income' ? <ArrowUpRight size={22} strokeWidth={2.5} /> : <ArrowDownLeft size={22} strokeWidth={2.5} />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -424,7 +424,7 @@ export const Finance: React.FC = () => {
               </button>
               <button
                 onClick={() => setShowReportModal(false)}
-                className="flex-1 bg-primary text-black py-4 rounded-[20px] font-black uppercase italic tracking-tighter text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-neon"
+                className="flex-1 bg-primary text-black py-4 rounded-[20px] font-black uppercase italic tracking-tighter text-xs hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Entendido
               </button>

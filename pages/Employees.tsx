@@ -44,7 +44,7 @@ export const Employees: React.FC = () => {
         actions={
           <button
             onClick={() => navigate('/employees/new')}
-            className="bg-primary text-black p-2 rounded-xl shadow-neon-sm hover:brightness-110 active:scale-95 transition-all"
+            className="bg-primary text-black p-2 rounded-xl shadow-md hover:brightness-110 active:scale-95 transition-all"
             title="Novo Colaborador"
           >
             <Plus size={20} strokeWidth={3} />
@@ -72,23 +72,20 @@ export const Employees: React.FC = () => {
 
         {/* KPI Cards */}
         <div className="px-4 grid grid-cols-3 gap-3 mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-glass flex flex-col items-center group overflow-hidden relative">
-            <div className="absolute -right-2 -top-2 size-12 bg-positive/5 rounded-full blur-xl group-hover:bg-positive/10 transition-all"></div>
-            <UserCheck size={18} className="text-positive mb-2 drop-shadow-neon-sm" />
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-md flex flex-col items-center group overflow-hidden relative">
+            <UserCheck size={18} className="text-positive mb-2" />
             <p className="text-xl font-black text-white">{activeCount}</p>
             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Ativos</p>
           </div>
           
-          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-glass flex flex-col items-center group overflow-hidden relative">
-            <div className="absolute -right-2 -top-2 size-12 bg-warning/5 rounded-full blur-xl group-hover:bg-warning/10 transition-all"></div>
-            <UserMinus size={18} className="text-warning mb-2 drop-shadow-neon-sm" />
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-md flex flex-col items-center group overflow-hidden relative">
+            <UserMinus size={18} className="text-warning mb-2" />
             <p className="text-xl font-black text-white">{vacationCount}</p>
             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Férias</p>
           </div>
 
-          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-glass flex flex-col items-center group overflow-hidden relative">
-            <div className="absolute -right-2 -top-2 size-12 bg-negative/5 rounded-full blur-xl group-hover:bg-negative/10 transition-all"></div>
-            <UserX size={18} className="text-negative mb-2 drop-shadow-neon-sm" />
+          <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-md flex flex-col items-center group overflow-hidden relative">
+            <UserX size={18} className="text-negative mb-2" />
             <p className="text-xl font-black text-white">{leaveCount}</p>
             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Off</p>
           </div>
@@ -115,13 +112,12 @@ export const Employees: React.FC = () => {
               <div
                 key={emp.id}
                 onClick={() => navigate(`/employees/${emp.id}`)}
-                className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-5 shadow-glass group hover:border-primary/20"
+                className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-5 shadow-lg group hover:border-primary/20"
               >
                 {/* Avatar with Glow */}
                 <div className="relative shrink-0">
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div 
-                    className="size-16 rounded-[24px] bg-surface-dark border border-white/10 relative z-10 shadow-glass-sm flex items-center justify-center overflow-hidden"
+                    className="size-16 rounded-[24px] bg-surface-dark border border-white/10 relative z-10 shadow-sm flex items-center justify-center overflow-hidden"
                   >
                     {emp.image_url ? (
                       <img src={emp.image_url} alt={emp.name} className="w-full h-full object-cover" />
@@ -130,8 +126,8 @@ export const Employees: React.FC = () => {
                     )}
                   </div>
                   <div className={`absolute -bottom-1 -right-1 size-5 rounded-full border-2 border-surface-dark z-20 flex items-center justify-center ${
-                    emp.status === 'active' ? 'bg-positive shadow-neon-sm' : 
-                    emp.status === 'vacation' ? 'bg-warning shadow-neon-sm' : 'bg-negative'
+                    emp.status === 'active' ? 'bg-positive' : 
+                    emp.status === 'vacation' ? 'bg-warning' : 'bg-negative'
                   }`}>
                     {emp.status === 'active' ? <UserCheck size={10} className="text-black" strokeWidth={3} /> : 
                      emp.status === 'vacation' ? <UserMinus size={10} className="text-black" strokeWidth={3} /> : 
