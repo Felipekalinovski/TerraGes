@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   name TEXT,
   email TEXT,
   phone TEXT,
-  role TEXT DEFAULT 'Usuário',
+  role TEXT DEFAULT 'admin',
   avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -125,7 +125,8 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email)
+    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
+    'admin'
   );
   RETURN NEW;
 END;

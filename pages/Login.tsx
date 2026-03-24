@@ -52,7 +52,7 @@ export const Login: React.FC = () => {
               .from('profiles')
               .update({ 
                 company_id: employee.company_id,
-                role: 'user' // Funcionários entram como user/operador por padrão
+                role: 'operador' // Funcionários entram como operador por padrão
               })
               .eq('id', authData.user.id);
             
