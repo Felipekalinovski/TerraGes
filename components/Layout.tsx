@@ -76,14 +76,15 @@ export const Layout: React.FC<LayoutProps> & {
 
   return (
     <LayoutContext.Provider value={contextValue}>
-      <div className="flex flex-col min-h-screen bg-brand-dark text-white max-w-md mx-auto relative overflow-hidden font-sans">
+      <div className="flex h-screen bg-brand-dark text-white w-full overflow-hidden font-sans">
         
-        <div className="relative flex flex-col flex-1 z-10">
+        <Layout.Sidebar />
+        
+        <div className="flex-1 flex flex-col relative w-full h-full overflow-y-auto">
           {children}
           {!hideNav && <Layout.Navigation />}
         </div>
         
-        <Layout.Sidebar />
       </div>
     </LayoutContext.Provider>
   );
@@ -100,14 +101,14 @@ Layout.Header = ({ title, subTitle, showBack, actions }) => {
   const { setIsSidebarOpen, navigate, userProfile } = useLayout();
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between p-4 bg-brand-dark/80 border-b border-white/5 h-18">
+    <header className="sticky top-0 z-20 flex items-center justify-between p-4 bg-brand-dark/80 border-b border-white/5 h-18 backdrop-blur-md">
       <div className="flex items-center gap-3">
         {showBack ? (
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-300 transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft size={24} />
           </button>
         ) : (
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-300 transition-colors">
+          <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <Menu size={24} />
           </button>
         )}
@@ -167,9 +168,9 @@ Layout.Sidebar = () => {
   return (
     <>
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity" onClick={() => setIsSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
-      <aside className={`fixed top-0 left-0 bottom-0 w-72 bg-surface-dark z-50 shadow-2xl transform transition-transform duration-500 ease-out border-r border-white/5 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed md:static top-0 left-0 bottom-0 w-72 md:shrink-0 bg-surface-dark z-50 shadow-2xl transform transition-transform duration-500 ease-out border-r border-white/5 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-primary flex items-center justify-center text-black shadow-neon">
@@ -177,7 +178,7 @@ Layout.Sidebar = () => {
             </div>
             <h2 className="text-xl font-heading font-black tracking-tight text-white uppercase italic">TerraGes</h2>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
@@ -206,7 +207,7 @@ Layout.Sidebar = () => {
 };
 
 Layout.Content = ({ children }) => (
-  <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20">
+  <main className="flex-1 overflow-x-hidden pb-20 md:pb-6">
     {children}
   </main>
 );
@@ -217,7 +218,7 @@ Layout.Navigation = () => {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
+    <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
       <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
         <LayoutDashboard size={22} strokeWidth={isActive('/dashboard') ? 3 : 2} />
         <span className="text-[8px] font-black uppercase tracking-tighter text-current">Início</span>
