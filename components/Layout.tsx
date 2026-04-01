@@ -20,7 +20,9 @@ import {
   MapPin,
   ClipboardList,
   Menu,
-  Settings
+  Settings,
+  FileText,
+  Clock
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -77,14 +79,14 @@ export const Layout: React.FC<LayoutProps> & {
   return (
     <LayoutContext.Provider value={contextValue}>
       <div className="flex h-screen bg-brand-dark text-white w-full overflow-hidden font-sans">
-        
+
         <Layout.Sidebar />
-        
+
         <div className="flex-1 flex flex-col relative w-full h-full overflow-y-auto">
           {children}
           {!hideNav && <Layout.Navigation />}
         </div>
-        
+
       </div>
     </LayoutContext.Provider>
   );
@@ -122,11 +124,11 @@ Layout.Header = ({ title, subTitle, showBack, actions }) => {
       <div className="flex items-center gap-2">
         {actions}
         <ThemeToggle />
-        <button 
+        <button
           onClick={() => navigate('/settings/profile')}
           className="size-9 rounded-full border-2 border-white/10 hover:border-primary/50 transition-all overflow-hidden p-0.5 bg-surface-dark"
         >
-          <img 
+          <img
             src={userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=00E599&color=000`}
             className="size-full rounded-full object-cover"
             alt="Profile"
@@ -152,7 +154,10 @@ Layout.Sidebar = () => {
     { icon: <Wrench size={20} />, label: 'Manutenção', path: '/maintenance' },
     { icon: <Users size={20} />, label: 'Equipe', path: '/employees' },
     { icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' },
-    { icon: <Hammer size={20} />, label: 'Diário de Obra', path: '/rdo' },
+    { icon: <FileText size={20} />, label: 'Orçamentos', path: '/orcamentos' },
+    { icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' },
+    { icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' },
+    { icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' },
   ];
 
   // Admin exclusive items
@@ -186,8 +191,8 @@ Layout.Sidebar = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${isActive(item.path) 
-                ? 'bg-primary/10 text-primary border border-primary/20' 
+              className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${isActive(item.path)
+                ? 'bg-primary/10 text-primary border border-primary/20'
                 : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
             >
               <span className={isActive(item.path) ? 'text-primary' : 'text-gray-500 group-hover:text-primary transition-colors'}>{item.icon}</span>
@@ -223,9 +228,9 @@ Layout.Navigation = () => {
         <LayoutDashboard size={22} strokeWidth={isActive('/dashboard') ? 3 : 2} />
         <span className="text-[8px] font-black uppercase tracking-tighter text-current">Início</span>
       </button>
-      <button onClick={() => navigate('/rdo')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/rdo') ? 'text-primary' : 'text-gray-500'}`}>
-        <Home size={22} strokeWidth={isActive('/rdo') ? 2.5 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Obras</span>
+      <button onClick={() => navigate('/orcamentos')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
+        <FileText size={22} strokeWidth={isActive('/orcamentos') ? 2.5 : 2} />
+        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Orçamentos</span>
       </button>
       <button onClick={() => navigate('/service-orders')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
         <ClipboardList size={22} strokeWidth={isActive('/service-orders') ? 2.5 : 2} />
