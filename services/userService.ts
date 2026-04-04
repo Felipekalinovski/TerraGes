@@ -9,6 +9,7 @@ export interface UserProfile {
     company_id?: string;
     company_name?: string;
     avatar_url?: string;
+    onboarding_completed?: boolean;
     created_at?: string;
     updated_at?: string;
 }

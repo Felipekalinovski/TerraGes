@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './pages/Login';
 import { SignUp } from './pages/SignUp';
@@ -15,7 +15,6 @@ import { SettingsNotifications } from './pages/SettingsNotifications';
 import { SettingsSecurity } from './pages/SettingsSecurity';
 import { SettingsIntegrations } from './pages/SettingsIntegrations';
 import { AIChat } from './pages/AIChat';
-import { IntelligenceHub } from './pages/IntelligenceHub';
 import { Schedule } from './pages/Schedule';
 import { ScheduleForm } from './pages/ScheduleForm';
 import { MaintenanceForm } from './pages/MaintenanceForm';
@@ -43,6 +42,7 @@ import { Loader2 } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string }> = ({ children, requiredRole }) => {
   const { session, profile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -53,6 +53,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   }
 
   if (!session) return <Navigate to="/login" replace />;
+
+  if (profile && profile.onboarding_completed === false && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  if (profile && profile.onboarding_completed !== false && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   if (requiredRole && profile?.role !== requiredRole && profile?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
@@ -79,7 +87,6 @@ const App: React.FC = () => {
 
           {/* ── IA ── */}
           <Route path="/chat"        element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
-          <Route path="/intelligence" element={<ProtectedRoute><IntelligenceHub /></ProtectedRoute>} />
           <Route path="/aichat"      element={<Navigate to="/chat" replace />} />
 
           {/* ── Agenda ── */}
@@ -93,9 +100,7 @@ const App: React.FC = () => {
           <Route path="/maintenance/edit/:id" element={<ProtectedRoute><MaintenanceForm /></ProtectedRoute>} />
 
           {/* ── Frota ── */}
-          <Route path="/fleet"              element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
-          <Route path="/fleet/add"          element={<ProtectedRoute><FleetForm /></ProtectedRoute>} />
-          <Route path="/fleet/edit/:id"     element={<ProtectedRoute><FleetForm /></ProtectedRoute>} />
+          <Route path="/fleet/*"              element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
           <Route path="/fleet/:id/history"  element={<ProtectedRoute><MaintenanceHistory /></ProtectedRoute>} />
 
           {/* ── Equipe ── */}

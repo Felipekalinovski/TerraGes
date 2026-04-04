@@ -11,7 +11,7 @@ export function Onboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const handleFinish = async () => {
+  const handleFinish = async (redirectUri = '/dashboard') => {
     if (!user) return;
     setLoading(true);
     try {
@@ -23,11 +23,11 @@ export function Onboarding() {
 
       if (error) throw error;
       
-      navigate('/dashboard');
+      // Force reload to update AuthContext profile state
+      window.location.href = redirectUri;
     } catch (err: any) {
       console.error(err);
       alert('Erro ao finalizar configurações.');
-    } finally {
       setLoading(false);
     }
   };
@@ -120,9 +120,8 @@ export function Onboarding() {
                 
                 <div className="space-y-3 w-full">
                   <button 
-                    onClick={() => {
-                      handleFinish();
-                      navigate('/orcamentos');
+                    onClick={async () => {
+                      await handleFinish('/orcamentos');
                     }}
                     className="w-full bg-primary hover:bg-primary/90 text-[#0A0A0A] font-black uppercase py-4 px-6 rounded-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
                   >
@@ -130,7 +129,7 @@ export function Onboarding() {
                     <ArrowRight size={18} />
                   </button>
                   <button 
-                    onClick={handleFinish}
+                    onClick={() => handleFinish('/dashboard')}
                     className="w-full bg-[#111] hover:bg-[#222] border border-[#333] text-white font-bold uppercase py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-2"
                   >
                     {loading ? <Loader2 size={18} className="animate-spin" /> : 'Ir para o Início'}
@@ -144,8 +143,9 @@ export function Onboarding() {
           {step < 3 && (
             <div className="mt-8 pt-6 border-t border-[#2A2A2A] flex items-center justify-between">
               <button 
-                onClick={handleFinish} 
+                onClick={() => handleFinish('/dashboard')} 
                 className="text-gray-500 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors"
+                disabled={loading}
               >
                 Pular
               </button>

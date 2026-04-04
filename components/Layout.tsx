@@ -147,7 +147,6 @@ Layout.Sidebar = () => {
 
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' },
-    { icon: <Sparkles size={20} />, label: 'Intelligence Hub', path: '/intelligence' },
     { icon: <MessageSquare size={20} />, label: 'Chat com IA', path: '/chat' },
     { icon: <CalendarDays size={20} />, label: 'Agenda', path: '/schedule' },
     { icon: <Truck size={20} />, label: 'Minha Frota', path: '/fleet' },

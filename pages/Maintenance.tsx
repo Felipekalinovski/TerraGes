@@ -204,12 +204,12 @@ export const Maintenance: React.FC = () => {
                           } text-[8px] font-black uppercase tracking-widest`}>
                              {getTypeLabel(item.type)}
                           </div>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); navigate('/intelligence'); }}
-                            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-[8px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all font-heading italic"
-                          >
-                            <Sparkles size={10} /> IA Diagnostic
-                          </button>
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); navigate('/chat'); }}
+                             className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-[8px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all font-heading italic"
+                           >
+                             <Sparkles size={10} /> IA Chat
+                           </button>
                           {item.cost > 0 && (
                             <span className="text-[10px] font-bold text-gray-400 italic">
                               {formatCurrency(item.cost)}

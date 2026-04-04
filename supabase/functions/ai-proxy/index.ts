@@ -41,8 +41,8 @@ Deno.serve(async (req: Request) => {
 
         // Select model based on type
         const model = type === "vision"
-            ? (Deno.env.get("AI_MODEL_VISION") || "meta-llama/llama-3.2-11b-vision-instruct:free")
-            : (Deno.env.get("AI_MODEL_TEXT") || "meta-llama/llama-3.3-70b-instruct:free");
+            ? (Deno.env.get("AI_MODEL_VISION") || "anthropic/claude-3-haiku:free")
+            : (Deno.env.get("AI_MODEL_TEXT") || "anthropic/claude-3-haiku:free");
 
         console.log(`Proxying to OpenRouter | Model: ${model} | Messages: ${messages.length}`);
 
