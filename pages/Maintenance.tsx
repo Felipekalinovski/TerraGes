@@ -21,6 +21,13 @@ export const Maintenance: React.FC = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadData();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);

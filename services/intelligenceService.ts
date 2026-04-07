@@ -87,6 +87,7 @@ export const intelligenceService = {
             // 3. Save Analysis
             await supabase.from('rdo_ai_analysis').insert({
                 rdo_id: rdoId,
+                user_id: rdo.user_id,
                 classification: analysis.classification,
                 occurrence_type: analysis.occurrence_type,
                 severity: analysis.severity,
@@ -98,7 +99,7 @@ export const intelligenceService = {
 
             // 4. Save Tags
             if (analysis.tags && analysis.tags.length > 0) {
-                const tagsToInsert = analysis.tags.map(tag => ({ rdo_id: rdoId, tag }));
+                const tagsToInsert = analysis.tags.map(tag => ({ rdo_id: rdoId, user_id: rdo.user_id, tag }));
                 await supabase.from('rdo_tags').insert(tagsToInsert);
             }
 
@@ -107,6 +108,7 @@ export const intelligenceService = {
                 await supabase.from('machine_impact').insert({
                     machine_id: impact.id,
                     rdo_id: rdoId,
+                    user_id: rdo.user_id,
                     hours_added: impact.hours_added,
                     risk_increase: impact.risk_increase,
                     notes: impact.notes
@@ -120,6 +122,7 @@ export const intelligenceService = {
             if (analysis.severity === 'alta' || analysis.severity === 'crítica') {
                 await supabase.from('insights').insert({
                     project_id: rdo.project_id,
+                    user_id: rdo.user_id,
                     type: 'ALERTA_OPERACIONAL',
                     content: `Alerta Crítico no RDO de ${rdo.date}: ${analysis.preventive_alert}`,
                     status: 'active'
@@ -188,74 +191,118 @@ export const intelligenceService = {
 
     async getDynamicChatContext(projectId?: string) {
         try {
-            // Parallelize independent data fetches
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
             const [
                 { data: company },
                 { data: machines },
-                { data: recentRDOs },
+                { data: recentMaintenance },
                 { data: transactions },
                 { data: activeInsights },
-                { data: upcomingSchedules }
+                { data: upcomingSchedules },
+                { data: rdosThisMonth },
+                { data: serviceOrders }
             ] = await Promise.all([
-                // 1. Fetch company info
                 supabase.from('company_info').select('name').limit(1).single(),
 
-                // 2. Fetch fleet status
-                supabase.from('machines').select('id, status'),
+                supabase.from('machines').select('id, name, status, type, health_score, health_status'),
 
-                // 3. Fetch recent RDOs
-                supabase.from('rdos')
-                    .select('date, activities, rdo_ai_analysis(severity)')
+                supabase.from('maintenance_records')
+                    .select('*, machines(name)')
                     .order('date', { ascending: false })
                     .limit(5),
 
-                // 4. Fetch financial summary
-                supabase.from('transactions').select('amount, type'),
+                supabase.from('transactions').select('amount, type, category'),
 
-                // 5. Fetch active insights
-                supabase.from('insights')
-                    .select('content')
-                    .eq('status', 'active')
-                    .limit(3),
+                supabase.from('insights').select('content, type').eq('status', 'active').limit(5),
 
-                // 6. Fetch upcoming schedules
-                supabase.from('schedules')
-                    .select('title, type, start_time')
-                    .gte('start_time', new Date().toISOString())
+                supabase.from('schedules').select('title, type, start_time, status')
+                    .gte('start_time', today.toISOString())
                     .order('start_time', { ascending: true })
-                    .limit(5)
+                    .limit(5),
+
+                supabase.from('rdos').select('date, status')
+                    .gte('date', thirtyDaysAgo.toISOString()),
+
+                supabase.from('service_orders').select('status, type')
+                    .limit(10)
             ]);
 
-            // Process data locally
             const activeMachines = machines?.filter(m => m.status === 'active').length || 0;
             const maintenanceMachines = machines?.filter(m => m.status === 'maintenance').length || 0;
-            const balance = transactions?.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0) || 0;
+            const machinesTotal = machines?.length || 0;
+            
+            const income = transactions?.filter(t => t.type === 'income').reduce((acc, t) => acc + (t.amount || 0), 0) || 0;
+            const expense = transactions?.filter(t => t.type === 'expense').reduce((acc, t) => acc + (t.amount || 0), 0) || 0;
+            const balance = income - expense;
+
+            const rdosCount = rdosThisMonth?.length || 0;
+            const completedSO = serviceOrders?.filter(s => s.status === 'completed').length || 0;
+
+            const machinesList = machines?.map(m => 
+                `- ${m.name} (${m.type || 'tipo não definido'}) - Status: ${m.health_status || 'normal'} - Saúde: ${m.health_score || 100}%`
+            ).join('\n') || 'Nenhuma máquina cadastrada';
+
+            const maintenanceList = recentMaintenance?.map(m => 
+                `- ${m.machines?.name || 'Máquina'} - ${m.type} em ${new Date(m.date).toLocaleDateString('pt-BR')} - R$ ${(m.cost || 0).toFixed(2)}`
+            ).join('\n') || 'Nenhuma manutenção recente';
+
+            const transactionsSummary = `
+            - Receitas: R$ ${income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            - Despesas: R$ ${expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            - Saldo: R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
             return `
-            Você é o assistente inteligente do TerraGes.
-            
-            Dados Reais do Sistema (Atualizado):
-            - Empresa: ${company?.name || 'TerraGes Cliente'}
-            - Frota: ${machines?.length || 0} máquinas (${activeMachines} ativas, ${maintenanceMachines} manutenção)
-            - Saldo: R$ ${balance.toLocaleString('pt-BR')}
-            - RDOs Recentes: ${recentRDOs?.length || 0}
-            - Alertas: ${activeInsights?.length || 0}
-            - Agenda: ${upcomingSchedules?.length || 0} futuros
+Você é o assistente inteligente do TerraGes, um sistema de gestão para empresas de terraplanagem, construção pesada e serviços de máquinas pesadas.
 
-            Alertas Ativos:
-            ${activeInsights?.map(i => `- ${i.content}`).join('\n') || 'Nenhum alerta.'}
+IMPORTANTE - Regras de Ouro:
+1. NUNCA invente dados. Use apenas as informações fornecidas abaixo.
+2. Se você não souber algo, diga "Não tenho essa informação baseada nos dados atuais."
+3. Responda de forma direta e em português do Brasil.
+4. Datas devem seguir o formato brasileiro (dd/MM/yyyy).
+5. Valores em reais (R$) com vírgula como separador decimal.
 
-            Agenda Próxima:
-            ${upcomingSchedules?.map(s => `- ${s.title} (${s.type}) em ${new Date(s.start_time).toLocaleDateString('pt-BR')}`).join('\n') || 'Nada agendado.'}
+=== DADOS REAIS DO SISTEMA ===
 
-            Regras:
-            1. Seja breve e direto. Respostas curtas (máx 2 parágrafos).
-            2. Se for agendar, use JSON no final: [[CREATE_SCHEDULE:{"title":"...","type":"...","start_time":"ISO","priority":"...","notes":"..."}]]
-            3. Hoje é ${new Date().toLocaleDateString('pt-BR')}.
-            `;
+Empresa: ${company?.name || 'TerraGes Cliente'}
+
+FROTA (${machinesTotal} máquinas):
+${machinesList}
+
+Status da Frota:
+- Ativas: ${activeMachines}
+- Em Manutenção: ${maintenanceMachines}
+
+FINANCEIRO (Últimos 30 dias):
+${transactionsSummary}
+
+MANUTENÇÕES RECENTES:
+${maintenanceList}
+
+RDOs deste mês: ${rdosCount}
+
+Ordens de Serviço Concluídas: ${completedSO}
+
+AGENDA PRÓXIMA:
+${upcomingSchedules?.map(s => `- ${s.title} (${s.type}) em ${new Date(s.start_time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`).join('\n') || 'Nada agendado.'}
+
+ALERTAS ATIVOS:
+${activeInsights?.map(i => `- [${i.type}] ${i.content}`).join('\n') || 'Nenhum alerta.'}
+
+=== INSTRUÇÕES ===
+- Hoje é ${today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}.
+- Forneça apenas informações baseadas nos dados acima.
+- Se perguntarem sobre algo que não está nos dados, seja honesto.
+- Mantenha respostas curtas (máx 3 parágrafos).
+- Para agendar algo, use: [[CREATE_SCHEDULE:{"title":"...","type":"...","start_time":"YYYY-MM-DDTHH:MM:SS","priority":"...","notes":"..."}]]
+`;
         } catch (error) {
             console.error("Erro ao gerar contexto do chat:", error);
-            return "Erro ao carregar contexto do sistema. Responda genericamente.";
+            return `Você é o assistente do TerraGes. 
+IMPORTANTANTE: Responda apenas com informações gerais. Em caso de dúvida sobre dados específicos, diga que não tem acesso aos dados no momento.
+Hoje é ${new Date().toLocaleDateString('pt-BR')}.`;
         }
     },
 
@@ -366,8 +413,10 @@ export const intelligenceService = {
 
             // 3. Create Insight if necessary
             if (result.needs_alert) {
+                const { data: { user } } = await supabase.auth.getUser();
                 await supabase.from('insights').insert({
                     project_id: null, // Global or machine specific
+                    user_id: user?.id,
                     type: 'MANUTENCAO_PREDITIVA',
                     content: `[Predição AI] ${machine.name}: ${result.message}`,
                     status: 'active'

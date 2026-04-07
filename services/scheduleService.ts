@@ -75,7 +75,8 @@ export const scheduleService = {
 
     // Criar novo agendamento
     async create(scheduleData: ScheduleFormData): Promise<Schedule> {
-        // Validar conflito de máquina
+        const { data: { user } } = await supabase.auth.getUser();
+
         if (scheduleData.machine_id) {
             const { data: conflicts } = await supabase
                 .from('schedules')
@@ -86,13 +87,12 @@ export const scheduleService = {
 
             if (conflicts && conflicts.length > 0) {
                 console.warn('Conflito de máquina detectado para este horário.');
-                // Poderíamos lançar um erro ou apenas avisar. O prompt pede para "validar conflito".
             }
         }
 
         const { data, error } = await supabase
             .from('schedules')
-            .insert([scheduleData])
+            .insert([{ ...scheduleData, user_id: user?.id }])
             .select()
             .single();
 

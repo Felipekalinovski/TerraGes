@@ -64,9 +64,11 @@ export const serviceOrderService = {
 
     // Criar nova ordem
     async create(orderData: ServiceOrderFormData): Promise<ServiceOrder> {
+        const { data: { user } } = await supabase.auth.getUser();
+
         const { data, error } = await supabase
             .from('service_orders')
-            .insert([orderData])
+            .insert([{ ...orderData, user_id: user?.id }])
             .select()
             .single();
 

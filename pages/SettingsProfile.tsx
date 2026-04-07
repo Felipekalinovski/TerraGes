@@ -92,12 +92,39 @@ export const SettingsProfile: React.FC = () => {
     }
   };
 
+  const formatPhone = (value: string) => {
+    const isInternational = value.startsWith('+');
+    const digits = value.replace(/\D/g, '').slice(0, 15);
+    
+    if (isInternational) {
+      return `+${digits}`;
+    }
+
+    // Padrão Brasil (sem +)
+    if (digits.length <= 11) {
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+
+    return digits;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setFormData(prev => ({ ...prev, phone: formatted }));
+  };
+
+  const getRawPhone = () => {
+    return formData.phone.replace(/\D/g, '');
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
       const result = await userService.updateProfile({
         name: formData.name,
-        phone: formData.phone,
+        phone: getRawPhone(),
         role: formData.role,
       });
 
@@ -209,12 +236,13 @@ export const SettingsProfile: React.FC = () => {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={handlePhoneChange}
                   className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="(00) 00000-0000"
+                  placeholder="+55 (11) 99999-9999"
                 />
                 <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
               </div>
+              <p className="text-[9px] font-medium text-gray-600 ml-4 uppercase tracking-tighter">Use o formato internacional com +DDI (ex: +55) para ativar o Bot</p>
             </div>
           </div>
 

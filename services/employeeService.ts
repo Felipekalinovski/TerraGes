@@ -57,9 +57,11 @@ export const employeeService = {
 
     // Criar funcionário
     async create(employeeData: Omit<Employee, 'id' | 'created_at'>): Promise<Employee> {
+        const { data: { user } } = await supabase.auth.getUser();
+
         const { data, error } = await supabase
             .from('employees')
-            .insert([employeeData])
+            .insert([{ ...employeeData, user_id: user?.id }])
             .select()
             .single();
 

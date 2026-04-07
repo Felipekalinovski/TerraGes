@@ -41,9 +41,11 @@ export const rdoService = {
     },
 
     async create(rdoData: RDOFormData): Promise<RDO> {
+        const { data: { user } } = await supabase.auth.getUser();
+
         const { data, error } = await supabase
             .from('rdos')
-            .insert([rdoData])
+            .insert([{ ...rdoData, user_id: user?.id }])
             .select()
             .single();
 

@@ -73,19 +73,33 @@ export const maintenanceService = {
 
     // Criar nova manutenção
     async create(maintenanceData: MaintenanceFormData): Promise<MaintenanceRecord> {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const { data: machine, error: machineError } = await supabase
+            .from('machines')
+            .select('id')
+            .eq('id', maintenanceData.machine_id)
+            .single();
+
+        if (machineError || !machine) {
+            throw new Error('Máquina não encontrada. Selecione um equipamento válido.');
+        }
+
         const { data, error } = await supabase
             .from('maintenance_records')
-            .insert([maintenanceData])
+            .insert([{ ...maintenanceData, user_id: user?.id }])
             .select()
             .single();
 
         if (error) {
             console.error('Error creating maintenance record:', error);
+            if (error.code === '23503') {
+                throw new Error('Equipamento não existe ou foi removido.');
+            }
             throw error;
         }
 
-        // Restore machine health
-        const boost = maintenanceData.type === 'preventive' ? 30 : 50; // Corrective restores more because it usually fixes a failure
+        const boost = maintenanceData.type === 'preventive' ? 30 : 50;
         intelligenceService.restoreMachineHealth(data.machine_id, boost, `Manutenção ${data.type}`).catch(err => {
             console.error('Erro ao restaurar saúde da máquina:', err);
         });
@@ -104,6 +118,9 @@ export const maintenanceService = {
 
         if (error) {
             console.error('Error updating maintenance record:', error);
+            if (error.code === 'PGRST116') {
+                throw new Error('Registro de manutenção não encontrado. Pode ter sido excluído.');
+            }
             throw error;
         }
 

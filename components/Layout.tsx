@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userService, UserProfile } from '../services/userService';
+import { whatsappService } from '../services/whatsappService';
 import {
   LayoutDashboard,
   Truck,
@@ -22,7 +23,8 @@ import {
   Menu,
   Settings,
   FileText,
-  Clock
+  Clock,
+  Phone
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -142,8 +144,13 @@ Layout.Header = ({ title, subTitle, showBack, actions }) => {
 Layout.Sidebar = () => {
   const { isSidebarOpen, setIsSidebarOpen, userProfile, isActive, navigate } = useLayout();
   const { signOut, profile } = useAuth();
+  const [whatsappPending, setWhatsappPending] = useState(0);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+
+  useEffect(() => {
+    whatsappService.countPendingActions().then(setWhatsappPending).catch(() => {});
+  }, []);
 
   const navItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' },
@@ -198,6 +205,26 @@ Layout.Sidebar = () => {
               <span className="text-sm font-bold tracking-tight uppercase">{item.label}</span>
             </button>
           ))}
+
+          {/* WhatsApp Bot */}
+          <button
+            onClick={() => navigate('/whatsapp-inbox')}
+            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
+              isActive('/whatsapp-inbox')
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <span className={isActive('/whatsapp-inbox') ? 'text-green-400' : 'text-gray-500 group-hover:text-green-400 transition-colors'}>
+              <Phone size={20} />
+            </span>
+            <span className="text-sm font-bold tracking-tight uppercase flex-1">WhatsApp Bot</span>
+            {whatsappPending > 0 && (
+              <span className="size-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
+                {whatsappPending}
+              </span>
+            )}
+          </button>
         </nav>
 
         <div className="p-4 bg-black/40 border-t border-white/5 mt-auto">

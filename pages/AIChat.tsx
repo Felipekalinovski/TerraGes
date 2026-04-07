@@ -143,12 +143,12 @@ export const AIChat: React.FC = () => {
                 <div
                   className={`max-w-[85%] p-5 rounded-[28px] text-sm leading-relaxed relative group transition-all ${msg.role === 'user'
                     ? 'bg-primary text-black font-bold rounded-br-none shadow-md'
-                    : 'bg-surface-dark text-gray-200 rounded-bl-none border border-white/5 shadow-md'
+                    : 'bg-surface-dark text-gray-200 dark:text-gray-200 rounded-bl-none border border-white/5 shadow-md'
                     }`}
                 >
                   {msg.text.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/g, '').trim()}
                   
-                  <div className={`text-[9px] mt-3 font-black uppercase tracking-widest opacity-40 ${msg.role === 'user' ? 'text-black/60' : 'text-gray-500'}`}>
+                  <div className={`text-[9px] mt-3 font-black uppercase tracking-widest opacity-40 ${msg.role === 'user' ? 'text-black/60' : 'text-gray-500 dark:text-gray-500'}`}>
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
 

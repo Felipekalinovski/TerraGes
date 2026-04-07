@@ -52,9 +52,26 @@ export const EmployeeForm: React.FC = () => {
     }
   };
 
+  const formatPhone = (value: string) => {
+    const isInternational = value.startsWith('+');
+    const digits = value.replace(/\D/g, '').slice(0, 15);
+    
+    if (isInternational) return `+${digits}`;
+    if (digits.length <= 11) {
+      if (digits.length <= 2) return digits;
+      if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    return digits;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'contact') {
+      setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleCertChange = (cert: string) => {
@@ -103,7 +120,7 @@ export const EmployeeForm: React.FC = () => {
         name: formData.name!,
         role: formData.role!,
         status: formData.status as any || 'active',
-        contact: formData.contact || '',
+        contact: formData.contact?.replace(/\D/g, '') || '',
         email: formData.email || '',
         cpf: formData.cpf || '',
         birth_date: formData.birth_date || '',
@@ -334,7 +351,7 @@ export const EmployeeForm: React.FC = () => {
                       onChange={handleChange}
                       type="text"
                       className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium placeholder:text-gray-700"
-                      placeholder="(00) 00000-0000"
+                      placeholder="+55 (11) 99999-9999"
                     />
                   </div>
                 </div>

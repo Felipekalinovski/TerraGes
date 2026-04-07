@@ -37,6 +37,7 @@ import { OrcamentoForm } from './pages/OrcamentoForm';
 import { HoraMaquinaPage } from './pages/HoraMaquina';
 import { RelatorioCliente } from './pages/RelatorioCliente';
 import { Onboarding } from './pages/Onboarding';
+import { WhatsAppInbox } from './pages/WhatsAppInbox';
 
 import { Loader2 } from 'lucide-react';
 
@@ -137,6 +138,9 @@ const App: React.FC = () => {
 
           {/* Relatório para o Cliente */}
           <Route path="/relatorio-cliente" element={<ProtectedRoute><RelatorioCliente /></ProtectedRoute>} />
+
+          {/* WhatsApp Bot Inbox */}
+          <Route path="/whatsapp-inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
 
           {/* ── Configurações ── */}
           <Route path="/settings"               element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
