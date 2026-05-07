@@ -49,8 +49,17 @@ function normalizePhone(jid: string): string {
   return jid.replace(/@s\.whatsapp\.net|@g\.us/g, "").split(":")[0].replace(/\D/g, "");
 }
 
-function extractText(msg: EvogoPayload["data"]["Message"]): string | null {
-  return msg?.conversation ?? msg?.extendedTextMessage?.text ?? null;
+function extractText(payload: any): string | null {
+  // Tenta extrair de várias estruturas possíveis (Evolution v1, v2, v3 e Go)
+  const msg = payload.data?.Message || payload.Message || payload;
+  return (
+    msg?.conversation || 
+    msg?.extendedTextMessage?.text || 
+    msg?.text ||
+    msg?.content ||
+    payload.data?.message?.text ||
+    null
+  );
 }
 
 function detectType(info: EvogoPayload["data"]["Info"]): "text" | "audio" | "image" | "unsupported" {
@@ -374,7 +383,7 @@ Deno.serve(async (req: Request) => {
     const inputType = msgTypeStr;
 
     if (msgTypeStr === "text") {
-      userText = extractText(msg);
+      userText = extractText(payload);
     } else if (msgTypeStr === "audio") {
       await sendMessage(phone, "🎙️ Ouvi seu áudio! Processando...", instanceToken);
       const media = await getMediaBase64(msgId, rawPhone, instanceToken);
@@ -398,6 +407,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userText) {
+      console.log("[WA] Falha ao extrair texto do payload:", JSON.stringify(payload).substring(0, 500));
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: "no_text" }), { headers: corsHeaders });
     }
 
