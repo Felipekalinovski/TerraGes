@@ -1,13 +1,51 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { isAdminUser, canViewData, getAllowedRoutes } from './services/roleService';
+import { Login } from './pages/Login';
+import { SignUp } from './pages/SignUp';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { Dashboard } from './pages/Dashboard';
+import { Fleet } from './pages/Fleet';
+import { RDO } from './pages/RDO';
+import { Finance } from './pages/Finance';
+import { Settings } from './pages/Settings';
+import { SettingsProfile } from './pages/SettingsProfile';
+import { SettingsCompany } from './pages/SettingsCompany';
+import { SettingsNotifications } from './pages/SettingsNotifications';
+import { SettingsSecurity } from './pages/SettingsSecurity';
+import { SettingsIntegrations } from './pages/SettingsIntegrations';
+import { AIChat } from './pages/AIChat';
+import { Schedule } from './pages/Schedule';
+import { ScheduleForm } from './pages/ScheduleForm';
+import { MaintenanceForm } from './pages/MaintenanceForm';
+import { MaintenanceHistory } from './pages/MaintenanceHistory';
+import { Maintenance } from './pages/Maintenance';
+import { Employees } from './pages/Employees';
+import { EmployeeForm } from './pages/EmployeeForm';
+import { EmployeeDetails } from './pages/EmployeeDetails';
+import { FleetForm } from './pages/FleetForm';
+import { RDOForm } from './pages/RDOForm';
+import { Reports } from './pages/Reports';
+import { SettingsProjects } from './pages/SettingsProjects';
+import { ServiceOrderList } from './pages/ServiceOrderList';
+import { ServiceOrderForm } from './pages/ServiceOrderForm';
+import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
+
+// ── Novos módulos ──────────────────────────────────────────────────────────────
+import { Orcamento } from './pages/Orcamento';
+import { OrcamentoForm } from './pages/OrcamentoForm';
+import { HoraMaquinaPage } from './pages/HoraMaquina';
+import { RelatorioCliente } from './pages/RelatorioCliente';
+import { Onboarding } from './pages/Onboarding';
+import { WhatsAppInbox } from './pages/WhatsAppInbox';
+
 import { Loader2 } from 'lucide-react';
+import { isAdminUser, canViewData } from './services/roleService';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string; requireAccess?: boolean }> = ({ 
   children, 
-  requiredRole, 
-  requireAccess = false 
+  requiredRole,
+  requireAccess = false
 }) => {
   const { session, profile, loading } = useAuth();
   const location = useLocation();
@@ -30,14 +68,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Verificação de admin
+  // Verificação de admin (requiredRole)
   if (requiredRole && requiredRole === 'admin' && !isAdminUser(profile?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   // Se requer acesso específico (visualização), e não é admin, redireciona
   if (requireAccess && !canViewData(profile?.role)) {
-    // Operador tentando acessar rota restrita - redireciona para hora-máquina
     return <Navigate to="/hora-maquina" replace />;
   }
 
@@ -91,6 +128,7 @@ const App: React.FC = () => {
           {/* ── Financeiro / Relatórios ── */}
           <Route path="/finance" element={<ProtectedRoute requireAccess><Finance /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute requireAccess><Reports /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
 
           {/* ── Ordens de Serviço ── */}
           <Route path="/service-orders"           element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
@@ -103,7 +141,7 @@ const App: React.FC = () => {
           {/* ────────────────────────────────────────────────────────────────── */}
 
           {/* Orçamentos */}
-          <Route path="/orcamentos"       element={<ProtectedRoute><Orcamento /></ProtectedRoute>} />
+          <Route path="/orcamentos"       element={<ProtectedRoute requireAccess><Orcamento /></ProtectedRoute>} />
           <Route path="/orcamentos/novo"  element={<ProtectedRoute><OrcamentoForm /></ProtectedRoute>} />
           <Route path="/orcamentos/:id"   element={<ProtectedRoute><OrcamentoForm /></ProtectedRoute>} />
 
@@ -113,7 +151,7 @@ const App: React.FC = () => {
           {/* Relatório para o Cliente */}
           <Route path="/relatorio-cliente" element={<ProtectedRoute><RelatorioCliente /></ProtectedRoute>} />
 
-          {/* WhatsApp Bot Inbox - apenas admin */}
+          {/* WhatsApp Bot Inbox */}
           <Route path="/whatsapp-inbox" element={<ProtectedRoute requireAccess><WhatsAppInbox /></ProtectedRoute>} />
 
           {/* ── Configurações ── */}
