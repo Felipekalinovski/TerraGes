@@ -27,7 +27,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { isAdminUser, canViewFinance, canViewReports, canAccessSettings, canManageTeam, canViewSchedule } from '../services/roleService';
+import { isAdminUser, canViewFinance, canViewReports, canAccessSettings, canManageTeam, canViewSchedule, canViewData } from '../services/roleService';
 
 // Context for shared layout state
 interface LayoutContextType {
