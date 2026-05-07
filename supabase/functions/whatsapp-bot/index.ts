@@ -68,25 +68,55 @@ async function sendMessage(to: string, text: string, token: string): Promise<voi
   // Formatar número: remover tudo exceto dígitos
   const number = to.replace(/\D/g, "");
   
-  const url = `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": token,
-    },
-    body: JSON.stringify({ 
-      number: number,
-      text: text
-    }),
-  });
+  // Tentar diferentes endpoints (Evolution Go format)
+  const endpoints = [
+    `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
+    `${EVOLUTION_API_URL}/message/sendText?instance=${EVOLUTION_INSTANCE}`,
+    `${EVOLUTION_API_URL}/api/message/sendText/${EVOLUTION_INSTANCE}`,
+    `${EVOLUTION_API_URL}/message/sendText`, // Evolution Go might use this path without instance parameter
+  ];
   
-  const responseText = await res.text();
+  let success = false;
+  let lastError = "";
   
-  if (!res.ok) {
-    console.error(`[WA] Envio falhou (${res.status}):`, responseText);
-  } else {
-    console.log(`[WA] Enviado para ${to} ✓`);
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": token,
+          "instance": EVOLUTION_INSTANCE,
+        },
+        body: JSON.stringify({ 
+          number: number,
+          text: text, // Evolution v1 / Some Evolution Go versions
+          textMessage: { text: text } // Evolution v2/v3 structured format
+        }),
+      });
+      
+      if (res.ok) {
+        console.log(`[WA] Enviado para ${to} via ${url}`);
+        success = true;
+        break;
+      } else {
+        const err = await res.text();
+        lastError = `${res.status}: ${err}`;
+        console.log(`[WA] Tentativa ${url} falhou: ${lastError}`);
+      }
+    } catch (e) {
+      lastError = String(e);
+      console.log(`[WA] Erro em ${url}: ${lastError}`);
+    }
+  }
+  
+  if (!success) {
+    console.error(`[WA] Todas as tentativas falharam. Último erro: ${lastError}`);
+    // Se todos falharem, registrar informação para debug
+    console.log(`[WA] Debug - Configuração atual:`);
+    console.log(`[WA]   EVOLUTION_API_URL: ${EVOLUTION_API_URL}`);
+    console.log(`[WA]   EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE}`);
+    console.log(`[WA]   Tentou endpoints: ${endpoints.join(', ')}`);
   }
 }
 
