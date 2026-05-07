@@ -65,19 +65,26 @@ function detectType(info: EvogoPayload["data"]["Info"]): "text" | "audio" | "ima
 // ─── Evolution API ────────────────────────────────────────────────────────────
 
 async function sendMessage(to: string, text: string, token: string): Promise<void> {
-  const url = `${EVOLUTION_API_URL}/send/text`;
+  // Formatar número: remover tudo exceto dígitos
+  const number = to.replace(/\D/g, "");
+  
+  const url = `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "apikey": token,
-      "instance": EVOLUTION_INSTANCE,
     },
-    body: JSON.stringify({ number: to, text, delay: 500, formatJid: true }),
+    body: JSON.stringify({ 
+      number: number,
+      text: text
+    }),
   });
+  
+  const responseText = await res.text();
+  
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error(`[WA] Envio falhou (${res.status}):`, errBody);
+    console.error(`[WA] Envio falhou (${res.status}):`, responseText);
   } else {
     console.log(`[WA] Enviado para ${to} ✓`);
   }
