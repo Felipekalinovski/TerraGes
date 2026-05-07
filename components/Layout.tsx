@@ -27,6 +27,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { isAdminUser, canViewFinance, canViewReports, canAccessSettings, canManageTeam, canViewSchedule } from '../services/roleService';
 
 // Context for shared layout state
 interface LayoutContextType {
@@ -146,28 +147,62 @@ Layout.Sidebar = () => {
   const { signOut, profile } = useAuth();
   const [whatsappPending, setWhatsappPending] = useState(0);
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+  const userRole = profile?.role;
+  const canView = canViewData(userRole); // true para admin, false para operador
 
   useEffect(() => {
     whatsappService.countPendingActions().then(setWhatsappPending).catch(() => {});
   }, []);
 
-  const navItems = [
+  // Menu base para todos os usuários logados
+  const navItems: Array<{ icon: React.ReactNode; label: string; path: string }> = [
     { icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' },
-    { icon: <MessageSquare size={20} />, label: 'Chat com IA', path: '/chat' },
-    { icon: <CalendarDays size={20} />, label: 'Agenda', path: '/schedule' },
-    { icon: <Truck size={20} />, label: 'Minha Frota', path: '/fleet' },
-    { icon: <Wrench size={20} />, label: 'Manutenção', path: '/maintenance' },
-    { icon: <Users size={20} />, label: 'Equipe', path: '/employees' },
-    { icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' },
-    { icon: <FileText size={20} />, label: 'Orçamentos', path: '/orcamentos' },
-    { icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' },
-    { icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' },
-    { icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' },
   ];
 
-  // Admin exclusive items
-  if (isAdmin) {
+  // Admin/gerente pode ver chat IA
+  if (canView) {
+    navItems.push({ icon: <MessageSquare size={20} />, label: 'Chat com IA', path: '/chat' });
+  }
+
+  // Agenda - apenas admin visualiza, operador apenas vê próprio schedule através deoutro lugar
+  if (canViewSchedule(userRole)) {
+    navItems.push({ icon: <CalendarDays size={20} />, label: 'Agenda', path: '/schedule' });
+  }
+
+  // Frota admin apenas
+  if (canView) {
+    navItems.push({ icon: <Truck size={20} />, label: 'Minha Frota', path: '/fleet' });
+  }
+
+  // Manutenção - adminvisualiza
+  if (canView) {
+    navItems.push({ icon: <Wrench size={20} />, label: 'Manutenção', path: '/maintenance' });
+  }
+
+  // Equipe - admin/gerente
+  if (canManageTeam(userRole)) {
+    navItems.push({ icon: <Users size={20} />, label: 'Equipe', path: '/employees' });
+  }
+
+  // Ordens de Serviço - todos podem ver masOperator não cria
+  navItems.push({ icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' });
+
+  // Orçamentos - admin
+  if (canView) {
+    navItems.push({ icon: <FileText size={20} />, label: 'Orçamentos', path: '/orcamentos' });
+  }
+
+  // Hora-Máquina - todos veem para registrar
+  navItems.push({ icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' });
+
+  // Relatório Cliente - todos podem acessar
+  navItems.push({ icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' });
+
+  // RDO - operador pode inserir, adminvisualiza
+  navItems.push({ icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' });
+
+  // Admin exclusive items (financeiro, relatórios, configurações)
+  if (isAdminUser(userRole)) {
     navItems.push(
       { icon: <Wallet size={20} />, label: 'Financeiro', path: '/finance' },
       { icon: <BarChart2 size={20} />, label: 'Relatórios', path: '/reports' },
@@ -206,25 +241,27 @@ Layout.Sidebar = () => {
             </button>
           ))}
 
-          {/* WhatsApp Bot */}
-          <button
-            onClick={() => navigate('/whatsapp-inbox')}
-            className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
-              isActive('/whatsapp-inbox')
-                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <span className={isActive('/whatsapp-inbox') ? 'text-green-400' : 'text-gray-500 group-hover:text-green-400 transition-colors'}>
-              <Phone size={20} />
-            </span>
-            <span className="text-sm font-bold tracking-tight uppercase flex-1">WhatsApp Bot</span>
-            {whatsappPending > 0 && (
-              <span className="size-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
-                {whatsappPending}
+          {/* WhatsApp Bot - apenas admin */}
+          {isAdminUser(userRole) && (
+            <button
+              onClick={() => navigate('/whatsapp-inbox')}
+              className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
+                isActive('/whatsapp-inbox')
+                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <span className={isActive('/whatsapp-inbox') ? 'text-green-400' : 'text-gray-500 group-hover:text-green-400 transition-colors'}>
+                <Phone size={20} />
               </span>
-            )}
-          </button>
+              <span className="text-sm font-bold tracking-tight uppercase flex-1">WhatsApp Bot</span>
+              {whatsappPending > 0 && (
+                <span className="size-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
+                  {whatsappPending}
+                </span>
+              )}
+            </button>
+          )}
         </nav>
 
         <div className="p-4 bg-black/40 border-t border-white/5 mt-auto">
@@ -246,7 +283,7 @@ Layout.Content = ({ children }) => (
 Layout.Navigation = () => {
   const { navigate, isActive, setIsSidebarOpen } = useLayout();
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+  const isAdmin = isAdminUser(profile?.role);
 
   return (
     <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">

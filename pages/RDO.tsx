@@ -4,6 +4,7 @@ import { Plus, Calendar, MapPin, User, Eye, Edit2, Trash2, Loader2 } from 'lucid
 import { useNavigate } from 'react-router-dom';
 import { rdoService, RDO as RDOType } from '../services/rdoService';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser } from '../services/roleService';
 
 export const RDO: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export const RDO: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+  const isAdmin = isAdminUser(profile?.role);
 
   useEffect(() => {
     if (profile) {

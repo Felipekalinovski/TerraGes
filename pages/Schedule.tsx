@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Calendar as CalendarIco
 import { useNavigate } from 'react-router-dom';
 import { scheduleService, type Schedule as SupabaseSchedule } from '../services/scheduleService';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser } from '../services/roleService';
 
 // --- Types & Helpers ---
 
@@ -95,7 +96,7 @@ export const Schedule: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+  const isAdmin = isAdminUser(profile?.role);
 
   useEffect(() => {
     if (profile) {

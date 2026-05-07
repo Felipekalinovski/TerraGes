@@ -1,47 +1,14 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Login } from './pages/Login';
-import { SignUp } from './pages/SignUp';
-import { ForgotPassword } from './pages/ForgotPassword';
-import { Dashboard } from './pages/Dashboard';
-import { Fleet } from './pages/Fleet';
-import { RDO } from './pages/RDO';
-import { Finance } from './pages/Finance';
-import { Settings } from './pages/Settings';
-import { SettingsProfile } from './pages/SettingsProfile';
-import { SettingsCompany } from './pages/SettingsCompany';
-import { SettingsNotifications } from './pages/SettingsNotifications';
-import { SettingsSecurity } from './pages/SettingsSecurity';
-import { SettingsIntegrations } from './pages/SettingsIntegrations';
-import { AIChat } from './pages/AIChat';
-import { Schedule } from './pages/Schedule';
-import { ScheduleForm } from './pages/ScheduleForm';
-import { MaintenanceForm } from './pages/MaintenanceForm';
-import { MaintenanceHistory } from './pages/MaintenanceHistory';
-import { Maintenance } from './pages/Maintenance';
-import { Employees } from './pages/Employees';
-import { EmployeeForm } from './pages/EmployeeForm';
-import { EmployeeDetails } from './pages/EmployeeDetails';
-import { FleetForm } from './pages/FleetForm';
-import { RDOForm } from './pages/RDOForm';
-import { Reports } from './pages/Reports';
-import { SettingsProjects } from './pages/SettingsProjects';
-import { ServiceOrderList } from './pages/ServiceOrderList';
-import { ServiceOrderForm } from './pages/ServiceOrderForm';
-import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
-
-// ── Novos módulos ──────────────────────────────────────────────────────────────
-import { Orcamento } from './pages/Orcamento';
-import { OrcamentoForm } from './pages/OrcamentoForm';
-import { HoraMaquinaPage } from './pages/HoraMaquina';
-import { RelatorioCliente } from './pages/RelatorioCliente';
-import { Onboarding } from './pages/Onboarding';
-import { WhatsAppInbox } from './pages/WhatsAppInbox';
-
+import { isAdminUser, canViewData, getAllowedRoutes } from './services/roleService';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string }> = ({ children, requiredRole }) => {
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string; requireAccess?: boolean }> = ({ 
+  children, 
+  requiredRole, 
+  requireAccess = false 
+}) => {
   const { session, profile, loading } = useAuth();
   const location = useLocation();
 
@@ -63,8 +30,15 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (requiredRole && profile?.role !== requiredRole && profile?.role !== 'admin') {
+  // Verificação de admin
+  if (requiredRole && requiredRole === 'admin' && !isAdminUser(profile?.role)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Se requer acesso específico (visualização), e não é admin, redireciona
+  if (requireAccess && !canViewData(profile?.role)) {
+    // Operador tentando acessar rota restrita - redireciona para hora-máquina
+    return <Navigate to="/hora-maquina" replace />;
   }
 
   return <>{children}</>;
@@ -87,36 +61,36 @@ const App: React.FC = () => {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
           {/* ── IA ── */}
-          <Route path="/chat"        element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+          <Route path="/chat"        element={<ProtectedRoute requireAccess><AIChat /></ProtectedRoute>} />
           <Route path="/aichat"      element={<Navigate to="/chat" replace />} />
 
           {/* ── Agenda ── */}
-          <Route path="/schedule"          element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+          <Route path="/schedule"          element={<ProtectedRoute requireAccess><Schedule /></ProtectedRoute>} />
           <Route path="/schedule/new"      element={<ProtectedRoute><ScheduleForm /></ProtectedRoute>} />
           <Route path="/schedule/edit/:id" element={<ProtectedRoute><ScheduleForm /></ProtectedRoute>} />
 
           {/* ── Manutenção ── */}
-          <Route path="/maintenance"          element={<ProtectedRoute><Maintenance /></ProtectedRoute>} />
+          <Route path="/maintenance"          element={<ProtectedRoute requireAccess><Maintenance /></ProtectedRoute>} />
           <Route path="/maintenance/new"      element={<ProtectedRoute><MaintenanceForm /></ProtectedRoute>} />
           <Route path="/maintenance/edit/:id" element={<ProtectedRoute><MaintenanceForm /></ProtectedRoute>} />
 
           {/* ── Frota ── */}
-          <Route path="/fleet/*"              element={<ProtectedRoute><Fleet /></ProtectedRoute>} />
-          <Route path="/fleet/:id/history"  element={<ProtectedRoute><MaintenanceHistory /></ProtectedRoute>} />
+          <Route path="/fleet/*"              element={<ProtectedRoute requireAccess><Fleet /></ProtectedRoute>} />
+          <Route path="/fleet/:id/history"  element={<ProtectedRoute requireAccess><MaintenanceHistory /></ProtectedRoute>} />
 
           {/* ── Equipe ── */}
-          <Route path="/employees"          element={<ProtectedRoute><Employees /></ProtectedRoute>} />
-          <Route path="/employees/new"      element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
-          <Route path="/employees/edit/:id" element={<ProtectedRoute><EmployeeForm /></ProtectedRoute>} />
-          <Route path="/employees/:id"      element={<ProtectedRoute><EmployeeDetails /></ProtectedRoute>} />
+          <Route path="/employees"          element={<ProtectedRoute requireAccess><Employees /></ProtectedRoute>} />
+          <Route path="/employees/new"      element={<ProtectedRoute requireAccess><EmployeeForm /></ProtectedRoute>} />
+          <Route path="/employees/edit/:id" element={<ProtectedRoute requireAccess><EmployeeForm /></ProtectedRoute>} />
+          <Route path="/employees/:id"      element={<ProtectedRoute requireAccess><EmployeeDetails /></ProtectedRoute>} />
 
           {/* ── Obra / RDO ── */}
-          <Route path="/rdo"      element={<ProtectedRoute><RDO /></ProtectedRoute>} />
+          <Route path="/rdo"      element={<ProtectedRoute requireAccess><RDO /></ProtectedRoute>} />
           <Route path="/rdo/new"  element={<ProtectedRoute><RDOForm /></ProtectedRoute>} />
 
           {/* ── Financeiro / Relatórios ── */}
-          <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          <Route path="/finance" element={<ProtectedRoute requireAccess><Finance /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute requireAccess><Reports /></ProtectedRoute>} />
 
           {/* ── Ordens de Serviço ── */}
           <Route path="/service-orders"           element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
@@ -139,8 +113,8 @@ const App: React.FC = () => {
           {/* Relatório para o Cliente */}
           <Route path="/relatorio-cliente" element={<ProtectedRoute><RelatorioCliente /></ProtectedRoute>} />
 
-          {/* WhatsApp Bot Inbox */}
-          <Route path="/whatsapp-inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
+          {/* WhatsApp Bot Inbox - apenas admin */}
+          <Route path="/whatsapp-inbox" element={<ProtectedRoute requireAccess><WhatsAppInbox /></ProtectedRoute>} />
 
           {/* ── Configurações ── */}
           <Route path="/settings"               element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />

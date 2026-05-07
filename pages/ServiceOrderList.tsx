@@ -4,6 +4,7 @@ import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User,
 import { useNavigate } from 'react-router-dom';
 import { serviceOrderService, ServiceOrder } from '../services/serviceOrderService';
 import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser } from '../services/roleService';
 
 export const ServiceOrderList: React.FC = () => {
     const navigate = useNavigate();
@@ -11,7 +12,7 @@ export const ServiceOrderList: React.FC = () => {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'gerente' || profile?.role === 'proprietario';
+    const isAdmin = isAdminUser(profile?.role);
 
     useEffect(() => {
         if (profile) {

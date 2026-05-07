@@ -5,6 +5,8 @@ import {
   ChevronRight, Phone, Calendar, ClipboardList, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { whatsappService, WhatsAppConversation, WhatsAppMessage } from '../services/whatsappService';
+import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser } from '../services/roleService';
 
 // ─── Badge de Status da Ação ────────────────────────────────────────────────
 const ActionBadge: React.FC<{ type: string | null; status: string }> = ({ type, status }) => {
@@ -98,6 +100,11 @@ export const WhatsAppInbox: React.FC = () => {
   const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
   const [pendingActions, setPendingActions] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Role do usuário logado
+  const { profile } = useAuth();
+  const userRole = (profile?.role ?? '').toLowerCase();
+  const isAdmin = ['admin', 'gerente', 'proprietario', 'dono'].includes(userRole);
 
   // Carrega conversas
   const loadConversations = async () => {
@@ -294,13 +301,26 @@ export const WhatsAppInbox: React.FC = () => {
 
                           <ActionBadge type={msg.action_type} status={msg.action_status} />
 
-                          {msg.role === 'assistant' && msg.action_status === 'pending' && msg.action_data && (
+                          {/* Apenas ADMIN pode aprovar/rejeitar rascunhos */}
+                          {msg.role === 'assistant' && msg.action_status === 'pending' && msg.action_data && isAdmin && (
                             <DraftApprovalCard
                               message={msg}
                               onApprove={() => handleApprove(msg)}
                               onReject={() => handleReject(msg)}
                               loading={pendingActions[msg.id] ?? false}
                             />
+                          )}
+
+                          {/* Operador vê mensagens de rascunho mas não pode agir */}
+                          {msg.role === 'assistant' && msg.action_status === 'pending' && msg.action_data && !isAdmin && (
+                            <div className="mt-2 p-3 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-yellow-400 mb-1">
+                                📋 Rascunho pendente — hanya untuk admin
+                              </p>
+                              <p className="text-[10px] text-gray-500">
+                                Solicite ao gestor para confirmar no app.
+                              </p>
+                            </div>
                           )}
 
                           <span className="text-[9px] text-gray-600 mt-1 px-1">{formatTime(msg.created_at)}</span>
