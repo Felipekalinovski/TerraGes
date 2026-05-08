@@ -77,35 +77,82 @@ async function sendMessage(to: string, text: string, token: string): Promise<voi
   // Formatar número: adicionar @s.whatsapp.net se necessário
   const number = to.includes('@s.whatsapp.net') ? to : `${to.replace(/\D/g, "")}@s.whatsapp.net`;
   
-  // Endpoint Evolution Go conforme documentação
-  const url = `${EVOLUTION_API_URL}/send/text`;
+  // Lista de endpoints possíveis para Evolution Go (priorizando o oficial primeiro)
+  const endpoints = [
+    `${EVOLUTION_API_URL}/send/text`, // Documentação oficial
+    `${EVOLUTION_API_URL}/message/sendText`, // Alternativa comum
+    `${EVOLUTION_API_URL}/api/message/sendText`, // Outra alternativa
+  ];
   
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": token,
-      },
-      body: JSON.stringify({ 
-        number: number,
-        text: text,
-        // Campos opcionais conforme documentação (podem ser removidos se não forem necessários)
-        delay: -1, // Envia imediatamente
-      }),
-    });
-    
-    if (!res.ok) {
-      const err = await res.text();
-      console.error(`[WA] Erro ao enviar para ${to}: ${res.status}: ${err}`);
-      throw new Error(`Failed to send message: ${res.status}: ${err}`);
+  let lastError = "";
+  
+  for (const url of endpoints) {
+    try {
+      console.log(`[WA] Tentando endpoint: ${url}`);
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": token,
+        },
+        body: JSON.stringify({ 
+          number: number,
+          text: text,
+          // Campos opcionais conforme documentação
+          delay: -1, // Envia imediatamente
+        }),
+      });
+      
+      if (res.ok) {
+        console.log(`[WA] Enviado para ${to} via ${url}`);
+        return;
+      } else {
+        const err = await res.text();
+        lastError = `${res.status}: ${err}`;
+        console.log(`[WA] Endpoint ${url} falhou: ${lastError}`);
+      }
+    } catch (e) {
+      lastError = String(e);
+      console.log(`[WA] Erro na requisição ${url}: ${lastError}`);
     }
-    
-    console.log(`[WA] Enviado para ${to} via ${url}`);
-  } catch (e) {
-    console.error(`[WA] Erro na requisição para ${to}: ${e}`);
-    throw e;
   }
+  
+  // Se todos endpoints falharem, tenta formatos diferentes
+  console.log(`[WA] Todos endpoints falharam. Tentando formatos alternativos...`);
+  
+  // Tenta com estrutura de mensagem diferente
+  const alternativeFormats = [
+    { body: { number: number, message: text } },
+    { body: { number: number, text: text, delay: -1 } },
+    { body: { number: number, text: text } },
+  ];
+  
+  for (const format of alternativeFormats) {
+    for (const url of endpoints) {
+      try {
+        console.log(`[WA] Tentando formato alternativo em ${url}`);
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": token,
+          },
+          body: JSON.stringify(format.body),
+        });
+        
+        if (res.ok) {
+          console.log(`[WA] Enviado para ${to} via ${url} com formato alternativo`);
+          return;
+        }
+      } catch (e) {
+        console.log(`[WA] Formato alternativo falhou: ${e}`);
+      }
+    }
+  }
+  
+  console.error(`[WA] Todas as tentativas falharam. Último erro: ${lastError}`);
+  throw new Error(`Failed to send message after all attempts: ${lastError}`);
 }
 
 async function getMediaBase64(msgId: string, chatJid: string, token: string): Promise<{ base64: string; mimetype: string } | null> {
