@@ -45,7 +45,8 @@ export const connectEvolutionInstance = async (config: EvolutionConfig) => {
 
 export const setEvolutionWebhook = async (config: EvolutionConfig, webhookUrl: string) => {
   try {
-    const response = await fetch(`${config.baseUrl}/webhook/set/${config.instanceName}`, {
+    // Evolution Go usa formato simplificado para webhook
+    const response = await fetch(`${config.baseUrl}/webhook/set`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,7 +71,7 @@ export const setEvolutionWebhook = async (config: EvolutionConfig, webhookUrl: s
 
 export const logoutEvolutionInstance = async (config: EvolutionConfig) => {
   try {
-    await fetch(`${config.baseUrl}/instance/logout/${config.instanceName}`, {
+    await fetch(`${config.baseUrl}/instance/logout`, {
       method: 'DELETE',
       headers: {
         'apikey': config.apiKey
@@ -78,5 +79,34 @@ export const logoutEvolutionInstance = async (config: EvolutionConfig) => {
     });
   } catch (error) {
     console.error("Erro ao desconectar:", error);
+  }
+};
+
+export const sendMessageEvolution = async (config: EvolutionConfig, to: string, text: string) => {
+  try {
+    const number = to.includes('@s.whatsapp.net') ? to : `${to.replace(/\D/g, "")}@s.whatsapp.net`;
+    
+    const response = await fetch(`${config.baseUrl}/send/text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.apiKey
+      },
+      body: JSON.stringify({
+        number: number,
+        text: text,
+        delay: -1 // Envia imediatamente
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to send message: ${response.status}: ${error}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Erro ao enviar mensagem:", error);
+    throw error;
   }
 };

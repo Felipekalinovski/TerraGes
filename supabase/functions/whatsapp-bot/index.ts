@@ -74,77 +74,77 @@ function detectType(info: EvogoPayload["data"]["Info"]): "text" | "audio" | "ima
 // ─── Evolution API ────────────────────────────────────────────────────────────
 
 async function sendMessage(to: string, text: string, token: string): Promise<void> {
-  // Formatar número: remover tudo exceto dígitos
-  const number = to.replace(/\D/g, "");
+  // Formatar número: adicionar @s.whatsapp.net se necessário
+  const number = to.includes('@s.whatsapp.net') ? to : `${to.replace(/\D/g, "")}@s.whatsapp.net`;
   
-  // Tentar diferentes endpoints (Evolution Go format)
-  const endpoints = [
-    `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
-    `${EVOLUTION_API_URL}/message/sendText?instance=${EVOLUTION_INSTANCE}`,
-    `${EVOLUTION_API_URL}/api/message/sendText/${EVOLUTION_INSTANCE}`,
-    `${EVOLUTION_API_URL}/message/sendText`, // Evolution Go might use this path without instance parameter
-  ];
+  // Endpoint Evolution Go conforme documentação
+  const url = `${EVOLUTION_API_URL}/send/text`;
   
-  let success = false;
-  let lastError = "";
-  
-  for (const url of endpoints) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": token,
-          "instance": EVOLUTION_INSTANCE,
-        },
-        body: JSON.stringify({ 
-          number: number,
-          text: text, // Evolution v1 / Some Evolution Go versions
-          textMessage: { text: text } // Evolution v2/v3 structured format
-        }),
-      });
-      
-      if (res.ok) {
-        console.log(`[WA] Enviado para ${to} via ${url}`);
-        success = true;
-        break;
-      } else {
-        const err = await res.text();
-        lastError = `${res.status}: ${err}`;
-        console.log(`[WA] Tentativa ${url} falhou: ${lastError}`);
-      }
-    } catch (e) {
-      lastError = String(e);
-      console.log(`[WA] Erro em ${url}: ${lastError}`);
-    }
-  }
-  
-  if (!success) {
-    console.error(`[WA] Todas as tentativas falharam. Último erro: ${lastError}`);
-    // Se todos falharem, registrar informação para debug
-    console.log(`[WA] Debug - Configuração atual:`);
-    console.log(`[WA]   EVOLUTION_API_URL: ${EVOLUTION_API_URL}`);
-    console.log(`[WA]   EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE}`);
-    console.log(`[WA]   Tentou endpoints: ${endpoints.join(', ')}`);
-  }
-}
-
-async function getMediaBase64(msgId: string, chatJid: string, token: string): Promise<{ base64: string; mimetype: string } | null> {
-  const url = `${EVOLUTION_API_URL}/chat/getBase64FromMediaMessage`;
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "apikey": token,
-        "instance": EVOLUTION_INSTANCE,
       },
-      body: JSON.stringify({ message: { key: { id: msgId, remoteJid: chatJid } } }),
+      body: JSON.stringify({ 
+        number: number,
+        text: text,
+        // Campos opcionais conforme documentação (podem ser removidos se não forem necessários)
+        delay: -1, // Envia imediatamente
+      }),
     });
-    if (!res.ok) { console.error("[Media] Falha:", await res.text()); return null; }
-    const d = await res.json();
-    return { base64: d.base64 ?? d.data?.base64, mimetype: d.mimetype ?? d.data?.mimetype ?? "audio/ogg" };
-  } catch (e) { console.error("[Media] Erro:", e); return null; }
+    
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`[WA] Erro ao enviar para ${to}: ${res.status}: ${err}`);
+      throw new Error(`Failed to send message: ${res.status}: ${err}`);
+    }
+    
+    console.log(`[WA] Enviado para ${to} via ${url}`);
+  } catch (e) {
+    console.error(`[WA] Erro na requisição para ${to}: ${e}`);
+    throw e;
+  }
+}
+
+async function getMediaBase64(msgId: string, chatJid: string, token: string): Promise<{ base64: string; mimetype: string } | null> {
+  // Formatação correta para Evolution Go
+  const url = `${EVOLUTION_API_URL}/chat/getBase64FromMediaMessage`;
+  
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": token,
+      },
+      body: JSON.stringify({ 
+        message: { 
+          key: { 
+            id: msgId, 
+            remoteJid: chatJid 
+          } 
+        } 
+      }),
+    });
+    
+    if (!res.ok) { 
+      const err = await res.text();
+      console.error(`[Media] Falha: ${res.status}: ${err}`); 
+      return null; 
+    }
+    
+    const data = await res.json();
+    // Evolution Go pode retornar o base64 em diferentes campos
+    return { 
+      base64: data.base64 ?? data.data?.base64, 
+      mimetype: data.mimetype ?? data.data?.mimetype ?? "audio/ogg" 
+    };
+  } catch (e) { 
+    console.error(`[Media] Erro: ${e}`); 
+    return null; 
+  }
 }
 
 // ─── Groq Whisper ─────────────────────────────────────────────────────────────
