@@ -1,4 +1,6 @@
 
+import type { EvolutionConfig as EvogoEvolutionConfig } from "../evolution_types_antigravity.ts";
+
 export interface EvolutionConfig {
   baseUrl: string;
   apiKey: string; // Global API Key da Evolution
@@ -45,7 +47,7 @@ export const connectEvolutionInstance = async (config: EvolutionConfig) => {
 
 export const setEvolutionWebhook = async (config: EvolutionConfig, webhookUrl: string) => {
   try {
-    // Evolution Go usa formato simplificado para webhook
+    // Evolution Go webhook configuration
     const response = await fetch(`${config.baseUrl}/webhook/set`, {
       method: 'POST',
       headers: {
@@ -53,7 +55,8 @@ export const setEvolutionWebhook = async (config: EvolutionConfig, webhookUrl: s
         'apikey': config.apiKey
       },
       body: JSON.stringify({
-        webhookUrl: webhookUrl,
+        enabled: true,
+        url: webhookUrl,
         webhookByEvents: true, // Habilita envio por eventos
         events: [
           "MESSAGES_UPSERT",

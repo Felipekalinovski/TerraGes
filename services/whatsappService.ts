@@ -104,20 +104,22 @@ export const whatsappService = {
   /**
    * Configura o webhook da Evolution API para apontar para o Supabase.
    * Deve ser chamado após conectar o WhatsApp nas Configurações.
+   * Formato Evolution Go: url, enabled, webhookByEvents, events
    */
   async configureWebhook(evolutionBaseUrl: string, evolutionApiKey: string, instanceName: string): Promise<void> {
     const webhookUrl = `https://gwusywstresijdjzkujn.supabase.co/functions/v1/whatsapp-bot`;
 
-    const res = await fetch(`${evolutionBaseUrl}/webhook/set/${instanceName}`, {
+    const res = await fetch(`${evolutionBaseUrl}/webhook/set`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': evolutionApiKey,
       },
       body: JSON.stringify({
-        webhookUrl,
+        enabled: true,
+        url: webhookUrl,
         webhookByEvents: true,
-        events: ['MESSAGES_UPSERT'],
+        events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE'],
       }),
     });
 

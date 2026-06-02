@@ -128,7 +128,6 @@ const App: React.FC = () => {
           {/* ── Financeiro / Relatórios ── */}
           <Route path="/finance" element={<ProtectedRoute requireAccess><Finance /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute requireAccess><Reports /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
 
           {/* ── Ordens de Serviço ── */}
           <Route path="/service-orders"           element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />

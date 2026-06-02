@@ -5,6 +5,7 @@ import { generateAIResponse } from '../services/aiService';
 
 import { intelligenceService } from '../services/intelligenceService';
 import { scheduleService } from '../services/scheduleService';
+import { userService } from '../services/userService';
 
 interface Message {
   id: string;
@@ -44,13 +45,10 @@ export const AIChat: React.FC = () => {
 
   useEffect(() => {
     const loadProfile = async () => {
-      const { userService } = await import('../services/userService');
       const profile = await userService.getCurrentProfile();
       if (profile?.avatar_url) setUserAvatar(profile.avatar_url);
     };
     loadProfile();
-
-
   }, []);
 
   const handleSendMessage = async (text: string = inputText) => {
