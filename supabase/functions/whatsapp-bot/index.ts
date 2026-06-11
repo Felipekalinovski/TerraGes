@@ -6,14 +6,19 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? ""; // Para OCR e embeddings
-const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "https://evolution.kalinovski.online").replace(/\/$/, "");
+const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "http://evo-kapy4bp2jpo0hdbghy3gw5vy.137.131.236.148.sslip.io").replace(/\/$/, "");
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE") ?? "";
+const EVOLUTION_API_VERSION = Deno.env.get("EVOLUTION_API_VERSION") ?? "v2"; // "v1" ou "v2"
 const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "qwen/qwen3-4b:free";
+
+// Client global para que todas as funções auxiliares tenham acesso
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Content-Type": "application/json",
 };
 
 // ─── Schema Evogo ─────────────────────────────────────────────────────────────
@@ -72,31 +77,98 @@ interface EmbeddingRecord {
   content: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers (suporte Evolution v1 legado + v2/Go) ─────────────────────────────
 
 function normalizePhone(jid: string): string {
-  return jid.replace(/@s\.whatsapp\.net|@g\.us/g, "").split(":")[0].replace(/\D/g, "");
+  return (jid ?? "").replace(/@s\.whatsapp\.net|@g\.us/g, "").split(":")[0].replace(/\D/g, "");
+}
+
+function getChatJid(payload: any): string | null {
+  return payload.data?.key?.remoteJid || payload.data?.Info?.Chat || null;
+}
+
+function getMsgId(payload: any): string | null {
+  return payload.data?.key?.id || payload.data?.Info?.ID || null;
+}
+
+function getFromMe(payload: any): boolean {
+  return Boolean(payload.data?.key?.fromMe ?? payload.data?.Info?.IsFromMe ?? false);
+}
+
+function getIsGroup(payload: any): boolean {
+  if (payload.data?.Info?.IsGroup) return true;
+  const jid = getChatJid(payload);
+  return Boolean(jid?.endsWith("@g.us"));
+}
+
+function getPushName(payload: any): string | null {
+  return payload.data?.pushName ?? payload.data?.Info?.PushName ?? null;
+}
+
+function getIsEdit(payload: any): boolean {
+  return Boolean(payload.data?.IsEdit ?? payload.data?.edit ?? false);
+}
+
+function getInstanceToken(payload: any): string {
+  return payload.token || payload.instanceToken || EVOLUTION_API_KEY;
+}
+
+// Evolution v1 (Node) e v2 (Go) têm endpoints diferentes
+function evoUrl(path: string): string {
+  // v2 (Go): /message/sendText/{instance}, /chat/getBase64FromMediaMessage/{instance}
+  // v1 (Node): /message/sendText/{instance} ou /send/text (legado)
+  const cleanPath = path.replace(/^\//, "");
+  if (EVOLUTION_API_VERSION === "v2" && EVOLUTION_INSTANCE) {
+    return `${EVOLUTION_API_URL}/${cleanPath}/${EVOLUTION_INSTANCE}`;
+  }
+  return `${EVOLUTION_API_URL}/${cleanPath}`;
+}
+
+function evoBody(to: string, text: string): any {
+  // Em v2 o body também inclui instanceName; em v1 não precisa
+  const number = to.includes('@s.whatsapp.net') ? to : `${to.replace(/\D/g, "")}@s.whatsapp.net`;
+  if (EVOLUTION_API_VERSION === "v2") {
+    return { number, text, delay: -1 };
+  }
+  return { number, text, delay: -1 };
 }
 
 function extractText(payload: any): string | null {
-  // Tenta extrair de várias estruturas possíveis (Evolution v1, v2, v3 e Go)
-  const msg = payload.data?.Message || payload.Message || payload;
+  // v2 (Go): payload.data.message.{conversation, extendedTextMessage.text, ...}
+  const v2msg = payload.data?.message;
+  if (v2msg && typeof v2msg === "object") {
+    const t =
+      v2msg.conversation ||
+      v2msg.extendedTextMessage?.text ||
+      v2msg.text ||
+      v2msg.content ||
+      v2msg.imageMessage?.caption ||
+      null;
+    if (t) return t;
+  }
+  // v1 (legado): payload.data.Message.*
+  const v1msg = payload.data?.Message || payload.Message || payload;
   return (
-    msg?.conversation ||
-    msg?.extendedTextMessage?.text ||
-    msg?.text ||
-    msg?.content ||
-    payload.data?.message?.text ||
+    v1msg?.conversation ||
+    v1msg?.extendedTextMessage?.text ||
+    v1msg?.text ||
+    v1msg?.content ||
     null
   );
 }
 
-function detectType(info: EvogoPayload["data"]["Info"]): "text" | "audio" | "image" | "unsupported" {
-  const t = (info.Type ?? "").toLowerCase();
-  const mt = (info.MediaType ?? "").toLowerCase();
-  if (t === "text") return "text";
-  if (t === "audio" || mt === "audio") return "audio";
-  if (t === "image" || mt === "image") return "image";
+function detectType(payload: any): "text" | "audio" | "image" | "unsupported" {
+  // v2 (Go): payload.data.messageType = "conversation" | "extendedTextMessage" | "audioMessage" | "imageMessage"
+  const v2Type = (payload.data?.messageType ?? "").toLowerCase();
+  if (v2Type === "conversation" || v2Type === "extendedtextmessage") return "text";
+  if (v2Type === "audiomessage") return "audio";
+  if (v2Type === "imagemessage") return "image";
+  // v1 fallback
+  const v1Type = (payload.data?.Info?.Type ?? "").toLowerCase();
+  const v1MediaType = (payload.data?.Info?.MediaType ?? "").toLowerCase();
+  if (v1Type === "text") return "text";
+  if (v1Type === "audio" || v1MediaType === "audio") return "audio";
+  if (v1Type === "image" || v1MediaType === "image") return "image";
   return "unsupported";
 }
 
@@ -124,18 +196,30 @@ async function authenticateUser(phone: string): Promise<User | null> {
 
 // ─── Processamento Multimodal ───────────────────────────────────────────────────
 
-async function processMedia(message: EvogoPayload): Promise<string> {
-  if (!message.data?.Info.ID || !message.data?.Info.Chat) return extractText(message) || '';
+async function processMedia(message: any): Promise<string> {
+  const chatJid = getChatJid(message);
+  const msgId = getMsgId(message);
+  const token = getInstanceToken(message);
+  if (!chatJid || !msgId) return extractText(message) || '';
 
-  const info = message.data.Info;
-  const msg = message.data.Message;
+  const v2msg = message.data?.message;
+  const v1msg = message.data?.Message;
 
-  if (info.Type === 'image' && msg.imageMessage) {
-    // Se houver legenda, usá-la junto com o OCR
-    const caption = msg.imageMessage.caption || '';
-    
-    // Fazer OCR na imagem
-    const imageUrl = await getImageUrl(info.Chat, info.ID, message.instanceToken || EVOLUTION_API_KEY);
+  // v2 (Go) - checa imageMessage dentro de data.message
+  if (v2msg?.imageMessage) {
+    const caption = v2msg.imageMessage.caption || '';
+    const imageUrl = await getImageUrl(chatJid, msgId, token);
+    if (imageUrl) {
+      const ocrText = await performOCR(imageUrl);
+      return `${caption}\n[Texto identificado na imagem: ${ocrText}]`;
+    }
+    return caption;
+  }
+
+  // v1 (legado) - checa imageMessage dentro de data.Message
+  if (v1msg?.imageMessage) {
+    const caption = v1msg.imageMessage.caption || '';
+    const imageUrl = await getImageUrl(chatJid, msgId, token);
     if (imageUrl) {
       const ocrText = await performOCR(imageUrl);
       return `${caption}\n[Texto identificado na imagem: ${ocrText}]`;
@@ -147,8 +231,7 @@ async function processMedia(message: EvogoPayload): Promise<string> {
 }
 
 async function getImageUrl(chatJid: string, msgId: string, token: string): Promise<string | null> {
-  // Obter imagem do Evolution API
-  const url = `${EVOLUTION_API_URL}/chat/getBase64FromMediaMessage`;
+  const url = evoUrl("chat/getBase64FromMediaMessage");
 
   try {
     const res = await fetch(url, {
@@ -213,11 +296,8 @@ async function performOCR(imageUrl: string): Promise<string> {
 // ─── Evolution API ────────────────────────────────────────────────────────────
 
 async function sendMessage(to: string, text: string, token: string): Promise<void> {
-  // Formatar número: adicionar @s.whatsapp.net se necessário
   const number = to.includes('@s.whatsapp.net') ? to : `${to.replace(/\D/g, "")}@s.whatsapp.net`;
-
-  // Endpoint Evolution Go conforme documentação
-  const url = `${EVOLUTION_API_URL}/send/text`;
+  const url = evoUrl("message/sendText");
 
   try {
     const res = await fetch(url, {
@@ -229,8 +309,7 @@ async function sendMessage(to: string, text: string, token: string): Promise<voi
       body: JSON.stringify({
         number: number,
         text: text,
-        // Campos opcionais conforme documentação (podem ser removidos se não forem necessários)
-        delay: -1, // Envia imediatamente
+        delay: -1,
       }),
     });
 
@@ -248,8 +327,7 @@ async function sendMessage(to: string, text: string, token: string): Promise<voi
 }
 
 async function getMediaBase64(msgId: string, chatJid: string, token: string): Promise<{ base64: string; mimetype: string } | null> {
-  // Formatação correta para Evolution Go
-  const url = `${EVOLUTION_API_URL}/chat/getBase64FromMediaMessage`;
+  const url = evoUrl("chat/getBase64FromMediaMessage");
 
   try {
     const res = await fetch(url, {
@@ -329,14 +407,10 @@ async function classifyMessage(text: string, userRole: string): Promise<TriageRe
   
   Mensagem: "${text}"
   
-  Responda apenas com a categoria e confiança (0-1) no formato JSON:
-  {
-    "category": "categoria",
-    "confidence": número,
-    "context": {}
-  }
+  Responda APENAS com JSON puro (sem markdown, sem crases, sem \`\`\`). Exemplo:
+{"category":"categoria","confidence":0.9,"context":{}}
   `;
-  
+
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -346,20 +420,22 @@ async function classifyMessage(text: string, userRole: string): Promise<TriageRe
         "X-Title": "TerraGes OperaAI",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
-        model: OPENROUTER_MODEL, 
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.1
       }),
     });
-    
+
     if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
     const d = await res.json();
-    const result = d.choices?.[0]?.message?.content;
-    
-    return JSON.parse(result);
+    const result = d.choices?.[0]?.message?.content || "";
+
+    // Strip markdown code fences que o LLM às vezes adiciona
+    const stripped = result.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    return JSON.parse(stripped);
   } catch (e) {
-    console.error("[Triage] Erro:", e);
+    console.error("[Triage] Erro:", e, "raw=", (typeof result !== "undefined" ? result : "").slice?.(0, 200));
     // Categoria padrão se falhar
     return { category: 'off_scope', confidence: 0.5, context: {} };
   }
@@ -398,20 +474,25 @@ async function getConversationState(phone: string): Promise<ConversationState | 
 
 async function generateEmbedding(text: string): Promise<number[] | null> {
   try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        input: text,
-        model: 'text-embedding-ada-002'  // modelo padrão para embeddings
-      })
-    });
-
+    // Gemini text-embedding-004 retorna 768 dims (precisa bater com schema)
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text: text.slice(0, 8000) }] },
+          taskType: 'RETRIEVAL_DOCUMENT',
+        }),
+      }
+    );
+    if (!response.ok) {
+      console.error('[Embedding] Gemini erro:', response.status, (await response.text()).slice(0, 200));
+      return null;
+    }
     const data = await response.json();
-    return data.data?.[0]?.embedding || null;
+    return data.embedding?.values || null;
   } catch (e) {
     console.error('[Embedding] Erro:', e);
     return null;
@@ -826,40 +907,44 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
   try {
     const bodyText = await req.text();
     if (!bodyText?.trim()) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: corsHeaders });
     }
 
-    let payload: EvogoPayload;
+    let payload: any;
     try { payload = JSON.parse(bodyText); }
     catch { return new Response(JSON.stringify({ ok: false, error: "invalid_json" }), { status: 400, headers: corsHeaders }); }
 
+    console.log(`[WA] evento=${payload.event} | instance=${payload.instance || payload.instanceName} | dataKeys=${Object.keys(payload.data || {}).join(",")} | msgKeys=${Object.keys(payload.data?.message || payload.data?.Message || {}).join(",")}`);
+
     // Ignora eventos que não são mensagens
-    if (payload.event !== "Message") {
+    const allowedEvents = ["Message", "MESSAGES_UPSERT", "messages.upsert", "message"];
+    if (!allowedEvents.includes(payload.event)) {
+      console.log(`[Skip] evento não suportado: ${payload.event}`);
       return new Response(JSON.stringify({ ok: true, skipped: true, event: payload.event }), { headers: corsHeaders });
     }
 
-    const info = payload.data?.Info;
-    const msg = payload.data?.Message;
+    // Normaliza payload v1/v2 (Go) em campos comuns
+    const rawPhone = getChatJid(payload);
+    const msgId = getMsgId(payload);
+    const fromMe = getFromMe(payload);
+    const isGroup = getIsGroup(payload);
+    const isEdit = getIsEdit(payload);
+    const contactName = getPushName(payload);
+    const msgTypeStr = detectType(payload);
+    const instanceToken = getInstanceToken(payload);
 
     // Ignora mensagens enviadas pelo bot, grupos e edições
-    if (!info || info.IsFromMe || info.IsGroup || payload.data?.IsEdit) {
-      console.log(`[Skip] fromMe:${info?.IsFromMe} | group:${info?.IsGroup} | edit:${payload.data?.IsEdit}`);
+    if (!rawPhone || fromMe || isGroup || isEdit) {
+      console.log(`[Skip] fromMe:${fromMe} | group:${isGroup} | edit:${isEdit} | jid:${rawPhone}`);
       return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: corsHeaders });
     }
 
-    const rawPhone = info.Chat;
     const phone = normalizePhone(rawPhone);
-    const msgId = info.ID;
-    const contactName = info.PushName ?? null;
-    const msgTypeStr = detectType(info);
-    const instanceToken = payload.instanceToken ?? EVOLUTION_API_KEY;
 
-    console.log(`[WA] Mensagem de ${phone} (${contactName}) — tipo: ${msgTypeStr}`);
+    console.log(`[WA] Mensagem de ${phone} (${contactName}) — tipo: ${msgTypeStr} — evento: ${payload.event}`);
 
     if (msgTypeStr === "unsupported") {
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: "unsupported_type" }), { headers: corsHeaders });
@@ -890,7 +975,6 @@ Deno.serve(async (req: Request) => {
       userText = await processMedia(payload);
       if (!userText || userText.includes('Texto não identificado')) {
         await sendMessage(phone, "📸 Foto recebida! Estou lendo o conteúdo da imagem...", instanceToken);
-        // Aguardar OCR e continuar com o texto extraído
       }
     }
 
@@ -902,7 +986,7 @@ Deno.serve(async (req: Request) => {
     // 1. Autenticação do usuário
     const user = await authenticateUser(phone);
     if (!user) {
-      await sendMessage(phone, `Bem-vindo! 👋 Sou OperaAI, assistente do TerraGes.\nPosso ajudar com: registrar horas, orçamentos, relatórios e sua frota.\n\nPara começar, cadastre seu número (${phone}) nas Configurações do app!`, instanceToken);
+      await sendMessage(phone, `Bem-vindo! 👋 Sou OperaAI, assistente do TerraGes.\nPosso ajudar com: registrar horas, orçamentos, relatórios e sua frota.\n\nPara começar, cadastre seu número (${phone}) acessando nosso app web: https://terrages.vercel.app/login`, instanceToken);
       return new Response(JSON.stringify({ ok: true, reason: "user_not_found" }), { headers: corsHeaders });
     }
 
@@ -976,32 +1060,40 @@ Deno.serve(async (req: Request) => {
     }
 
     // 4. Busca ou cria conversa
+    console.log(`[Step] 4/10 buscando conversa`);
     let conversationId: string;
     const { data: existingConv } = await supabase.from("whatsapp_conversations").select("id").eq("phone_number", phone).maybeSingle();
 
     if (existingConv) {
       conversationId = existingConv.id;
-      await supabase.from("whatsapp_conversations").update({
+      const { error: updErr } = await supabase.from("whatsapp_conversations").update({
         last_message: userText.substring(0, 200),
         last_message_at: new Date().toISOString(),
         contact_name: contactName ?? undefined,
       }).eq("id", conversationId);
+      if (updErr) console.error(`[Step] 4 update conv error: ${updErr.message}`);
     } else {
       const { data: newConv, error: convError } = await supabase
         .from("whatsapp_conversations")
         .insert([{ profile_id: userId, phone_number: phone, contact_name: contactName, last_message: userText.substring(0, 200) }])
         .select("id").single();
-      if (convError || !newConv) throw new Error("Falha ao criar conversa");
+      if (convError || !newConv) {
+        console.error(`[Step] 4 insert conv error: ${convError?.message}`);
+        throw new Error(`Falha ao criar conversa: ${convError?.message || "no_data"}`);
+      }
       conversationId = newConv.id;
     }
 
     // 5. Salva mensagem do usuário
-    await supabase.from("whatsapp_messages").insert([{
+    console.log(`[Step] 5/10 salvando msg usuário`);
+    const { error: userMsgErr } = await supabase.from("whatsapp_messages").insert([{
       conversation_id: conversationId, role: "user", content: userText,
-      whatsapp_msg_id: msgId, input_type: inputType,
+      whatsapp_msg_id: msgId,
     }]);
+    if (userMsgErr) console.error(`[Step] 5 insert user msg error: ${userMsgErr.message} (code=${userMsgErr.code}, hint=${userMsgErr.hint})`);
 
     // 6. Histórico (últimas 10 mensagens)
+    console.log(`[Step] 6/10 carregando histórico`);
     const { data: history } = await supabase
       .from("whatsapp_messages").select("role, content")
       .eq("conversation_id", conversationId)
@@ -1012,28 +1104,42 @@ Deno.serve(async (req: Request) => {
     }));
 
     // 7. Chama a IA (com contexto aprimorado)
+    console.log(`[Step] 7/10 montando contexto + chamando IA`);
     const systemContext = await buildSystemContext(supabase, userId, inputType, isAdminUser);
     const aiResponse = await callAI([{ role: "system", content: systemContext }, ...historyMessages]);
+    console.log(`[Step] 7 IA respondeu (${aiResponse.length} chars)`);
 
     // 8. Processa ações (com sistema de confirmação)
+    console.log(`[Step] 8/10 processando ações`);
     const { cleanText, actionType, actionData, actionStatus } = await processActions(supabase, aiResponse, userId, phone, isAdminUser);
 
     // 9. Salva resposta do assistente
-    await supabase.from("whatsapp_messages").insert([{
+    console.log(`[Step] 9/10 salvando msg assistente`);
+    const { error: asstMsgErr } = await supabase.from("whatsapp_messages").insert([{
       conversation_id: conversationId, role: "assistant", content: cleanText,
       action_type: actionType, action_data: actionData as never, action_status: actionStatus,
     }]);
+    if (asstMsgErr) console.error(`[Step] 9 insert asst msg error: ${asstMsgErr.message} (code=${asstMsgErr.code}, hint=${asstMsgErr.hint})`);
 
     // 10. Envia resposta
-    await sendMessage(phone, cleanText, instanceToken);
+    console.log(`[Step] 10/10 enviando WhatsApp`);
+    try {
+      await sendMessage(phone, cleanText, instanceToken);
+    } catch (sendErr: any) {
+      console.error(`[Step] 10 sendMessage falhou: ${sendErr?.message}`);
+    }
     console.log(`[WA] Resposta processada para ${phone}`);
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Bot] Erro fatal:", error);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
+    return new Response(JSON.stringify({
+      error: "Internal error",
+      message: error?.message || String(error),
+      stack: (error?.stack || "").split("\n").slice(0, 4).join(" | "),
+    }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
