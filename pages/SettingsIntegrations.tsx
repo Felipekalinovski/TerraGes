@@ -8,7 +8,7 @@ import {
 import { createEvolutionInstance, connectEvolutionInstance, setEvolutionWebhook, EvolutionConfig } from '../services/evolutionApiService';
 import { whatsappService } from '../services/whatsappService';
 
-const EVOLUTION_BASE_URL = 'https://api.kalinovski.online';
+const EVOLUTION_BASE_URL = 'http://evo-kapy4bp2jpo0hdbghy3gw5vy.137.131.236.148.sslip.io';
 const WEBHOOK_URL = 'https://gwusywstresijdjzkujn.supabase.co/functions/v1/whatsapp-bot';
 
 export const SettingsIntegrations: React.FC = () => {
@@ -27,7 +27,7 @@ export const SettingsIntegrations: React.FC = () => {
 
   // Config da Evolution — campos preenchíveis
   const [apiKey, setApiKey] = useState('');
-  const [instanceName, setInstanceName] = useState('terrages-bot');
+  const [instanceName, setInstanceName] = useState('terrages');
 
   const config: EvolutionConfig = {
     baseUrl: EVOLUTION_BASE_URL,

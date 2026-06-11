@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "https://evolution.kalinovski.online").replace(/\/$/, "");
+const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "http://evo-kapy4bp2jpo0hdbghy3gw5vy.137.131.236.148.sslip.io").replace(/\/$/, "");
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 
 const corsHeaders = {
