@@ -690,7 +690,7 @@ async function buildSystemContext(
   // Se não é admin, retorna contexto LIMITADO (apenas confirmações)
   if (!isAdmin) {
     return `Você é o OperaAI, assistente do TerraGes.
-Você atende via WhatsApp e usa português simples.
+Você atende via WhatsApp e usa português simples. Interprete e compreenda com tolerância erros de digitação, palavras mal escritas (especialmente vindas de áudios transcritos), gírias, sotaques regionais e jargões operacionais/agrícolas.
 
 ATENÇÃO: Você está conversando com um OPERADOR de campo. Ele NÃO tem acesso direto a relatórios ou informações financeiras da empresa.
 
@@ -751,7 +751,7 @@ IMPORTANTE: Fora a criação de OS, nunca revele dados financeiros, de frotas, a
   ).join("\n") || "Nenhuma pendência";
 
   return `Você é o OperaAI, assistente inteligente do TerraGes.
-Atende via WhatsApp. Seja direto, cordial e use português simples.
+Atende via WhatsApp. Seja direto, cordial e use português simples. Interprete e compreenda com tolerância erros de digitação, palavras mal escritas (especialmente vindas de áudios transcritos), gírias, sotaques regionais e jargões operacionais/agrícolas.
 NUNCA invente dados. Use APENAS as informações abaixo.
 Hoje é ${today.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}.
 
