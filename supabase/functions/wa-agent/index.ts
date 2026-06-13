@@ -5,6 +5,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "openrouter/free";
+const VISION_MODEL = Deno.env.get("AI_MODEL_VISION") ?? "google/gemma-4-31b-it:free";
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE") ?? "";
@@ -93,6 +95,110 @@ async function sendMessage(to: string, text: string, token: string): Promise<voi
     const err = await res.text();
     console.error(`[WA] Erro ao enviar para ${to}: ${res.status}: ${err}`);
   }
+}
+
+// ─── Mídia (Áudio/Imagem) ──────────────────────────────────
+
+async function getMediaBase64(msgId: string, chatJid: string, token: string): Promise<{ base64: string; mimetype: string } | null> {
+  const res = await fetch(evoUrl("chat/getBase64FromMediaMessage"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "apikey": token },
+    body: JSON.stringify({ message: { key: { id: msgId, remoteJid: chatJid } } }),
+  });
+  if (!res.ok) { console.error(`[Media] Falha: ${res.status}`); return null; }
+  const data = await res.json();
+  return { base64: data.base64 ?? data.data?.base64, mimetype: data.mimetype ?? data.data?.mimetype ?? "audio/ogg" };
+}
+
+async function transcribeAudio(base64: string, mimetype: string): Promise<string | null> {
+  try {
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const ext = mimetype.includes("ogg") ? "ogg" : "mp4";
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type: mimetype }), `audio.${ext}`);
+    form.append("model", "whisper-large-v3-turbo");
+    form.append("language", "pt");
+    form.append("response_format", "text");
+    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST", headers: { "Authorization": `Bearer ${GROQ_API_KEY}` }, body: form,
+    });
+    if (!res.ok) { console.error("[Whisper] Erro:", await res.text()); return null; }
+    return (await res.text()).trim();
+  } catch (e) { console.error("[Whisper] Erro:", e); return null; }
+}
+
+async function ocrImage(base64: string): Promise<string> {
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://terrages.app",
+        "X-Title": "TerraGes OCR",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: VISION_MODEL,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: "Extraia todo o texto visível na imagem. Se houver valores, datas ou números, destaque-os." },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } },
+          ],
+        }],
+        max_tokens: 300,
+      }),
+    });
+    if (!res.ok) { console.error("[OCR] Erro:", await res.text()); return ""; }
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content || "";
+  } catch (e) { console.error("[OCR] Erro:", e); return ""; }
+}
+
+function detectMsgType(payload: any): "text" | "audio" | "image" | "unsupported" {
+  const v2type = payload.data?.messageType;
+  if (typeof v2type === "string") {
+    const t = v2type.toLowerCase();
+    if (t === "audiomessage") return "audio";
+    if (t === "imagemessage") return "image";
+    if (["conversation", "extendedtextmessage"].includes(t)) return "text";
+  }
+  const v2msg = payload.data?.message;
+  if (v2msg?.audioMessage) return "audio";
+  if (v2msg?.imageMessage) return "image";
+  if (v2msg?.conversation || v2msg?.extendedTextMessage?.text) return "text";
+  const v1msg = payload.data?.Message || payload.Message;
+  if (!v1msg) return "unsupported";
+  const type = v1msg.Type?.toLowerCase?.() || "";
+  const mediaType = v1msg.MediaType?.toLowerCase?.() || "";
+  if (type === "audio" || mediaType === "audio") return "audio";
+  if (type === "image" || mediaType === "image") return "image";
+  if (v1msg.conversation || v1msg.extendedTextMessage?.text) return "text";
+  return "unsupported";
+}
+
+async function extractMediaText(payload: any, rawPhone: string, msgId: string, instanceToken: string): Promise<string | null> {
+  const msgType = detectMsgType(payload);
+
+  if (msgType === "text") return extractText(payload);
+
+  if (msgType === "audio") {
+    const media = await getMediaBase64(msgId, rawPhone, instanceToken);
+    if (!media?.base64) return null;
+    return transcribeAudio(media.base64, media.mimetype);
+  }
+
+  if (msgType === "image") {
+    const caption = extractText(payload) || "";
+    const media = await getMediaBase64(msgId, rawPhone, instanceToken);
+    if (media?.base64) {
+      const ocrResult = await ocrImage(media.base64);
+      if (ocrResult) return `${caption}\n[Texto da imagem: ${ocrResult}]`.trim();
+    }
+    return caption || null;
+  }
+
+  return extractText(payload);
 }
 
 // ─── Autenticação ──────────────────────────────────────────
@@ -533,8 +639,21 @@ async function processMessage(payload: any): Promise<void> {
   if (!rawPhone || fromMe || isGroup) return;
 
   const phone = normalizePhone(rawPhone);
-  const userText = extractText(payload);
-  if (!userText) return;
+  const msgType = detectMsgType(payload);
+
+  if (msgType === "audio") {
+    await sendMessage(phone, "🎙️ Processando áudio...", instanceToken);
+  } else if (msgType === "image") {
+    await sendMessage(phone, "📸 Processando imagem...", instanceToken);
+  }
+
+  const userText = await extractMediaText(payload, rawPhone, msgId!, instanceToken);
+  if (!userText) {
+    if (msgType === "audio" || msgType === "image") {
+      await sendMessage(phone, "⚠️ Não consegui processar. Pode digitar?", instanceToken);
+    }
+    return;
+  }
 
   console.log(`[WA] ${phone}: ${userText.slice(0, 100)}`);
 
