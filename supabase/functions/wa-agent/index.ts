@@ -181,11 +181,17 @@ Apenas admins/gestores veem dados financeiros completos.`,
   fleet: {
     name: "fleet-bot",
     prompt: `Você é o especialista em Frota do TerraGes.
-Informe status, health score, horas e próxima manutenção.`,
+Para consultar dados reais das máquinas, use a tag no final da resposta:
+[[QUERY_FLEET:{"machine":"nome ou vazio para todas","status":"active|maintenance|inactive"}]]
+Sempre use QUERY_FLEET quando perguntarem sobre máquinas, status, horas ou manutenção.
+Informe status, health score, horas e próxima manutenção com os dados retornados.`,
   },
   machine_hours: {
     name: "machine-hours-bot",
     prompt: `Você é o especialista em Horas-Máquina do TerraGes.
+Para consultar dados reais de horas, use a tag no final da resposta:
+[[QUERY_HOURS:{"machine":"nome da máquina","days":30}]]
+Sempre use QUERY_HOURS para responder perguntas sobre horas trabalhadas, períodos ou valores.
 Registre horas: máquina, operador, projeto, cliente, data, início, fim, intervalo, valor hora.`,
   },
   quotes: {
@@ -196,20 +202,52 @@ Colete: cliente, tipo serviço, máquinas, valor hora, desconto, validade.`,
   service_order: {
     name: "service-order-bot",
     prompt: `Você é o especialista em Ordens de Serviço do TerraGes.
-Crie OS com: cliente, máquina, operador, data, hora início, hora fim, valor hora, forma de pagamento.
-Antes de criar, pergunte os dados que faltam. Quando tiver tudo, use a tag no final:
+Para consultar OS existentes, use no final:
+[[QUERY_OS:{"status":"pending|completed|cancelled","days":30}]]
+Para criar nova OS, use no final:
 [[CREATE_OS:{"client":"nome","client_cpf":"","client_contact":"","date":"YYYY-MM-DD","start_hour":8,"end_hour":17,"hourly_rate":0,"payment_method":"Pix","location":"","description":""}]]
-Depois da tag, escreva um resumo e pergunte: "Confirma a criação? (Sim/Não)"`,
+Sempre use QUERY_OS quando perguntarem sobre OS existentes. Antes de criar, pergunte os dados que faltam.
+Depois da tag CREATE_OS, escreva resumo e pergunte: "Confirma a criação? (Sim/Não)"`,
   },
   reports: {
     name: "reports-bot",
     prompt: `Você é o especialista em Relatórios do TerraGes.
-Gere resumos de dados do sistema.`,
+Use tags de consulta para dados reais:
+- [[QUERY_FINANCE:{"days":30}]] para finanças
+- [[QUERY_HOURS:{"days":30}]] para horas-máquina
+- [[QUERY_OS:{"days":30}]] para OS
+- [[QUERY_FLEET:{}]] para frota
+Sempre use as tags de consulta em vez de inventar dados.`,
   },
   approval: {
     name: "approval-bot",
     prompt: `Você é o especialista em Aprovações do TerraGes.
-Apenas admin pode aprovar. Ações: ordens de serviço, agendamentos.`,
+Consulte OS pendentes com [[QUERY_OS:{"status":"pending"}]]
+Apenas admin pode aprovar.`,
+  },
+  finance: {
+    name: "finance-bot",
+    prompt: `Você é o especialista em Finanças do TerraGes.
+Para consultar dados reais, use no final da resposta:
+[[QUERY_FINANCE:{"days":30,"type":"income|expense"}]]
+Sempre use QUERY_FINANCE quando perguntarem sobre saldo, receitas, despesas ou transações.
+Apenas admins/gestores veem dados financeiros completos.`,
+  },
+  maintenance: {
+    name: "maintenance-bot",
+    prompt: `Você é o especialista em Manutenção do TerraGes.
+Para consultar manutenções reais, use no final:
+[[QUERY_MAINTENANCE:{"machine":"nome da máquina","days":30}]]
+Tipos: preventive, corrective, predictive.
+Sempre use QUERY_MAINTENANCE quando perguntarem sobre manutenções passadas.`,
+  },
+  employee: {
+    name: "employee-bot",
+    prompt: `Você é o especialista em Equipes do TerraGes.
+Para consultar dados reais, use no final:
+[[QUERY_EMPLOYEES:{"status":"active|vacation|leave","name":"nome opcional"}]]
+Sempre use QUERY_EMPLOYEES quando perguntarem sobre colaboradores.
+Informe nome, cargo, status, certificações e contato.`,
   },
 };
 
@@ -311,6 +349,121 @@ async function processActions(
   }
 
   return { cleanText, actionType, actionData, actionStatus };
+}
+
+// ─── Query Tools ───────────────────────────────────────────
+
+function fmtDate(d: string): string {
+  try { return new Date(d).toLocaleDateString("pt-BR"); } catch { return d; }
+}
+
+function fmtCurrency(v: number): string {
+  return `R$ ${v.toFixed(2).replace(".", ",")}`;
+}
+
+function periodFilter(days: number): string {
+  const d = new Date(); d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
+async function execQueries(text: string): Promise<string> {
+  let result = text;
+  const qMatch = text.match(/\[\[QUERY_FLEET:(.*?)\]\]/s);
+  if (qMatch) {
+    try {
+      const p = JSON.parse(qMatch[1]);
+      let q = supabase.from("machines").select("name, type, status, hours, next_maintenance, health_status");
+      if (p.machine) q = q.ilike("name", `%${p.machine}%`);
+      if (p.status) q = q.eq("status", p.status);
+      const { data } = await q.limit(10).order("name");
+      if (!data?.length) result = result.replace(qMatch[0], "Nenhuma máquina encontrada.");
+      else result = result.replace(qMatch[0], data.map((m: any) =>
+        `🔧 ${m.name} (${m.type || "—"}) — ${m.status}\n   Horas: ${m.hours || 0} | Health: ${m.health_status || "—"}\n   Próxima manutenção: ${m.next_maintenance ? fmtDate(m.next_maintenance) : "—"}`
+      ).join("\n\n"));
+    } catch { result = result.replace(qMatch[0], "Erro ao consultar frota."); }
+  }
+  const hMatch = text.match(/\[\[QUERY_HOURS:(.*?)\]\]/s);
+  if (hMatch) {
+    try {
+      const p = JSON.parse(hMatch[1]);
+      let q = supabase.from("hora_maquina").select("machine_name, operator_name, project_name, date, total_hours, total_value");
+      if (p.machine) q = q.ilike("machine_name", `%${p.machine}%`);
+      if (p.days) q = q.gte("created_at", periodFilter(p.days));
+      const { data } = await q.limit(15).order("date", { ascending: false });
+      if (!data?.length) result = result.replace(hMatch[0], "Nenhum registro de horas encontrado.");
+      else {
+        const total = data.reduce((s: number, r: any) => s + Number(r.total_hours || 0), 0);
+        const valor = data.reduce((s: number, r: any) => s + Number(r.total_value || 0), 0);
+        result = result.replace(hMatch[0], data.map((r: any) =>
+          `📅 ${fmtDate(r.date)} — ${r.machine_name}\n   Operador: ${r.operator_name || "—"} | Projeto: ${r.project_name || "—"}\n   Horas: ${r.total_hours}h | Valor: ${fmtCurrency(r.total_value || 0)}`
+        ).join("\n\n") + `\n\n📊 Total: ${total}h — ${fmtCurrency(valor)}`);
+      }
+    } catch { result = result.replace(hMatch[0], "Erro ao consultar horas."); }
+  }
+  const fMatch = text.match(/\[\[QUERY_FINANCE:(.*?)\]\]/s);
+  if (fMatch) {
+    try {
+      const p = JSON.parse(fMatch[1]);
+      let q = supabase.from("transactions").select("title, type, amount, category, date, status");
+      if (p.days) q = q.gte("created_at", periodFilter(p.days));
+      if (p.type) q = q.eq("type", p.type);
+      const { data } = await q.limit(20).order("date", { ascending: false });
+      if (!data?.length) result = result.replace(fMatch[0], "Nenhuma transação encontrada.");
+      else {
+        const income = data.filter((r: any) => r.type === "income").reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+        const expense = data.filter((r: any) => r.type === "expense").reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+        result = result.replace(fMatch[0], data.map((r: any) =>
+          `${r.type === "income" ? "💰" : "💸"} ${r.title} — ${fmtCurrency(r.amount || 0)} (${r.category || "—"}) ${r.status === "paid" ? "✅" : "⏳"}`
+        ).join("\n") + `\n\n📊 Receitas: ${fmtCurrency(income)} | Despesas: ${fmtCurrency(expense)} | Saldo: ${fmtCurrency(income - expense)}`);
+      }
+    } catch { result = result.replace(fMatch[0], "Erro ao consultar finanças."); }
+  }
+  const osMatch = text.match(/\[\[QUERY_OS:(.*?)\]\]/s);
+  if (osMatch) {
+    try {
+      const p = JSON.parse(osMatch[1]);
+      let q = supabase.from("service_orders").select("client, date, machine_id, start_hour, end_hour, total_value, status, payment_method");
+      if (p.status) q = q.eq("status", p.status);
+      if (p.days) q = q.gte("created_at", periodFilter(p.days));
+      const { data } = await q.limit(15).order("date", { ascending: false });
+      if (!data?.length) result = result.replace(osMatch[0], "Nenhuma OS encontrada.");
+      else {
+        const total = data.reduce((s: number, r: any) => s + Number(r.total_value || 0), 0);
+        result = result.replace(osMatch[0], data.map((r: any) =>
+          `📋 OS — ${r.client} — ${fmtDate(r.date)}\n   Horário: ${r.start_hour}h-${r.end_hour}h | ${fmtCurrency(r.total_value || 0)}\n   Pagamento: ${r.payment_method || "—"} | Status: ${r.status === "completed" ? "✅" : r.status === "pending" ? "⏳" : "❌"}`
+        ).join("\n\n") + `\n\n📊 Total: ${fmtCurrency(total)}`);
+      }
+    } catch { result = result.replace(osMatch[0], "Erro ao consultar OS."); }
+  }
+  const mMatch = text.match(/\[\[QUERY_MAINTENANCE:(.*?)\]\]/s);
+  if (mMatch) {
+    try {
+      const p = JSON.parse(mMatch[1]);
+      let q = supabase.from("maintenance_records").select("machine_id, date, type, description, cost, technician");
+      if (p.machine) q = q.ilike("machine_id", `%${p.machine}%`);
+      if (p.days) q = q.gte("created_at", periodFilter(p.days));
+      const { data } = await q.limit(10).order("date", { ascending: false });
+      if (!data?.length) result = result.replace(mMatch[0], "Nenhuma manutenção encontrada.");
+      else result = result.replace(mMatch[0], data.map((r: any) =>
+        `🔧 ${fmtDate(r.date)} — ${r.type}\n   ${r.description || "—"} | Técnico: ${r.technician || "—"}${r.cost ? ` | Custo: ${fmtCurrency(r.cost)}` : ""}`
+      ).join("\n\n"));
+    } catch { result = result.replace(mMatch[0], "Erro ao consultar manutenções."); }
+  }
+  const eMatch = text.match(/\[\[QUERY_EMPLOYEES:(.*?)\]\]/s);
+  if (eMatch) {
+    try {
+      const p = JSON.parse(eMatch[1]);
+      let q = supabase.from("employees").select("name, role, status, contact, certifications");
+      if (p.status) q = q.eq("status", p.status);
+      if (p.name) q = q.ilike("name", `%${p.name}%`);
+      const { data } = await q.limit(15).order("name");
+      if (!data?.length) result = result.replace(eMatch[0], "Nenhum colaborador encontrado.");
+      else result = result.replace(eMatch[0], data.map((e: any) =>
+        `👤 ${e.name} — ${e.role || "—"} (${e.status})\n   Contato: ${e.contact || "—"}${e.certifications?.length ? ` | Certificações: ${e.certifications.join(", ")}` : ""}`
+      ).join("\n\n"));
+    } catch { result = result.replace(eMatch[0], "Erro ao consultar colaboradores."); }
+  }
+  return result;
 }
 
 // ─── AI Call ───────────────────────────────────────────────
@@ -452,14 +605,17 @@ async function processMessage(payload: any): Promise<void> {
   // ── Process actions ──
   const { cleanText, actionType, actionData, actionStatus } = await processActions(aiResponse, user, phone);
 
+  // ── Process queries (se não houve ação, tenta queries) ──
+  const finalText = actionType ? cleanText : await execQueries(cleanText);
+
   // ── Save assistant message ──
   await supabase.from("whatsapp_messages").insert([{
-    conversation_id: conversationId, role: "assistant", content: cleanText,
+    conversation_id: conversationId, role: "assistant", content: finalText,
     action_type: actionType, action_data: actionData, action_status: actionStatus,
   }]);
 
   // ── Send response ──
-  await sendMessage(phone, cleanText, instanceToken);
+  await sendMessage(phone, finalText, instanceToken);
   console.log(`[WA] Resposta enviada para ${phone}`);
 }
 
