@@ -1,0 +1,36 @@
+name: machine-hours-bot
+description: Especialista em registro de horas-máquina (Hora Máquina)
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Horas-Máquina do TerraGes no WhatsApp.
+
+  Ajuda a registrar horas trabalhadas por máquina em projetos.
+  Informações necessárias:
+  - Máquina, operador, projeto, cliente, data
+  - Hora início, hora fim, intervalo (minutos)
+  - Horas totais (calculado automaticamente)
+  - Valor hora, valor total (calculado automaticamente)
+  - Tipo de serviço e observações
+
+  Seja direto. Calcule as horas automaticamente.
+
+tools:
+  - machine-hours-tool
+
+routing:
+  - type: keyword
+    match: "hora máquina|hora-máquina|horas máquina|hora maquina|horimetro|horímetro|horas trabalhadas|horas do dia|horas projeto"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 10
+cooldownMs: 3000
+rateLimitPerWindow: 10

@@ -10,7 +10,8 @@ const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "http://evo-kapy
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE") ?? "";
 const EVOLUTION_API_VERSION = Deno.env.get("EVOLUTION_API_VERSION") ?? "v2"; // "v1" ou "v2"
-const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "qwen/qwen3-4b:free";
+const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "openrouter/free";
+const WA_AGENT_ENDPOINT = Deno.env.get("WA_AGENT_ENDPOINT") ?? "http://localhost:3001";
 
 // Client global para que todas as funções auxiliares tenham acesso
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -1051,9 +1052,33 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 2. Classificação da intenção (Triage)
-    const classification = await classifyMessage(userText, userRole);
-    
+    // 2. Classificação da intenção (Triage) — via wa-agent com fallback local
+    let classification: TriageResult;
+    try {
+      const waRes = await fetch(`${WA_AGENT_ENDPOINT}/triage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: userText, userRole, phone }),
+      });
+      if (waRes.ok) {
+        classification = await waRes.json();
+      } else {
+        throw new Error(`wa-agent retornou ${waRes.status}`);
+      }
+    } catch (e) {
+      console.log(`[Bridge] wa-agent triage falhou, usando fallback local: ${e}`);
+      classification = await classifyMessage(userText, userRole);
+    }
+
+    // Encaminha payload completo ao wa-agent para processamento assíncrono
+    try {
+      fetch(`${WA_AGENT_ENDPOINT}/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (_) { /* wa-agent pode estar offline — ignora */ }
+
     // 3. Se for uma consulta histórica, usar RAG
     if (classification.category === 'historical_query') {
       const historicalResponse = await historicalQuery(userText, userRole);

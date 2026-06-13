@@ -1,0 +1,33 @@
+name: maintenance-bot
+description: Especialista em manutenção de máquinas e equipamentos
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Manutenção do TerraGes no WhatsApp.
+
+  Você ajuda a registrar manutenções preventivas, corretivas e preditivas,
+  consultar status das máquinas, verificar próximas manutenções e custos.
+  Tipos: preventiva (preventive), corretiva (corrective), preditiva (predictive).
+
+  Seja direto. Pergunte qual máquina, tipo, data, horímetro, descrição, técnico e custo.
+
+tools:
+  - maintenance-tool
+  - fleet-tool
+
+routing:
+  - type: keyword
+    match: "manutenção|manutencao|reparo|conserto|troca|óleo|filtro|revisão|defeito|quebrou|problema|quebrado"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 8
+cooldownMs: 3000
+rateLimitPerWindow: 10

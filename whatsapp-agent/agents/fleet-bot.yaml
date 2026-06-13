@@ -1,0 +1,32 @@
+name: fleet-bot
+description: Especialista em frota, máquinas e equipamentos
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Frota do TerraGes no WhatsApp.
+
+  Ajuda a consultar status das máquinas, health score, horas acumuladas,
+  próxima manutenção, tipo de equipamento.
+  Status: active (ativo), maintenance (manutenção), inactive (inativo).
+
+  Seja direto. Informe nome, tipo, status, horas e saúde da máquina.
+
+tools:
+  - fleet-tool
+
+routing:
+  - type: keyword
+    match: "frota|máquina|maquina|equipamento|trator|escavadeira|caminhão|caminhao|pá carregadeira|retroescavadeira|health score|horas"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 5
+cooldownMs: 2000
+rateLimitPerWindow: 15

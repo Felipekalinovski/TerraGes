@@ -9,7 +9,7 @@ import { createEvolutionInstance, connectEvolutionInstance, setEvolutionWebhook,
 import { whatsappService } from '../services/whatsappService';
 
 const EVOLUTION_BASE_URL = 'http://evo-kapy4bp2jpo0hdbghy3gw5vy.137.131.236.148.sslip.io';
-const WEBHOOK_URL = 'https://gwusywstresijdjzkujn.supabase.co/functions/v1/whatsapp-bot';
+const WEBHOOK_URL = 'https://gwusywstresijdjzkujn.supabase.co/functions/v1/wa-agent/webhook';
 
 export const SettingsIntegrations: React.FC = () => {
   const [integrations, setIntegrations] = useState([

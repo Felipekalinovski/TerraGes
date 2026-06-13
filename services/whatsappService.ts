@@ -107,7 +107,7 @@ export const whatsappService = {
    * Formato Evolution Go: url, enabled, webhookByEvents, events
    */
   async configureWebhook(evolutionBaseUrl: string, evolutionApiKey: string, instanceName: string): Promise<void> {
-    const webhookUrl = `https://gwusywstresijdjzkujn.supabase.co/functions/v1/whatsapp-bot`;
+    const webhookUrl = `https://gwusywstresijdjzkujn.supabase.co/functions/v1/wa-agent/webhook`;
 
     const res = await fetch(`${evolutionBaseUrl}/webhook/set`, {
       method: 'POST',

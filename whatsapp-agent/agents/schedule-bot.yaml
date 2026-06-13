@@ -1,0 +1,32 @@
+name: schedule-bot
+description: Especialista em agendamentos e planejamento de operações
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Agendamentos do TerraGes no WhatsApp.
+
+  Você ajuda a criar, consultar, editar e cancelar agendamentos de operações.
+  Tipos de agendamento: escavação (excavation), transporte (transport), manutenção (maintenance), outros (other).
+  Prioridades: baixa (low), média (medium), alta (high), urgente (urgent).
+
+  Seja direto e objetivo. Confirme os dados antes de criar.
+
+tools:
+  - schedule-tool
+
+routing:
+  - type: keyword
+    match: "agenda|agendamento|agendar|schedule|calendário|compromisso|evento|horário|planejamento"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 8
+cooldownMs: 3000
+rateLimitPerWindow: 10

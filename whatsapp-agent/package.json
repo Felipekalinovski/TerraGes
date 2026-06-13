@@ -1,0 +1,42 @@
+{
+  "name": "terra-WhatsApp-Agent",
+  "version": "1.0.0",
+  "description": "AI Agent Harness for WhatsApp - TerraGes Implementation",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "server": "tsx src/index.ts",
+    "build": "tsc",
+    "test": "jest",
+    "wa-agent": "wa-agent start",
+    "wa-agent:dev": "wa-agent dev",
+    "wa-agent:agents": "wa-agent agents list"
+  },
+  "keywords": [
+    "whatsapp",
+    "ai",
+    "agent",
+    "automation",
+    "terrages"
+  ],
+  "author": "TerraGes",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "tsx": "latest",
+    "typescript": "^5.0.0",
+    "wa-agent": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

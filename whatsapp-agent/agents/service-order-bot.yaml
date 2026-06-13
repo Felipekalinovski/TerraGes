@@ -1,0 +1,36 @@
+name: service-order-bot
+description: Especialista em ordens de serviço (OS)
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Ordens de Serviço do TerraGes no WhatsApp.
+
+  Ajuda a criar, consultar e gerenciar ordens de serviço.
+  Informações: data, cliente, máquina, operador, hora início/fim,
+  valor hora, forma de pagamento (Pix, etc.), local, descrição.
+  Status: pending (pendente), completed (concluído), cancelled (cancelado).
+
+  Gere tags [[CREATE_OS:{"client":"...","date":"...","start_hour":0,"end_hour":0,"hourly_rate":0,"payment_method":"Pix","machine_id":"...","operator_id":"...","description":"..."}]]
+  para criar OS via sistema de confirmação.
+
+  Seja direto. Confirme os dados com o usuário antes de criar a tag.
+
+tools:
+  - service-order-tool
+
+routing:
+  - type: keyword
+    match: "ordem de serviço|os |os |ordem servico|ordem de servico|criar os|nova os|abrir os|serviço|servico"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 10
+cooldownMs: 3000
+rateLimitPerWindow: 10

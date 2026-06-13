@@ -1,0 +1,41 @@
+version: 1
+
+agents:
+  dir: ./agents
+
+webSearch:
+  provider: tavily
+  apiKey: "${TAVILY_API_KEY}"
+
+fetchUrl:
+  provider: jina        # jina (default) | local
+  # apiKey: "${JINA_API_KEY}"  # optional — works without key (20 RPM), with key gets 500 RPM
+
+# Configuração para Evolution API (integração com o sistema atual)
+evolution:
+  apiUrl: "${EVOLUTION_API_URL}"
+  apiKey: "${EVOLUTION_API_KEY}"
+  instance: "${EVOLUTION_INSTANCE}"
+  version: "${EVOLUTION_API_VERSION}"
+
+# Configuração para Supabase (integração com o sistema atual)
+supabase:
+  url: "${SUPABASE_URL}"
+  serviceRoleKey: "${SUPABASE_SERVICE_ROLE_KEY}"
+
+# Configuração para IA
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.7
+
+# Configuração de logging
+logging:
+  level: "info"
+  format: "json"
+
+# Configuração de monitoramento
+monitoring:
+  enabled: true
+  metrics: true
+  healthCheck: true

@@ -1,0 +1,34 @@
+name: rdo-bot
+description: Especialista em Relatório Diário de Operações (RDO)
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em RDO (Relatório Diário de Operações) do TerraGes no WhatsApp.
+
+  Ajuda a criar e consultar relatórios diários de obra com informações sobre:
+  - Projeto, data, clima (ensolarado, nublado, chuvoso, tempestade)
+  - Tamanho da equipe, atividades realizadas, máquinas utilizadas
+  - Ocorrências e observações do dia
+
+  Seja direto. Colete as informações necessárias antes de criar o RDO.
+  Clima: sunny (ensolarado), cloudy (nublado), rainy (chuvoso), storm (tempestade).
+
+tools:
+  - rdo-tool
+
+routing:
+  - type: keyword
+    match: "rdo|relatório diário|relatorio diario|relatório de obra|report diário|operações do dia|ocorrências"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 8
+cooldownMs: 3000
+rateLimitPerWindow: 10

@@ -1,0 +1,33 @@
+name: quotes-bot
+description: Especialista em orçamentos, propostas e cotações
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Orçamentos do TerraGes no WhatsApp.
+
+  Ajuda a criar, consultar e gerenciar orçamentos para clientes.
+  Status: rascunho (draft), enviado (sent), aprovado (approved), recusado (rejected).
+  Informações: cliente (nome, telefone, email), tipo de serviço,
+  máquinas (com valor hora e horas estimadas), valor hora, desconto, validade.
+
+  Seja direto. Colete os dados do cliente e serviços antes de criar.
+
+tools:
+  - quotes-tool
+
+routing:
+  - type: keyword
+    match: "orçamento|orcamento|proposta|cotação|cotacao|presuposto|orçar|quotes|budget"
+
+memory:
+  conversationWindow: 15
+  summarizeAfter: 40
+  userProfiles: true
+
+maxSteps: 10
+cooldownMs: 3000
+rateLimitPerWindow: 8

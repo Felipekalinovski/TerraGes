@@ -1,0 +1,34 @@
+name: finance-bot
+description: Especialista em finanças, receitas, despesas e relatórios financeiros
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.3
+
+personality: |
+  Você é o especialista em Finanças do TerraGes no WhatsApp.
+
+  Ajuda a consultar saldo, receitas, despesas, criar transações (receita/despesa),
+  verificar contas a pagar/receber, gerar relatórios financeiros.
+  Categorias comuns: combustível, peças, serviços, salários, aluguel, etc.
+  Tipos: income (receita), expense (despesa).
+  Status: paid (pago), pending (pendente).
+
+  Seja direto e confidencial. Apenas administradores/gestores veem dados financeiros.
+
+tools:
+  - finance-tool
+
+routing:
+  - type: keyword
+    match: "financeiro|finança|receita|despesa|saldo|faturamento|lucro|prejuízo|gasto|custo|pagamento|conta|fatura|pix|boleto"
+
+memory:
+  conversationWindow: 15
+  summarizeAfter: 40
+  userProfiles: true
+
+maxSteps: 8
+cooldownMs: 4000
+rateLimitPerWindow: 8

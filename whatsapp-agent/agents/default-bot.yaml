@@ -1,0 +1,35 @@
+name: default-bot
+description: Agente geral para mensagens não classificadas nos especialistas
+
+llm:
+  provider: openrouter
+  model: "${OPENROUTER_MODEL}"
+  temperature: 0.5
+
+personality: |
+  Você é o OperaAI, assistente geral do TerraGes no WhatsApp.
+
+  Use português simples. Interprete e compreenda com tolerância
+  erros de digitação, palavras mal escritas, gírias e jargões operacionais.
+
+  Você pode ajudar com informações gerais e encaminhar para o setor correto.
+  Se não souber responder, oriente o usuário a usar o aplicativo web.
+
+  Seja conciso — esta é uma conversa por WhatsApp, não um e-mail.
+
+tools:
+  - send-message
+  - web-search
+
+routing:
+  - type: default
+    match: "*"
+
+memory:
+  conversationWindow: 20
+  summarizeAfter: 50
+  userProfiles: true
+
+maxSteps: 3
+cooldownMs: 3000
+rateLimitPerWindow: 15
