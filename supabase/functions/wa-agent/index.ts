@@ -189,15 +189,19 @@ Informe status, health score, horas e próxima manutenção com os dados retorna
   machine_hours: {
     name: "machine-hours-bot",
     prompt: `Você é o especialista em Horas-Máquina do TerraGes.
-Para consultar dados reais de horas, use a tag no final da resposta:
+Para consultar dados reais de horas, use:
 [[QUERY_HOURS:{"machine":"nome da máquina","days":30}]]
-Sempre use QUERY_HOURS para responder perguntas sobre horas trabalhadas, períodos ou valores.
-Registre horas: máquina, operador, projeto, cliente, data, início, fim, intervalo, valor hora.`,
+Para registrar horas, após coletar os dados use:
+[[CREATE_HOURS:{"machine_name":"...","operator_name":"...","project_name":"...","client_name":"...","date":"YYYY-MM-DD","start_time":"HH:mm","end_time":"HH:mm","break_minutes":0,"hourly_rate":0,"service_type":"..."}]]
+Sempre use QUERY_HOURS para consultas. Use CREATE_HOURS para registrar. Confirme antes de criar.`,
   },
   quotes: {
     name: "quotes-bot",
     prompt: `Você é o especialista em Orçamentos do TerraGes.
-Colete: cliente, tipo serviço, máquinas, valor hora, desconto, validade.`,
+Após coletar todos os dados, use:
+[[CREATE_QUOTE:{"client_name":"...","client_phone":"...","client_email":"...","service_type":"...","hourly_rate":0,"estimated_hours":0,"discount":0,"valid_until":"YYYY-MM-DD","notes":"..."}]]
+Campos: cliente (nome, tel, email), tipo serviço, valor hora, horas estimadas, desconto, validade.
+Confirme com o usuário antes de criar.`,
   },
   service_order: {
     name: "service-order-bot",
@@ -236,10 +240,11 @@ Apenas admins/gestores veem dados financeiros completos.`,
   maintenance: {
     name: "maintenance-bot",
     prompt: `Você é o especialista em Manutenção do TerraGes.
-Para consultar manutenções reais, use no final:
-[[QUERY_MAINTENANCE:{"machine":"nome da máquina","days":30}]]
+Para consultar: [[QUERY_MAINTENANCE:{"machine":"nome","days":30}]]
+Para registrar manutenção, após coletar dados use:
+[[CREATE_MAINTENANCE:{"machine_id":"","date":"YYYY-MM-DD","type":"preventive|corrective|predictive","description":"...","cost":0,"technician":"...","hour_meter":0}]]
 Tipos: preventive, corrective, predictive.
-Sempre use QUERY_MAINTENANCE quando perguntarem sobre manutenções passadas.`,
+Confirme antes de criar.`,
   },
   employee: {
     name: "employee-bot",
@@ -253,6 +258,62 @@ Informe nome, cargo, status, certificações e contato.`,
 
 // ─── Processamento de Ações ────────────────────────────────
 
+const ACTION_REGEX = /\[\[(CREATE_\w+):(.*?)\]\]/s;
+
+async function savePendingAction(phone: string, actionType: string, data: any) {
+  await supabase.from("pending_actions").update({ status: "cancelled" })
+    .eq("user_phone", phone).eq("status", "pending_confirmation");
+  return supabase.from("pending_actions").insert([{
+    user_phone: phone, action_type: actionType, action_data: data, status: "pending_confirmation",
+  }]);
+}
+
+async function executeAction(actionType: string, data: any, userId: string): Promise<string | null> {
+  try {
+    switch (actionType) {
+      case "CREATE_OS": {
+        const { error } = await supabase.from("service_orders").insert([{ ...data, user_id: userId, status: "pending" }]);
+        return error ? "⚠️ Erro ao criar OS." : null;
+      }
+      case "CREATE_SCHEDULE": {
+        const { error } = await supabase.from("schedules").insert(data);
+        return error ? "⚠️ Erro ao criar agendamento." : null;
+      }
+      case "CREATE_HOURS": {
+        const { error } = await supabase.from("hora_maquina").insert([{ ...data, user_id: userId }]);
+        return error ? "⚠️ Erro ao registrar horas." : null;
+      }
+      case "CREATE_MAINTENANCE": {
+        const { error } = await supabase.from("maintenance_records").insert([{ ...data, user_id: userId }]);
+        return error ? "⚠️ Erro ao registrar manutenção." : null;
+      }
+      case "CREATE_QUOTE": {
+        const { error } = await supabase.from("orcamentos").insert([{ ...data, user_id: userId, status: "rascunho" }]);
+        return error ? "⚠️ Erro ao criar orçamento." : null;
+      }
+      default:
+        return "⚠️ Tipo de ação desconhecido.";
+    }
+  } catch (e) {
+    console.error(`[Action] ${actionType}:`, e);
+    return "⚠️ Erro ao executar ação.";
+  }
+}
+
+function actionLabel(actionType: string): string {
+  const labels: Record<string, string> = {
+    CREATE_OS: "Ordem de Serviço",
+    CREATE_SCHEDULE: "Agendamento",
+    CREATE_HOURS: "Registro de Horas",
+    CREATE_MAINTENANCE: "Manutenção",
+    CREATE_QUOTE: "Orçamento",
+  };
+  return labels[actionType] || "Ação";
+}
+
+const ADMIN_ONLY_ACTIONS = new Set(["CREATE_SCHEDULE"]);
+const ALL_ACTIONS = new Set(["CREATE_OS", "CREATE_SCHEDULE", "CREATE_HOURS", "CREATE_MAINTENANCE", "CREATE_QUOTE"]);
+
 async function processActions(
   aiResponse: string,
   user: any,
@@ -264,88 +325,63 @@ async function processActions(
   let actionStatus = "none";
 
   const isAdmin = user.role === "admin";
+  const match = aiResponse.match(ACTION_REGEX);
 
-  if (!isAdmin) {
-    const osMatch = aiResponse.match(/\[\[CREATE_OS:(.*?)\]\]/s);
-    if (osMatch) {
-      cleanText = aiResponse.replace(/\[\[CREATE_OS:.*?\]\]/s, "").trim();
-      try {
-        const parsed = JSON.parse(osMatch[1]);
-        const { save, ...osData } = parsed;
+  if (!match) return { cleanText, actionType, actionData, actionStatus };
 
-        await supabase.from("pending_actions").update({ status: "cancelled" })
-          .eq("user_phone", phone).eq("status", "pending_confirmation");
+  const tag = match[0];
+  const rawType = match[1];
+  const rawJson = match[2];
 
-        const { error } = await supabase.from("pending_actions").insert([{
-          user_phone: phone, action_type: "CREATE_OS", action_data: osData, status: "pending_confirmation",
-        }]);
-
-        if (error) {
-          cleanText += "\n\n⚠️ Erro ao preparar confirmação.";
-          actionStatus = "failed";
-        } else {
-          actionType = "service_order";
-          actionData = osData;
-          actionStatus = "pending_confirmation";
-        }
-      } catch (e) {
-        console.error("[Action] OS parse error:", e);
-        actionStatus = "failed";
-      }
-      cleanText = cleanText.replace(/\[\[CREATE_.*?\]\]/gs, "").trim();
-      return { cleanText, actionType, actionData, actionStatus };
-    }
-
-    const hasAction = /\[\[CREATE_(SCHEDULE|REPORT):/.test(aiResponse);
+  if (!ALL_ACTIONS.has(rawType)) {
     cleanText = aiResponse.replace(/\[\[CREATE_.*?\]\]/gs, "").trim();
-    if (hasAction) {
-      cleanText += "\n\n⚠️ Apenas administradores podem criar agendamentos ou relatórios via WhatsApp.";
-    }
     return { cleanText, actionType, actionData, actionStatus };
   }
 
-  const scheduleMatch = aiResponse.match(/\[\[CREATE_SCHEDULE:(.*?)\]\]/s);
-  if (scheduleMatch) {
-    cleanText = aiResponse.replace(/\[\[CREATE_SCHEDULE:.*?\]\]/s, "").trim();
-    try {
-      const parsed = JSON.parse(scheduleMatch[1]);
-      const { save, ...data } = parsed;
-      actionType = "schedule";
-      actionData = data;
-      if (save !== "draft") {
-        const { error } = await supabase.from("schedules").insert(data);
-        actionStatus = error ? "failed" : "completed";
-        if (error) cleanText += "\n\n⚠️ Erro ao salvar agendamento.";
-      } else {
-        actionStatus = "pending";
-        cleanText += "\n_(Rascunho salvo)_";
-      }
-    } catch (e) {
-      console.error("[Action] Schedule:", e);
-      actionStatus = "failed";
-    }
+  cleanText = aiResponse.replace(tag, "").trim();
+  let parsed: any;
+
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    cleanText += "\n\n⚠️ Erro ao processar dados da ação.";
+    return { cleanText, actionType, actionData, actionStatus: "failed" };
   }
 
-  const osMatch = aiResponse.match(/\[\[CREATE_OS:(.*?)\]\]/s);
-  if (osMatch) {
-    cleanText = aiResponse.replace(/\[\[CREATE_OS:.*?\]\]/s, "").trim();
-    try {
-      const parsed = JSON.parse(osMatch[1]);
-      const { save, ...osData } = parsed;
-      actionType = "service_order";
-      actionData = osData;
-      if (save !== "draft") {
-        const { error } = await supabase.from("service_orders").insert([{ ...osData, user_id: user.id, status: "pending" }]);
-        actionStatus = error ? "failed" : "completed";
-        if (error) cleanText += "\n\n⚠️ Erro ao criar OS.";
-      } else {
-        actionStatus = "pending";
-        cleanText += "\n_(Rascunho salvo)_";
-      }
-    } catch (e) {
-      console.error("[Action] OS:", e);
+  const { save, ...actionPayload } = parsed;
+
+  if (!isAdmin && ADMIN_ONLY_ACTIONS.has(rawType)) {
+    cleanText += "\n\n⚠️ Apenas administradores podem criar esta ação via WhatsApp.";
+    return { cleanText, actionType, actionData, actionStatus: "failed" };
+  }
+
+  // Não-admin: salva em pending_actions para confirmação
+  if (!isAdmin) {
+    const { error } = await savePendingAction(phone, rawType, actionPayload);
+    if (error) {
+      cleanText += "\n\n⚠️ Erro ao preparar confirmação.";
       actionStatus = "failed";
+    } else {
+      actionType = rawType;
+      actionData = actionPayload;
+      actionStatus = "pending_confirmation";
     }
+    cleanText = cleanText.replace(/\[\[CREATE_.*?\]\]/gs, "").trim();
+    return { cleanText, actionType, actionData, actionStatus };
+  }
+
+  // Admin: executa direto
+  if (save === "draft") {
+    actionType = rawType;
+    actionData = actionPayload;
+    actionStatus = "pending";
+    cleanText += "\n_(Rascunho salvo)_";
+  } else {
+    const err = await executeAction(rawType, actionPayload, user.id);
+    actionType = rawType;
+    actionData = actionPayload;
+    actionStatus = err ? "failed" : "completed";
+    if (err) cleanText += `\n\n${err}`;
   }
 
   return { cleanText, actionType, actionData, actionStatus };
@@ -519,14 +555,10 @@ async function processMessage(payload: any): Promise<void> {
     const isYes = ["sim", "s", "confirmo", "ok", "yes", "y"].includes(clean);
     const isNo = ["não", "nao", "n", "cancelar", "no"].includes(clean);
 
-    if (isYes && pendingAction.action_type === "CREATE_OS") {
-      const { error } = await supabase.from("service_orders").insert([{
-        ...pendingAction.action_data, user_id: user.id, status: "pending",
-      }]);
+    if (isYes) {
+      const err = await executeAction(pendingAction.action_type, pendingAction.action_data, user.id);
       await supabase.from("pending_actions").update({ status: "executed" }).eq("id", pendingAction.id);
-      const msg = error
-        ? "❌ Erro ao criar OS."
-        : "✅ Ordem de Serviço criada com sucesso!";
+      const msg = err ? `❌ ${err}` : `✅ ${actionLabel(pendingAction.action_type)} criada com sucesso!`;
       await sendMessage(phone, msg, instanceToken);
       return;
     }
