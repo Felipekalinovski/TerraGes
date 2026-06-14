@@ -225,13 +225,19 @@ function OperadorDashboard() {
       <Layout.Content>
         <div className="px-4 pb-24 pt-4 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Saudação */}
-          <div className="bg-surface-dark/50 p-6 rounded-2xl border border-white/5">
-            <p className="text-sm text-gray-400 font-medium">
-              Olá, <span className="text-white font-bold">{profile?.name || 'Operador'}</span>!
-            </p>
-            <p className="text-xs text-gray-600 mt-1">
-              Use os botões abaixo para registrar suas atividades.
-            </p>
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-transparent to-accent/5 p-6 rounded-2xl border border-primary/10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative">
+              <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-black mb-3 shadow-lg shadow-primary/20">
+                <Truck size={22} strokeWidth={2.5} />
+              </div>
+              <p className="text-sm text-gray-400 font-medium">
+                Olá, <span className="text-white font-bold">{profile?.name || 'Operador'}</span>!
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Use os botões abaixo para registrar suas atividades.
+              </p>
+            </div>
           </div>
 
           {/* Botões de registro rápido */}

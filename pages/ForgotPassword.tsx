@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Hammer, Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import { Truck, Mail, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const ForgotPassword: React.FC = () => {
@@ -31,8 +31,8 @@ export const ForgotPassword: React.FC = () => {
         </button>
 
         <div className="flex flex-col items-center mb-8 mt-2">
-          <div className="size-16 bg-[#4b3220] rounded-full flex items-center justify-center mb-4 text-primary">
-            {isSent ? <CheckCircle size={32} /> : <Hammer size={32} />}
+          <div className="size-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/10 flex items-center justify-center mb-4 shadow-lg shadow-primary/10">
+            {isSent ? <CheckCircle className="text-accent" size={32} /> : <Truck className="text-primary" size={28} strokeWidth={1.5} />}
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Recuperar Senha</h1>
           <p className="text-gray-400 text-sm text-center mt-2 px-4">

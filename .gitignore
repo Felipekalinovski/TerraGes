@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# WhatsApp agent local files
+whatsapp-agent/.env
+whatsapp-agent/server.err

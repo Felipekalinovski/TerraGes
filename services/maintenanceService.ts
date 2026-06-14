@@ -73,8 +73,6 @@ export const maintenanceService = {
 
     // Criar nova manutenção
     async create(maintenanceData: MaintenanceFormData): Promise<MaintenanceRecord> {
-        const { data: { user } } = await supabase.auth.getUser();
-
         const { data: machine, error: machineError } = await supabase
             .from('machines')
             .select('id')
@@ -87,7 +85,7 @@ export const maintenanceService = {
 
         const { data, error } = await supabase
             .from('maintenance_records')
-            .insert([{ ...maintenanceData, user_id: user?.id }])
+            .insert([maintenanceData])
             .select()
             .single();
 

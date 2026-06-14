@@ -4,8 +4,8 @@
     "description": "Sistema completo de gestão de obras, frotas e financeiro.",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#1a1614",
-    "theme_color": "#fbbf24",
+    "background_color": "#0A0A0A",
+    "theme_color": "#F97316",
     "icons": [
         {
             "src": "/icon.png",

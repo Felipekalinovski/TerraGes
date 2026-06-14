@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Hammer, User, Mail, Lock, ArrowRight, Loader2, Chrome } from 'lucide-react';
+import { Truck, User, Mail, Lock, ArrowRight, Loader2, Chrome } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 
@@ -65,10 +65,10 @@ export const SignUp: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-brand-gradient p-4 animate-in fade-in duration-500">
       <div className="w-full max-w-md bg-surface-dark/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/10">
         <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Hammer className="text-primary" size={32} />
-            <h1 className="text-2xl font-bold text-white tracking-tight">Criar Conta</h1>
+          <div className="size-14 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/10 flex items-center justify-center mb-3 shadow-lg shadow-primary/10">
+            <Truck className="text-primary" size={28} strokeWidth={1.5} />
           </div>
+          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Criar Conta</h1>
           <p className="text-gray-400 text-sm">Junte-se ao TerraGes</p>
         </div>
 

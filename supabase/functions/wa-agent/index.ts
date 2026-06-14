@@ -213,6 +213,175 @@ async function authenticateUser(phone: string) {
   return { id: data.id, phone: data.phone, role: data.role, name: data.name || "" };
 }
 
+// ─── Estado de Conversa (Sessions) ─────────────────────────
+
+interface Session {
+  phone: string;
+  role: string;
+  state: string;
+  context: Record<string, any>;
+}
+
+async function getSession(phone: string, role: string): Promise<Session> {
+  const { data } = await supabase
+    .from("conversation_sessions")
+    .select("*")
+    .eq("user_phone", phone)
+    .maybeSingle();
+
+  if (data) {
+    if (data.user_role !== role) {
+      await supabase.from("conversation_sessions")
+        .update({ user_role: role }).eq("user_phone", phone);
+    }
+    return {
+      phone: data.user_phone,
+      role: data.user_role,
+      state: data.current_state || "idle",
+      context: (data.context as Record<string, any>) || {},
+    };
+  }
+
+  await supabase.from("conversation_sessions").insert([{
+    user_phone: phone, user_role: role, current_state: "idle", context: {},
+  }]);
+
+  return { phone, role, state: "idle", context: {} };
+}
+
+async function setSessionState(phone: string, state: string, context: Record<string, any> = {}): Promise<void> {
+  await supabase.from("conversation_sessions")
+    .update({ current_state: state, context, updated_at: new Date().toISOString() })
+    .eq("user_phone", phone);
+}
+
+async function resetSession(phone: string): Promise<void> {
+  await supabase.from("conversation_sessions")
+    .update({ current_state: "idle", context: {}, updated_at: new Date().toISOString() })
+    .eq("user_phone", phone);
+}
+
+// ─── Wizards ────────────────────────────────────────────────
+
+const OS_STEPS = ["client", "machine", "date", "start_hour", "end_hour", "hourly_rate", "payment_method"];
+const OS_STEP_LABELS: Record<string, string> = {
+  client: "👤 Qual o nome do cliente?",
+  machine: "🔧 Qual máquina será usada? (ou digite 'nenhuma')",
+  date: "📅 Qual a data? (DD/MM/AAAA)",
+  start_hour: "⏰ Hora de início? (ex: 8)",
+  end_hour: "⏰ Hora de fim? (ex: 17)",
+  hourly_rate: "💰 Valor da hora? (ex: 150)",
+  payment_method: "💳 Forma de pagamento? (Pix, Cartao, Boleto, Faturado, Dinheiro, Cheque)",
+};
+
+const HOURS_STEPS = ["machine_name", "operator_name", "project_name", "date", "start_time", "end_time", "hourly_rate"];
+const HOURS_STEP_LABELS: Record<string, string> = {
+  machine_name: "🔧 Qual o nome da máquina?",
+  operator_name: "👤 Nome do operador?",
+  project_name: "🏗️ Nome do projeto?",
+  date: "📅 Data? (DD/MM/AAAA)",
+  start_time: "⏰ Hora início? (HH:MM)",
+  end_time: "⏰ Hora fim? (HH:MM)",
+  hourly_rate: "💰 Valor da hora? (ex: 150)",
+};
+
+function parseStepValue(value: string, step: string): any {
+  if (step === "date" || step === "start_time" || step === "end_time") return value;
+  if (step === "start_hour" || step === "end_hour" || step === "hourly_rate" || step === "break_minutes") {
+    const num = parseFloat(value.replace(",", "."));
+    return isNaN(num) ? value : num;
+  }
+  return value;
+}
+
+async function processWizard(
+  userText: string,
+  session: Session,
+  phone: string,
+  instanceToken: string,
+  userId: string,
+): Promise<boolean> {
+  const wizardMatch = session.state.match(/^wizard:(\w+):(\w+)$/);
+  if (!wizardMatch) return false;
+
+  const wizardType = wizardMatch[1]; // "os" or "hours"
+  const currentStep = wizardMatch[2];
+
+  if (userText.toLowerCase() === "cancelar") {
+    await resetSession(phone);
+    await sendMessage(phone, "❌ Criação cancelada.", instanceToken);
+    return true;
+  }
+
+  const ctx = { ...session.context };
+  ctx[currentStep] = parseStepValue(userText, currentStep);
+
+  if (wizardType === "os") {
+    const idx = OS_STEPS.indexOf(currentStep);
+    if (idx < 0 || idx >= OS_STEPS.length - 1) {
+      // All data collected — generate CREATE_OS tag
+      const osData = {
+        client: ctx.client || "",
+        date: ctx.date ? ctx.date.split("/").reverse().join("-") : new Date().toISOString().slice(0, 10),
+        start_hour: Number(ctx.start_hour) || 8,
+        end_hour: Number(ctx.end_hour) || 17,
+        hourly_rate: Number(ctx.hourly_rate) || 0,
+        payment_method: ctx.payment_method || "Pix",
+      };
+      await resetSession(phone);
+
+      // Save as pending action
+      await supabase.from("pending_actions").update({ status: "cancelled" })
+        .eq("user_phone", phone).eq("status", "pending_confirmation");
+      await supabase.from("pending_actions").insert([{
+        user_phone: phone, action_type: "CREATE_OS", action_data: osData, status: "pending_confirmation",
+      }]);
+
+      const summary = `📋 *Nova OS*\n\nCliente: ${osData.client}\nData: ${osData.date}\nHorário: ${osData.start_hour}h às ${osData.end_hour}h\nValor: R$ ${osData.hourly_rate}/h\nPagamento: ${osData.payment_method}\n\nConfirma? (Sim/Não)`;
+      await sendMessage(phone, summary, instanceToken);
+      return true;
+    }
+
+    const nextStep = OS_STEPS[idx + 1];
+    await setSessionState(phone, `wizard:os:${nextStep}`, ctx);
+    await sendMessage(phone, OS_STEP_LABELS[nextStep], instanceToken);
+    return true;
+  }
+
+  if (wizardType === "hours") {
+    const idx = HOURS_STEPS.indexOf(currentStep);
+    if (idx < 0 || idx >= HOURS_STEPS.length - 1) {
+      const hoursData = {
+        machine_name: ctx.machine_name || "",
+        operator_name: ctx.operator_name || "",
+        project_name: ctx.project_name || "",
+        date: ctx.date ? ctx.date.split("/").reverse().join("-") : new Date().toISOString().slice(0, 10),
+        start_time: ctx.start_time || "08:00",
+        end_time: ctx.end_time || "17:00",
+        hourly_rate: Number(ctx.hourly_rate) || 0,
+      };
+      await resetSession(phone);
+
+      await supabase.from("pending_actions").update({ status: "cancelled" })
+        .eq("user_phone", phone).eq("status", "pending_confirmation");
+      await supabase.from("pending_actions").insert([{
+        user_phone: phone, action_type: "CREATE_HOURS", action_data: hoursData, status: "pending_confirmation",
+      }]);
+
+      const summary = `⏱️ *Registro de Horas*\n\nMáquina: ${hoursData.machine_name}\nOperador: ${hoursData.operator_name}\nProjeto: ${hoursData.project_name}\nData: ${hoursData.date}\nHorário: ${hoursData.start_time} às ${hoursData.end_time}\nValor: R$ ${hoursData.hourly_rate}/h\n\nConfirma? (Sim/Não)`;
+      await sendMessage(phone, summary, instanceToken);
+      return true;
+    }
+
+    const nextStep = HOURS_STEPS[idx + 1];
+    await setSessionState(phone, `wizard:hours:${nextStep}`, ctx);
+    await sendMessage(phone, HOURS_STEP_LABELS[nextStep], instanceToken);
+    return true;
+  }
+
+  return false;
+}
+
 // ─── Triage ────────────────────────────────────────────────
 
 interface TriageResult {
@@ -295,11 +464,9 @@ Informe status, health score, horas e próxima manutenção com os dados retorna
   machine_hours: {
     name: "machine-hours-bot",
     prompt: `Você é o especialista em Horas-Máquina do TerraGes.
-Para consultar dados reais de horas, use:
-[[QUERY_HOURS:{"machine":"nome da máquina","days":30}]]
-Para registrar horas, após coletar os dados use:
-[[CREATE_HOURS:{"machine_name":"...","operator_name":"...","project_name":"...","client_name":"...","date":"YYYY-MM-DD","start_time":"HH:mm","end_time":"HH:mm","break_minutes":0,"hourly_rate":0,"service_type":"..."}]]
-Sempre use QUERY_HOURS para consultas. Use CREATE_HOURS para registrar. Confirme antes de criar.`,
+Para consultar: [[QUERY_HOURS:{"machine":"nome","days":30}]]
+Para registrar horas, responda com [[START_WIZARD:hours]] e uma breve confirmação.
+NÃO peça dados manualmente — o wizard coleta automaticamente.`,
   },
   quotes: {
     name: "quotes-bot",
@@ -312,12 +479,9 @@ Confirme com o usuário antes de criar.`,
   service_order: {
     name: "service-order-bot",
     prompt: `Você é o especialista em Ordens de Serviço do TerraGes.
-Para consultar OS existentes, use no final:
-[[QUERY_OS:{"status":"pending|completed|cancelled","days":30}]]
-Para criar nova OS, use no final:
-[[CREATE_OS:{"client":"nome","client_cpf":"","client_contact":"","date":"YYYY-MM-DD","start_hour":8,"end_hour":17,"hourly_rate":0,"payment_method":"Pix","location":"","description":""}]]
-Sempre use QUERY_OS quando perguntarem sobre OS existentes. Antes de criar, pergunte os dados que faltam.
-Depois da tag CREATE_OS, escreva resumo e pergunte: "Confirma a criação? (Sim/Não)"`,
+Para consultar: [[QUERY_OS:{"status":"pending","days":30}]]
+Para criar nova OS, responda com [[START_WIZARD:os]] e uma breve confirmação.
+NÃO peça dados manualmente — o wizard coleta automaticamente.`,
   },
   reports: {
     name: "reports-bot",
@@ -665,11 +829,15 @@ async function processMessage(payload: any): Promise<void> {
 
   const isAdmin = user.role === "admin";
 
+  // ── Session (Estado de Conversa) ──
+  const session = await getSession(phone, user.role);
+
   // ── Pending action confirmation check ──
   const { data: pendingAction } = await supabase.from("pending_actions")
     .select("*").eq("user_phone", phone).eq("status", "pending_confirmation").maybeSingle();
 
   if (pendingAction) {
+    await resetSession(phone);
     const clean = userText.trim().toLowerCase();
     const isYes = ["sim", "s", "confirmo", "ok", "yes", "y"].includes(clean);
     const isNo = ["não", "nao", "n", "cancelar", "no"].includes(clean);
@@ -690,6 +858,13 @@ async function processMessage(payload: any): Promise<void> {
 
     await sendMessage(phone, "⚠️ Responda *Sim* para confirmar ou *Não* para cancelar.", instanceToken);
     return;
+  }
+
+  // ── Wizard (coleta passo a passo) ──
+  if (session.state.startsWith("wizard:")) {
+    const handled = await processWizard(userText, session, phone, instanceToken, user.id);
+    if (handled) return;
+    await resetSession(phone);
   }
 
   // ── Get/Create conversation ──
@@ -758,6 +933,28 @@ async function processMessage(payload: any): Promise<void> {
 
   // ── Process queries (se não houve ação, tenta queries) ──
   const finalText = actionType ? cleanText : await execQueries(cleanText);
+
+  // ── Wizard trigger ──
+  const wizardMatch = finalText.match(/\[\[START_WIZARD:(\w+)\]\]/);
+  if (wizardMatch) {
+    const wtype = wizardMatch[1];
+    const cleanResp = finalText.replace(/\[\[START_WIZARD:\w+\]\]/, "").trim();
+    await sendMessage(phone, cleanResp || "OK! Vou te ajudar com isso.", instanceToken);
+
+    if (wtype === "os") {
+      await setSessionState(phone, "wizard:os:client", {});
+      await sendMessage(phone, OS_STEP_LABELS.client, instanceToken);
+    } else if (wtype === "hours") {
+      await setSessionState(phone, "wizard:hours:machine_name", {});
+      await sendMessage(phone, HOURS_STEP_LABELS.machine_name, instanceToken);
+    }
+
+    await supabase.from("whatsapp_messages").insert([{
+      conversation_id: conversationId, role: "assistant",
+      content: cleanResp || `Iniciando wizard ${wtype}`,
+    }]);
+    return;
+  }
 
   // ── Save assistant message ──
   await supabase.from("whatsapp_messages").insert([{

@@ -257,7 +257,7 @@ export const EmployeeForm: React.FC = () => {
                       value={formData.birth_date}
                       onChange={handleChange}
                       type="date"
-                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium [color-scheme:dark]"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium"
                     />
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export const EmployeeForm: React.FC = () => {
                       value={formData.admission_date}
                       onChange={handleChange}
                       type="date"
-                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium [color-scheme:dark]"
+                      className="w-full bg-surface-dark/40 border border-white/5 rounded-[24px] pl-14 pr-6 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-glass font-medium"
                     />
                   </div>
                 </div>

@@ -258,7 +258,7 @@ export const ServiceOrderForm: React.FC = () => {
                         required
                         value={formData.date}
                         onChange={handleChange}
-                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all [color-scheme:dark]"
+                        className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl p-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all"
                       />
                     </div>
                   </div>

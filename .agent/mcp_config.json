@@ -15,6 +15,29 @@
                 "shadcn@latest",
                 "mcp"
             ]
+        },
+        "supabase": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@supabase/mcp-server@latest"
+            ],
+            "env": {
+                "SUPABASE_URL": "https://gwusywstresijdjzkujn.supabase.co",
+                "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dXN5d3N0cmVzaWpkanprdWpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NDYzMzExOCwiZXhwIjoyMDgwMjA5MTE4fQ.lzXcMw-OmhjVFGNntaNbvSYCeLpwYZN2EEK32U61iyk"
+            }
+        },
+        "open-design": {
+            "command": "C:\\Users\\fmdk1\\AppData\\Local\\Programs\\Open Design\\Open Design.exe",
+            "args": [
+                "C:\\Users\\fmdk1\\AppData\\Local\\Programs\\Open Design\\resources\\app\\prebundled\\daemon\\daemon-cli.mjs",
+                "mcp"
+            ],
+            "env": {
+                "OD_DATA_DIR": "C:\\Users\\fmdk1\\AppData\\Roaming\\Open Design\\namespaces\\release-stable-win\\data",
+                "OD_SIDECAR_IPC_PATH": "\\\\.\\pipe\\open-design-release-stable-win-daemon",
+                "ELECTRON_RUN_AS_NODE": "1"
+            }
         }
         //other mcp servers
     }

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader2, ShieldCheck, HardHat } from 'lucide-react';
+import { Mail, Lock, Loader2, Truck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Login: React.FC = () => {
@@ -90,15 +90,18 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Decor - Removed for Clean Look */}
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 animate-gradient pointer-events-none" />
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-[400px] z-10 animate-in fade-in zoom-in duration-500">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center size-16 bg-white/5 border border-white/10 rounded-2xl mb-6 shadow-md">
-            <ShieldCheck className="text-primary" size={32} strokeWidth={1.5} />
+          <div className="inline-flex items-center justify-center size-20 bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/10 rounded-3xl mb-6 shadow-lg shadow-primary/10">
+            <Truck className="text-primary" size={36} strokeWidth={1.5} />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-2">TerraGes <span className="text-primary italic">OS</span></h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">Sistemas de Gestão de Ativos</p>
+          <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-1">TerraGes <span className="text-primary italic">OS</span></h1>
+          <p className="text-[10px] text-accent font-bold uppercase tracking-[0.3em]">Sistemas de Gestão de Ativos</p>
         </div>
 
         <div className="bg-surface-dark border border-white/5 p-8 rounded-[32px] shadow-xl relative group">

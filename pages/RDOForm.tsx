@@ -115,7 +115,7 @@ export const RDOForm: React.FC = () => {
                     type="datetime-local"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all shadow-glass-sm [color-scheme:dark]"
+                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all shadow-glass-sm"
                   />
                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} strokeWidth={2.5} />
                 </div>

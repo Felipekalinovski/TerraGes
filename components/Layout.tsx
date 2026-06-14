@@ -219,10 +219,13 @@ Layout.Sidebar = () => {
       <aside className={`fixed md:static top-0 left-0 bottom-0 w-72 md:shrink-0 bg-surface-dark z-50 shadow-2xl transform transition-transform duration-500 ease-out border-r border-white/5 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-primary flex items-center justify-center text-black shadow-neon">
-              <Hammer size={24} strokeWidth={2.5} />
+            <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-black shadow-lg shadow-primary/20">
+              <Truck size={22} strokeWidth={2.5} />
             </div>
-            <h2 className="text-xl font-heading font-black tracking-tight text-white uppercase italic">TerraGes</h2>
+            <div>
+              <h2 className="text-lg font-heading font-black tracking-tight text-white uppercase italic leading-none">TerraGes</h2>
+              <p className="text-[8px] font-bold text-accent tracking-[0.3em] uppercase mt-0.5">Gestão de Ativos</p>
+            </div>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
         </div>
