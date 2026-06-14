@@ -320,12 +320,17 @@ async function processWizard(
     const idx = OS_STEPS.indexOf(currentStep);
     if (idx < 0 || idx >= OS_STEPS.length - 1) {
       // All data collected — generate CREATE_OS tag
+      const sh = Number(ctx.start_hour) || 8;
+      const eh = Number(ctx.end_hour) || 17;
+      const total_hours = Math.max(0, eh - sh);
       const osData = {
         client: ctx.client || "",
         date: ctx.date ? ctx.date.split("/").reverse().join("-") : new Date().toISOString().slice(0, 10),
-        start_hour: Number(ctx.start_hour) || 8,
-        end_hour: Number(ctx.end_hour) || 17,
+        start_hour: sh,
+        end_hour: eh,
+        total_hours,
         hourly_rate: Number(ctx.hourly_rate) || 0,
+        total_value: total_hours * (Number(ctx.hourly_rate) || 0),
         payment_method: ctx.payment_method || "Pix",
       };
       await resetSession(phone);
@@ -351,6 +356,12 @@ async function processWizard(
   if (wizardType === "hours") {
     const idx = HOURS_STEPS.indexOf(currentStep);
     if (idx < 0 || idx >= HOURS_STEPS.length - 1) {
+      const calcTH = (s: string, e: string) => {
+        const [sh, sm] = (s || "08:00").split(":").map(Number);
+        const [eh, em] = (e || "17:00").split(":").map(Number);
+        return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
+      };
+      const total_hours = calcTH(ctx.start_time, ctx.end_time);
       const hoursData = {
         machine_name: ctx.machine_name || "",
         operator_name: ctx.operator_name || "",
@@ -359,6 +370,8 @@ async function processWizard(
         start_time: ctx.start_time || "08:00",
         end_time: ctx.end_time || "17:00",
         hourly_rate: Number(ctx.hourly_rate) || 0,
+        total_hours,
+        total_value: total_hours * (Number(ctx.hourly_rate) || 0),
       };
       await resetSession(phone);
 
@@ -542,7 +555,14 @@ async function executeAction(actionType: string, data: any, userId: string): Pro
   try {
     switch (actionType) {
       case "CREATE_OS": {
-        const { error } = await supabase.from("service_orders").insert([{ ...data, user_id: userId, status: "pending" }]);
+        const sh = Number(data.start_hour) || 0;
+        const eh = Number(data.end_hour) || 0;
+        const total_hours = Math.max(0, eh - sh);
+        const total_value = total_hours * (Number(data.hourly_rate) || 0);
+        const { error } = await supabase.from("service_orders").insert([{
+          ...data, user_id: userId, status: "pending",
+          total_hours, total_value,
+        }]);
         return error ? "⚠️ Erro ao criar OS." : null;
       }
       case "CREATE_SCHEDULE": {
@@ -550,7 +570,16 @@ async function executeAction(actionType: string, data: any, userId: string): Pro
         return error ? "⚠️ Erro ao criar agendamento." : null;
       }
       case "CREATE_HOURS": {
-        const { error } = await supabase.from("hora_maquina").insert([{ ...data, user_id: userId }]);
+        const calcTotalHours = (s: string, e: string): number => {
+          const [sh, sm] = s.split(":").map(Number);
+          const [eh, em] = e.split(":").map(Number);
+          return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
+        };
+        const total_hours = calcTotalHours(data.start_time || "00:00", data.end_time || "00:00");
+        const total_value = total_hours * (Number(data.hourly_rate) || 0);
+        const { error } = await supabase.from("hora_maquina").insert([{
+          ...data, user_id: userId, total_hours, total_value,
+        }]);
         return error ? "⚠️ Erro ao registrar horas." : null;
       }
       case "CREATE_MAINTENANCE": {
@@ -932,7 +961,18 @@ async function processMessage(payload: any): Promise<void> {
   const { cleanText, actionType, actionData, actionStatus } = await processActions(aiResponse, user, phone);
 
   // ── Process queries (se não houve ação, tenta queries) ──
-  const finalText = actionType ? cleanText : await execQueries(cleanText);
+  let finalText = actionType ? cleanText : await execQueries(cleanText);
+
+  // ── Fallback: se AI não seguiu o prompt, auto-dispara wizard ──
+  const createIntents = ["criar", "nova", "novo", "cadastrar", "registrar", "abrir", "fazer uma os", "fazer um"];
+  const userWantsCreate = createIntents.some(kw => userText.toLowerCase().includes(kw));
+  if (!finalText.includes("[[START_WIZARD") && !finalText.includes("[[QUERY_") && !finalText.includes("[[CREATE_") && userWantsCreate) {
+    if (classification.category === "service_order") {
+      finalText = `[[START_WIZARD:os]] ${finalText}`;
+    } else if (classification.category === "machine_hours") {
+      finalText = `[[START_WIZARD:hours]] ${finalText}`;
+    }
+  }
 
   // ── Wizard trigger ──
   const wizardMatch = finalText.match(/\[\[START_WIZARD:(\w+)\]\]/);
