@@ -178,7 +178,7 @@ const FleetList: React.FC = () => {
         </div>
 
         {/* FAB */}
-        <div className="fixed bottom-26 right-6 z-20">
+        <div className="fixed bottom-28 right-6 z-20">
           <button
             onClick={() => navigate('/fleet/add')}
             className="flex items-center gap-3 bg-primary text-black h-16 pl-6 pr-8 rounded-[24px] shadow-lg font-heading font-black uppercase italic tracking-tighter hover:scale-105 active:scale-95 transition-all group"
