@@ -850,9 +850,76 @@ async function processMessage(payload: any): Promise<void> {
 
   console.log(`[WA] ${phone}: ${userText.slice(0, 100)}`);
 
-  const user = await authenticateUser(phone);
+  let user = await authenticateUser(phone);
+
+  // ── Registro via WhatsApp ──
   if (!user) {
-    await sendMessage(phone, `Sou OperaAI, assistente do TerraGes.\nCadastre-se em https://terrages.vercel.app/login`, instanceToken);
+    const { data: regSession } = await supabase.from("conversation_sessions")
+      .select("*").eq("user_phone", phone).maybeSingle();
+
+    if (regSession?.current_state === "register:code") {
+      if (userText.trim().toLowerCase() === "cancelar") {
+        await supabase.from("conversation_sessions").delete().eq("user_phone", phone);
+        await sendMessage(phone, "❌ Cadastro cancelado.", instanceToken);
+        return;
+      }
+      const ctx = (regSession.context || {}) as Record<string, any>;
+      if (userText.trim() === String(ctx.verification_code)) {
+        // Create auth user via Admin API (profiles.id references auth.users.id)
+        const tempEmail = `wa_${phone}@temp.terrages.com`;
+        const tempPassword = Math.random().toString(36).slice(2) + "A1!";
+        const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": SUPABASE_SERVICE_ROLE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+          body: JSON.stringify({ email: tempEmail, password: tempPassword, phone, email_confirm: true, phone_confirm: true }),
+        });
+        const authUser = await authRes.json();
+        console.log("[Reg] Auth API response:", JSON.stringify(authUser).slice(0, 500));
+        if (!authRes.ok || !authUser?.id) {
+          await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
+        } else {
+          // Auth trigger already created a profile row — update it
+          const { error } = await supabase.from("profiles").update({
+            phone, name: ctx.name || "Usuário WhatsApp", role: "operator",
+          }).eq("id", authUser.id);
+          if (error) {
+            console.log("[Reg] Profile update error:", JSON.stringify(error));
+            await sendMessage(phone, `❌ Erro ao criar cadastro: ${error.message}`, instanceToken);
+          } else {
+            await supabase.from("conversation_sessions").delete().eq("user_phone", phone);
+            await sendMessage(phone, `✅ Cadastro criado com sucesso, ${ctx.name}! Agora pode usar o assistente.`, instanceToken);
+            return;
+          }
+        }
+      } else {
+        await sendMessage(phone, `❌ Código incorreto. Digite novamente ou *cancelar* para sair.`, instanceToken);
+      }
+      return;
+    }
+
+    if (regSession?.current_state === "register:name") {
+      const name = userText.trim();
+      if (name.length < 2) {
+        await sendMessage(phone, "Nome muito curto. Digite seu nome completo:", instanceToken);
+        return;
+      }
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      await supabase.from("conversation_sessions")
+        .update({ current_state: "register:code", context: { name, verification_code: code } })
+        .eq("user_phone", phone);
+
+      await sendMessage(phone, `📱 Enviamos um código de verificação para seu WhatsApp.\nDigite o código recebido:`, instanceToken);
+      await sendMessage(phone, `🔐 Seu código de verificação: *${code}*`, instanceToken);
+      return;
+    }
+
+    // First contact — start registration
+    await supabase.from("conversation_sessions").upsert({
+      user_phone: phone, user_role: "operator",
+      current_state: "register:name", context: {},
+    }, { onConflict: "user_phone" });
+
+    await sendMessage(phone, `🤝 Bem-vindo ao TerraGes!\n\nVocê ainda não está cadastrado.\n\nDigite seu *nome completo* para criar seu cadastro:`, instanceToken);
     return;
   }
 
