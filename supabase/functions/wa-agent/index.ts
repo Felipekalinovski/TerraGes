@@ -110,6 +110,26 @@ async function getMediaBase64(msgId: string, chatJid: string, token: string): Pr
   return { base64: data.base64 ?? data.data?.base64, mimetype: data.mimetype ?? data.data?.mimetype ?? "audio/ogg" };
 }
 
+async function uploadReceipt(base64: string, mimetype: string, osId: string, phone: string): Promise<string | null> {
+  try {
+    const ext = mimetype.includes("png") ? "png" : mimetype.includes("webp") ? "webp" : "jpg";
+    const fileName = `os_${osId}_${phone}_${Date.now()}.${ext}`;
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const { data, error } = await supabase.storage.from("service-receipts").upload(fileName, bytes, {
+      contentType: mimetype, upsert: true,
+    });
+    if (error) {
+      console.error("[Storage] Upload error:", error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from("service-receipts").getPublicUrl(fileName);
+    return urlData?.publicUrl || null;
+  } catch (e) {
+    console.error("[Storage] Erro:", e);
+    return null;
+  }
+}
+
 async function transcribeAudio(base64: string, mimetype: string): Promise<string | null> {
   try {
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -593,7 +613,7 @@ async function savePendingAction(phone: string, actionType: string, data: any) {
   }]);
 }
 
-async function executeAction(actionType: string, data: any, userId: string): Promise<string | null> {
+async function executeAction(actionType: string, data: any, userId: string): Promise<{ error: string | null; recordId?: string }> {
   try {
     switch (actionType) {
       case "CREATE_OS": {
@@ -601,15 +621,15 @@ async function executeAction(actionType: string, data: any, userId: string): Pro
         const eh = Number(data.end_hour) || 0;
         const total_hours = Math.max(0, eh - sh);
         const total_value = total_hours * (Number(data.hourly_rate) || 0);
-        const { error } = await supabase.from("service_orders").insert([{
+        const { data: os, error } = await supabase.from("service_orders").insert([{
           ...data, user_id: userId, status: "pending",
           total_hours, total_value,
-        }]);
-        return error ? "⚠️ Erro ao criar OS." : null;
+        }]).select("id").single();
+        return { error: error ? "⚠️ Erro ao criar OS." : null, recordId: os?.id };
       }
       case "CREATE_SCHEDULE": {
         const { error } = await supabase.from("schedules").insert(data);
-        return error ? "⚠️ Erro ao criar agendamento." : null;
+        return { error: error ? "⚠️ Erro ao criar agendamento." : null };
       }
       case "CREATE_HOURS": {
         const calcTotalHours = (s: string, e: string): number => {
@@ -622,22 +642,22 @@ async function executeAction(actionType: string, data: any, userId: string): Pro
         const { error } = await supabase.from("hora_maquina").insert([{
           ...data, user_id: userId, total_hours, total_value,
         }]);
-        return error ? "⚠️ Erro ao registrar horas." : null;
+        return { error: error ? "⚠️ Erro ao registrar horas." : null };
       }
       case "CREATE_MAINTENANCE": {
         const { error } = await supabase.from("maintenance_records").insert([{ ...data, user_id: userId }]);
-        return error ? "⚠️ Erro ao registrar manutenção." : null;
+        return { error: error ? "⚠️ Erro ao registrar manutenção." : null };
       }
       case "CREATE_QUOTE": {
         const { error } = await supabase.from("orcamentos").insert([{ ...data, user_id: userId, status: "rascunho" }]);
-        return error ? "⚠️ Erro ao criar orçamento." : null;
+        return { error: error ? "⚠️ Erro ao criar orçamento." : null };
       }
       default:
-        return "⚠️ Tipo de ação desconhecido.";
+        return { error: "⚠️ Tipo de ação desconhecido." };
     }
   } catch (e) {
     console.error(`[Action] ${actionType}:`, e);
-    return "⚠️ Erro ao executar ação.";
+    return { error: "⚠️ Erro ao executar ação." };
   }
 }
 
@@ -718,11 +738,14 @@ async function processActions(
     actionStatus = "pending";
     cleanText += "\n_(Rascunho salvo)_";
   } else {
-    const err = await executeAction(rawType, actionPayload, user.id);
+    const result = await executeAction(rawType, actionPayload, user.id);
     actionType = rawType;
     actionData = actionPayload;
-    actionStatus = err ? "failed" : "completed";
-    if (err) cleanText += `\n\n${err}`;
+    actionStatus = result.error ? "failed" : "completed";
+    if (result.error) cleanText += `\n\n${result.error}`;
+    if (result.recordId) {
+      cleanText = cleanText.replace(/\n$/, "") + `\n[[SET_MEDIA:${result.recordId}]]`;
+    }
   }
 
   return { cleanText, actionType, actionData, actionStatus };
@@ -981,10 +1004,14 @@ async function processMessage(payload: any): Promise<void> {
     const isNo = ["não", "nao", "n", "cancelar", "no"].includes(clean);
 
     if (isYes) {
-      const err = await executeAction(pendingAction.action_type, pendingAction.action_data, user.id);
+      const result = await executeAction(pendingAction.action_type, pendingAction.action_data, user.id);
       await supabase.from("pending_actions").update({ status: "executed" }).eq("id", pendingAction.id);
-      const msg = err ? `❌ ${err}` : `✅ ${actionLabel(pendingAction.action_type)} criada com sucesso!`;
+      const msg = result.error ? `❌ ${result.error}` : `✅ ${actionLabel(pendingAction.action_type)} criada com sucesso!`;
       await sendMessage(phone, msg, instanceToken);
+      if (!result.error && result.recordId && pendingAction.action_type === "CREATE_OS") {
+        await setSessionState(phone, `awaiting_os_media:${result.recordId}`, {});
+        await sendMessage(phone, "📸 Envie uma foto do comprovante (opcional) ou digite *pular*.", instanceToken);
+      }
       return;
     }
 
@@ -995,6 +1022,42 @@ async function processMessage(payload: any): Promise<void> {
     }
 
     await sendMessage(phone, "⚠️ Responda *Sim* para confirmar ou *Não* para cancelar.", instanceToken);
+    return;
+  }
+
+  // ── OS Media Attachment ──
+  if (session.state.startsWith("awaiting_os_media:")) {
+    const osId = session.state.replace("awaiting_os_media:", "");
+    const skip = ["pular", "nao", "não", "cancelar", "n", "skip", "no"].includes(userText.trim().toLowerCase());
+    if (skip) {
+      await resetSession(phone);
+      await sendMessage(phone, "✅ OK, comprovante não anexado.", instanceToken);
+      return;
+    }
+
+    if (msgType === "image") {
+      await sendMessage(phone, "📸 Enviando comprovante...", instanceToken);
+      const media = await getMediaBase64(msgId!, rawPhone, instanceToken);
+      if (!media?.base64) {
+        await sendMessage(phone, "⚠️ Erro ao baixar imagem. Tente novamente ou digite *pular*.", instanceToken);
+        return;
+      }
+      const url = await uploadReceipt(media.base64, media.mimetype, osId, phone);
+      if (!url) {
+        await sendMessage(phone, "⚠️ Erro ao salvar imagem. Tente novamente.", instanceToken);
+        return;
+      }
+      const { error } = await supabase.from("service_orders").update({ receipt_url: url }).eq("id", osId);
+      if (error) {
+        await sendMessage(phone, "⚠️ Erro ao vincular comprovante à OS.", instanceToken);
+        return;
+      }
+      await resetSession(phone);
+      await sendMessage(phone, `✅ Comprovante anexado à OS!`, instanceToken);
+      return;
+    }
+
+    await sendMessage(phone, "📸 Envie uma *foto* do comprovante ou digite *pular* para ignorar.", instanceToken);
     return;
   }
 
@@ -1103,6 +1166,19 @@ async function processMessage(payload: any): Promise<void> {
       conversation_id: conversationId, role: "assistant",
       content: cleanResp || `Iniciando wizard ${wtype}`,
     }]);
+    return;
+  }
+
+  // ── Handle SET_MEDIA tag ──
+  const mediaMatch = finalText.match(/\[\[SET_MEDIA:([a-f0-9-]+)\]\]/);
+  if (mediaMatch) {
+    finalText = finalText.replace(/\[\[SET_MEDIA:[a-f0-9-]+\]\]/, "").trim();
+    await setSessionState(phone, `awaiting_os_media:${mediaMatch[1]}`, {});
+    await supabase.from("whatsapp_messages").insert([{
+      conversation_id: conversationId, role: "assistant", content: finalText || `✅ OS criada!`,
+    }]);
+    await sendMessage(phone, finalText || `✅ OS criada!`, instanceToken);
+    await sendMessage(phone, "📸 Envie uma foto do comprovante (opcional) ou digite *pular*.", instanceToken);
     return;
   }
 
