@@ -226,11 +226,16 @@ async function extractMediaText(payload: any, rawPhone: string, msgId: string, i
 async function authenticateUser(phone: string) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, phone, role, name")
+    .select("id, phone, role, name, company_id")
     .eq("phone", phone)
     .single();
   if (error) return null;
-  return { id: data.id, phone: data.phone, role: data.role, name: data.name || "" };
+  let company = "";
+  if (data.company_id) {
+    const { data: c } = await supabase.from("company_info").select("name").eq("id", data.company_id).single();
+    if (c) company = c.name;
+  }
+  return { id: data.id, phone: data.phone, role: data.role, name: data.name || "", company };
 }
 
 // ─── Estado de Conversa (Sessions) ─────────────────────────
@@ -513,7 +518,7 @@ async function classifyMessage(text: string, userRole: string): Promise<TriageRe
 Categorias:
 - schedule: agendamentos, cronogramas, compromissos
 - maintenance: manutenção de máquinas, revisões, reparos
-- employee: colaboradores, funcionários, equipe
+- employee: colaboradores, funcionários, equipe, NOMES de funcionários
 - rdo: relatório diário de obra, atividades do dia
 - finance: finanças, saldo, receitas, despesas, pagamentos
 - fleet: frota, máquinas, veículos, equipamentos
@@ -522,13 +527,14 @@ Categorias:
 - service_order: ordens de serviço, OS
 - reports: relatórios, resumos, dashboards
 - approval: aprovações, autorizações
-- off_scope: QUALQUER pergunta fora do escopo — previsão do tempo, esportes, notícias, política, entretenimento, futebol, religião, saúde, culinária, tecnologia geral, ciência, geografia, história, piadas, etc.
+- off_scope: pergunta sobre previsão do tempo, esportes, notícias, política, entretenimento, futebol, religião, saúde, culinária, tecnologia geral, ciência, geografia, história, piadas, etc.
 
 Regras:
-1. Se NÃO for sobre construção civil, terraplanagem, gestão de frota/máquinas/equipe/financeiro → off_scope
-2. Se for pergunta pessoal, clima, notícia, entretenimento → off_scope
-3. Se for "obrigado", "ok", "entendi" → mantenha a categoria anterior
-4. Se estiver em dúvida entre categoria específica e off_scope → escolha a categoria específica
+1. Pergunta sobre nome, empresa, função, dados do perfil ou nome da empresa do usuário → employee
+2. Pergunta sobre nome de funcionário/colaborador → employee
+3. Se NÃO for sobre construção civil, terraplanagem, gestão de frota/máquinas/equipe/financeiro/perfil → off_scope
+4. Se for "obrigado", "ok", "entendi" → mantenha a categoria anterior
+5. Se estiver em dúvida entre categoria específica e off_scope → escolha a categoria específica
 
 Usuário é: ${userRole}
 Mensagem: "${text}"
@@ -561,7 +567,7 @@ const AGENT_MAP: Record<string, { name: string; prompt: string }> = {
   },
   employee: {
     name: "employee-bot",
-    prompt: `Você é o especialista em Equipes do TerraGes.\n${BOUNDARY}\nPara consultar: [[QUERY_EMPLOYEES:{"status":"active|vacation|leave","name":"nome opcional"}]] Informe nome, cargo, status, certificações e contato.`,
+    prompt: `Você é o especialista em Perfil e Equipes do TerraGes.\n${BOUNDARY}\nResponda perguntas sobre o PERFIL do usuário (nome, função, empresa) com base nas informações fornecidas.\nResponda perguntas sobre COLABORADORES: nome, cargo, status, certificações e contato.\nPara consultar colaboradores por nome: [[QUERY_EMPLOYEES:{"name":"nome"}]]\nPara listar ativos: [[QUERY_EMPLOYEES:{"status":"active"}]].`,
   },
   rdo: {
     name: "rdo-bot",
@@ -597,7 +603,7 @@ const AGENT_MAP: Record<string, { name: string; prompt: string }> = {
   },
   off_scope: {
     name: "off-scope-bot",
-    prompt: `${BOUNDARY}\nResponda educadamente que só pode ajudar com gestão de frota, OS, horas-máquina, finanças, agendamentos, manutenção, orçamentos, RDOs e colaboradores.`,
+    prompt: `${BOUNDARY}\nEXCEÇÃO: se perguntarem sobre seus dados de perfil (nome, empresa, função), responda com as informações do usuário fornecidas.\nSe perguntarem sobre colaboradores, use [[QUERY_EMPLOYEES:{}]] para consultar.\nFora isso, responda educadamente que só pode ajudar com gestão de frota, OS, horas-máquina, finanças, agendamentos, manutenção, orçamentos, RDOs e colaboradores.`,
   },
 };
 
@@ -1110,11 +1116,17 @@ async function processMessage(payload: any): Promise<void> {
     content: m.content,
   }));
 
+  const userInfo = `Nome: ${user.name} | Função: ${user.role}${user.company ? ` | Empresa: ${user.company}` : ""}`;
+
   // ── Build system context ──
   const handler = AGENT_MAP[classification.category];
   const systemContext = handler
-    ? `Você é ${handler.name}, especialista do TerraGes.\n${handler.prompt}\n\nUsuário: ${user.name} (${user.role})`
-    : `Você é OperaAI, assistente do TerraGes.\nUsuário: ${user.name} (${user.role})`;
+    ? `Você é ${handler.name}, especialista do TerraGes.\n${handler.prompt}\n\nUsuário: ${userInfo}`
+    : `Você é OperaAI, assistente do TerraGes.\n${userInfo}
+
+Se perguntarem seu nome, apresente-se como OperaAI, assistente do TerraGes.
+Se perguntarem dados do perfil, nome ou empresa do usuário, responda com base nas informações acima.
+Se perguntarem por nomes de colaboradores, use [[QUERY_EMPLOYEES:{"name":"nome"}]] para consultar.`;
 
   // ── AI call ──
   let aiResponse = "";
