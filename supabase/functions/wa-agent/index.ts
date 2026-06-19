@@ -788,13 +788,24 @@ function periodFilter(days: number): string {
   return d.toISOString();
 }
 
-async function execQueries(text: string, user?: { role: string; hasEmail: boolean; phone: string | null }): Promise<string> {
+async function execQueries(text: string, user?: { id: string; role: string; hasEmail: boolean; phone: string | null }): Promise<string> {
   let result = text;
+
+  // Company-scoped user IDs for data isolation
+  let scopeUserIds: string[] | null = null;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("company_id").eq("id", user.id).single();
+    if (profile?.company_id) {
+      const { data: coworkers } = await supabase.from("profiles").select("id").eq("company_id", profile.company_id);
+      if (coworkers?.length) scopeUserIds = coworkers.map((c: any) => c.id);
+    }
+  }
   const qMatch = text.match(/\[\[QUERY_FLEET:(.*?)\]\]/s);
   if (qMatch) {
     try {
       const p = JSON.parse(qMatch[1]);
       let q = supabase.from("machines").select("name, type, status, hours, next_maintenance, health_status");
+      if (scopeUserIds) q = q.in("user_id", scopeUserIds);
       if (p.machine) q = q.ilike("name", `%${p.machine}%`);
       if (p.status) q = q.eq("status", p.status);
       const { data } = await q.limit(10).order("name");
@@ -809,6 +820,7 @@ async function execQueries(text: string, user?: { role: string; hasEmail: boolea
     try {
       const p = JSON.parse(hMatch[1]);
       let q = supabase.from("hora_maquina").select("machine_name, operator_name, project_name, date, total_hours, total_value");
+      if (scopeUserIds) q = q.in("user_id", scopeUserIds);
       if (p.machine) q = q.ilike("machine_name", `%${p.machine}%`);
       if (p.days) q = q.gte("created_at", periodFilter(p.days));
       const { data } = await q.limit(15).order("date", { ascending: false });
@@ -847,6 +859,7 @@ async function execQueries(text: string, user?: { role: string; hasEmail: boolea
     try {
       const p = JSON.parse(osMatch[1]);
       let q = supabase.from("service_orders").select("client, date, machine_id, start_hour, end_hour, total_value, status, payment_method");
+      if (scopeUserIds) q = q.in("user_id", scopeUserIds);
       if (p.status) q = q.eq("status", p.status);
       if (p.days) q = q.gte("created_at", periodFilter(p.days));
       const { data } = await q.limit(15).order("date", { ascending: false });
@@ -864,6 +877,7 @@ async function execQueries(text: string, user?: { role: string; hasEmail: boolea
     try {
       const p = JSON.parse(mMatch[1]);
       let q = supabase.from("maintenance_records").select("machine_id, date, type, description, cost, technician");
+      if (scopeUserIds) q = q.in("user_id", scopeUserIds);
       if (p.machine) q = q.ilike("machine_id", `%${p.machine}%`);
       if (p.days) q = q.gte("created_at", periodFilter(p.days));
       const { data } = await q.limit(10).order("date", { ascending: false });
@@ -878,6 +892,7 @@ async function execQueries(text: string, user?: { role: string; hasEmail: boolea
     try {
       const p = JSON.parse(eMatch[1]);
       let q = supabase.from("employees").select("name, role, status, contact, certifications");
+      if (scopeUserIds) q = q.in("user_id", scopeUserIds);
       if (p.status) q = q.eq("status", p.status);
       if (p.name) q = q.ilike("name", `%${p.name}%`);
       const { data } = await q.limit(15).order("name");
