@@ -14,6 +14,8 @@ const EVOLUTION_API_VERSION = Deno.env.get("EVOLUTION_API_VERSION") ?? "v2";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+const APP_URL = "https://terrages.vercel.app/login";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -1135,13 +1137,13 @@ async function processMessage(payload: any): Promise<void> {
   const hasAccess = canViewSensitive(user);
   const userInfo = `Nome: ${user.name} | Função: ${user.role}${user.company ? ` | Empresa: ${user.company}` : ""}${hasAccess ? "" : " | Acesso restrito: sem email cadastrado"}`;
 
+
   // ── Build system context ──
   const handler = AGENT_MAP[classification.category];
+  const linkMsg = `\n\nSempre que o usuário solicitar o link do app, ou quando for relevante sugerir que ele acesse o dashboard/app web para ver detalhes, aprovações ou informações visuais, envie:\n🔗 App Web: ${APP_URL}`;
   const systemContext = handler
-    ? `Você é ${handler.name}, especialista do TerraGes.\n${handler.prompt}\n\nUsuário: ${userInfo}`
-    : `Você é OperaAI, assistente do TerraGes.\n${userInfo}
-
-Se perguntarem seu nome, apresente-se como OperaAI, assistente do TerraGes.
+    ? `Você é ${handler.name}, especialista do TerraGes.\n${handler.prompt}\n\nUsuário: ${userInfo}${linkMsg}`
+    : `Você é OperaAI, assistente do TerraGes.\n${userInfo}${linkMsg}\n\nSe perguntarem seu nome, apresente-se como OperaAI, assistente do TerraGes.
 Se perguntarem dados do perfil, nome ou empresa do usuário, responda com base nas informações acima.
 Se perguntarem por nomes de colaboradores, use [[QUERY_EMPLOYEES:{"name":"nome"}]] para consultar.`;
 
