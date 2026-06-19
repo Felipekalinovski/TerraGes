@@ -192,10 +192,10 @@ async function scheduleRecurring(): Promise<void> {
   const { data: existingMm } = await supabase.from("scheduled_notifications")
     .select("id").eq("type", "machine_maintenance").gte("scheduled_time", now.toISOString()).limit(1);
   if (!existingMm?.length) {
-    await supabase.from("scheduled_notifications").insert([{
-      type: "machine_maintenance", target_role: "manager",
-      message: "Manutenções pendentes", scheduled_time: mm.toISOString(),
-    }]);
+      await supabase.from("scheduled_notifications").insert([{
+        type: "machine_maintenance", target_role: "gestor",
+        message: "Manutenções pendentes", scheduled_time: mm.toISOString(),
+      }]);
   }
 
   // Daily report: domingo 10:00
@@ -230,10 +230,15 @@ async function sendScheduledNotifications(): Promise<{ sent: number; errors: num
   let sent = 0, errors = 0;
 
   for (const n of notifications) {
+    // Apenas usuarios com phone + email cadastrados recebem notificacoes
     const { data: users } = await supabase
       .from("profiles")
       .select("phone")
-      .eq("role", n.target_role);
+      .eq("role", n.target_role)
+      .not("phone", "is", null)
+      .neq("phone", "")
+      .not("email", "is", null)
+      .neq("email", "");
 
     if (!users?.length) {
       console.log(`[CRON] Sem usuários para role=${n.target_role}`);

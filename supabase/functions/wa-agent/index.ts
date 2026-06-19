@@ -226,7 +226,7 @@ async function extractMediaText(payload: any, rawPhone: string, msgId: string, i
 async function authenticateUser(phone: string) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, phone, role, name, company_id")
+    .select("id, phone, role, name, company_id, email")
     .eq("phone", phone)
     .single();
   if (error) return null;
@@ -235,7 +235,16 @@ async function authenticateUser(phone: string) {
     const { data: c } = await supabase.from("company_info").select("name").eq("id", data.company_id).single();
     if (c) company = c.name;
   }
-  return { id: data.id, phone: data.phone, role: data.role, name: data.name || "", company };
+  const hasEmail = Boolean(data.email && data.email.trim() !== "");
+  return { id: data.id, phone: data.phone, role: data.role, name: data.name || "", company, hasEmail };
+}
+
+function canViewSensitive(user: { role: string; hasEmail: boolean; phone: string | null }): boolean {
+  return ["admin", "gestor"].includes(user.role) && Boolean(user.hasEmail && user.phone);
+}
+
+function canApprove(user: { role: string; hasEmail: boolean }): boolean {
+  return user.role === "admin" && Boolean(user.hasEmail);
 }
 
 // ─── Estado de Conversa (Sessions) ─────────────────────────
@@ -575,7 +584,10 @@ const AGENT_MAP: Record<string, { name: string; prompt: string }> = {
   },
   finance: {
     name: "finance-bot",
-    prompt: `Você é o especialista em Finanças do TerraGes.\n${BOUNDARY}\nPara consultar: [[QUERY_FINANCE:{"days":30,"type":"income|expense"}]] Sempre use QUERY_FINANCE quando perguntarem sobre saldo, receitas, despesas ou transações.`,
+    prompt: `Você é o especialista em Finanças do TerraGes.\n${BOUNDARY}\nPara consultar: [[QUERY_FINANCE:{"days":30,"type":"income|expense"}]]
+Sempre use QUERY_FINANCE quando perguntarem sobre saldo, receitas, despesas ou transações.
+APENAS administradores e gestores com email validado têm acesso a dados financeiros.
+Se o usuário não tiver acesso, informe educadamente que precisa cadastrar email para liberar.`,
   },
   fleet: {
     name: "fleet-bot",
@@ -595,11 +607,13 @@ const AGENT_MAP: Record<string, { name: string; prompt: string }> = {
   },
   reports: {
     name: "reports-bot",
-    prompt: `Você é o especialista em Relatórios do TerraGes.\n${BOUNDARY}\nUse tags de consulta para dados reais:\n- [[QUERY_FINANCE:{"days":30}]] para finanças\n- [[QUERY_HOURS:{"days":30}]] para horas-máquina\n- [[QUERY_OS:{"days":30}]] para OS\n- [[QUERY_FLEET:{}]] para frota`,
+    prompt: `Você é o especialista em Relatórios do TerraGes.\n${BOUNDARY}\nUse tags de consulta para dados reais:\n- [[QUERY_FINANCE:{"days":30}]] para finanças (admin/gestor com email)\n- [[QUERY_HOURS:{"days":30}]] para horas-máquina\n- [[QUERY_OS:{"days":30}]] para OS\n- [[QUERY_FLEET:{}]] para frota`,
   },
   approval: {
     name: "approval-bot",
-    prompt: `Você é o especialista em Aprovações do TerraGes.\n${BOUNDARY}\nConsulte OS pendentes: [[QUERY_OS:{"status":"pending"}]] Apenas admin pode aprovar.`,
+    prompt: `Você é o especialista em Aprovações do TerraGes.\n${BOUNDARY}\nConsulte OS pendentes: [[QUERY_OS:{"status":"pending"}]]
+APENAS administradores com email validado podem aprovar.
+Se o usuário não for admin, informe que precisa solicitar a um administrador.`,
   },
   off_scope: {
     name: "off-scope-bot",
@@ -772,7 +786,7 @@ function periodFilter(days: number): string {
   return d.toISOString();
 }
 
-async function execQueries(text: string): Promise<string> {
+async function execQueries(text: string, user?: { role: string; hasEmail: boolean; phone: string | null }): Promise<string> {
   let result = text;
   const qMatch = text.match(/\[\[QUERY_FLEET:(.*?)\]\]/s);
   if (qMatch) {
@@ -808,7 +822,9 @@ async function execQueries(text: string): Promise<string> {
   }
   const fMatch = text.match(/\[\[QUERY_FINANCE:(.*?)\]\]/s);
   if (fMatch) {
-    try {
+    if (!user || !canViewSensitive(user)) {
+      result = result.replace(fMatch[0], "⚠️ Acesso restrito. Apenas admin/gestor com email cadastrado pode ver dados financeiros.");
+    } else try {
       const p = JSON.parse(fMatch[1]);
       let q = supabase.from("transactions").select("title, type, amount, category, date, status");
       if (p.days) q = q.gte("created_at", periodFilter(p.days));
@@ -1116,7 +1132,8 @@ async function processMessage(payload: any): Promise<void> {
     content: m.content,
   }));
 
-  const userInfo = `Nome: ${user.name} | Função: ${user.role}${user.company ? ` | Empresa: ${user.company}` : ""}`;
+  const hasAccess = canViewSensitive(user);
+  const userInfo = `Nome: ${user.name} | Função: ${user.role}${user.company ? ` | Empresa: ${user.company}` : ""}${hasAccess ? "" : " | Acesso restrito: sem email cadastrado"}`;
 
   // ── Build system context ──
   const handler = AGENT_MAP[classification.category];
@@ -1145,7 +1162,7 @@ Se perguntarem por nomes de colaboradores, use [[QUERY_EMPLOYEES:{"name":"nome"}
   const { cleanText, actionType, actionData, actionStatus } = await processActions(aiResponse, user, phone);
 
   // ── Process queries (se não houve ação, tenta queries) ──
-  let finalText = actionType ? cleanText : await execQueries(cleanText);
+  let finalText = actionType ? cleanText : await execQueries(cleanText, user);
 
   // ── Fallback: se AI não seguiu o prompt, auto-dispara wizard ──
   const createIntents = ["criar", "nova", "novo", "cadastrar", "registrar", "abrir", "fazer uma os", "fazer um", "marcar", "agenda"];
