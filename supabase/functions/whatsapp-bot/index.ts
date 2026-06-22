@@ -179,11 +179,16 @@ async function authenticateUser(phone: string): Promise<User | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, phone, role, name')
+      .select('id, phone, role, name, email')
       .eq('phone', phone)
       .single();
     
-    if (error) return null;
+    if (error || !data) return null;
+    
+    const hasEmail = Boolean(data.email && data.email.trim() !== "");
+    
+    if (!hasEmail) return null;
+    
     return {
       id: data.id,
       phone: data.phone,

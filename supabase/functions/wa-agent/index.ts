@@ -956,75 +956,96 @@ async function processMessage(payload: any): Promise<void> {
 
   let user = await authenticateUser(phone);
 
-  // ── Registro via WhatsApp ──
+  // ── Registro simplificado via WhatsApp ──
   if (!user) {
-    const { data: regSession } = await supabase.from("conversation_sessions")
-      .select("*").eq("user_phone", phone).maybeSingle();
-
-    if (regSession?.current_state === "register:code") {
-      if (userText.trim().toLowerCase() === "cancelar") {
-        await supabase.from("conversation_sessions").delete().eq("user_phone", phone);
-        await sendMessage(phone, "❌ Cadastro cancelado.", instanceToken);
-        return;
-      }
-      const ctx = (regSession.context || {}) as Record<string, any>;
-      if (userText.trim() === String(ctx.verification_code)) {
-        // Create auth user via Admin API (profiles.id references auth.users.id)
-        const tempEmail = `wa_${phone}@temp.terrages.com`;
-        const tempPassword = Math.random().toString(36).slice(2) + "A1!";
-        const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "apikey": SUPABASE_SERVICE_ROLE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-          body: JSON.stringify({ email: tempEmail, password: tempPassword, phone, email_confirm: true, phone_confirm: true }),
-        });
-        const authUser = await authRes.json();
-        console.log("[Reg] Auth API response:", JSON.stringify(authUser).slice(0, 500));
-        if (!authRes.ok || !authUser?.id) {
-          await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
-        } else {
-          // Auth trigger already created a profile row — update it
-          const { error } = await supabase.from("profiles").update({
-            phone, name: ctx.name || "Usuário WhatsApp", role: "operator",
-          }).eq("id", authUser.id);
-          if (error) {
-            console.log("[Reg] Profile update error:", JSON.stringify(error));
-            await sendMessage(phone, `❌ Erro ao criar cadastro: ${error.message}`, instanceToken);
-          } else {
-            await supabase.from("conversation_sessions").delete().eq("user_phone", phone);
-            await sendMessage(phone, `✅ Cadastro criado com sucesso, ${ctx.name}! Agora pode usar o assistente.`, instanceToken);
-            return;
-          }
-        }
-      } else {
-        await sendMessage(phone, `❌ Código incorreto. Digite novamente ou *cancelar* para sair.`, instanceToken);
-      }
+    // Usuário não encontrado — criar novo perfil com base nos dados fornecidos
+    // Formato esperado: "nome,email,telefone" (ex: "João Silva,joao@email.com,5511912345678")
+    
+    const parts = userText.split(',');
+    if (parts.length < 2) {
+      await sendMessage(phone, `❌ Formato inválido. Envie no formato: "nome,email,telefone"\nExemplo: "João Silva,joao@email.com,5511912345678"`, instanceToken);
       return;
     }
-
-    if (regSession?.current_state === "register:name") {
-      const name = userText.trim();
-      if (name.length < 2) {
-        await sendMessage(phone, "Nome muito curto. Digite seu nome completo:", instanceToken);
-        return;
-      }
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await supabase.from("conversation_sessions")
-        .update({ current_state: "register:code", context: { name, verification_code: code } })
-        .eq("user_phone", phone);
-
-      await sendMessage(phone, `📱 Enviamos um código de verificação para seu WhatsApp.\nDigite o código recebido:`, instanceToken);
-      await sendMessage(phone, `🔐 Seu código de verificação: *${code}*`, instanceToken);
+    
+    const name = parts[0].trim();
+    const email = parts[1].trim();
+    const phoneFromText = parts[2] ? parts[2].trim() : phone;
+    
+    // Validar campos obrigatórios
+    if (!name || name.length < 2) {
+      await sendMessage(phone, `❌ Nome inválido. Digite seu nome completo (mínimo 2 caracteres):`, instanceToken);
       return;
     }
-
-    // First contact — start registration
-    await supabase.from("conversation_sessions").upsert({
-      user_phone: phone, user_role: "operator",
-      current_state: "register:name", context: {},
-    }, { onConflict: "user_phone" });
-
-    await sendMessage(phone, `🤝 Bem-vindo ao TerraGes!\n\nVocê ainda não está cadastrado.\n\nDigite seu *nome completo* para criar seu cadastro:`, instanceToken);
-    return;
+    
+    if (!email || !email.includes('@')) {
+      await sendMessage(phone, `❌ Email inválido. Por favor, forneça um email válido:`, instanceToken);
+      return;
+    }
+    
+    if (!phoneFromText || !/\d{10,15}/.test(phoneFromText.replace(/\D/g, ''))) {
+      await sendMessage(phone, `❌ Telefone inválido. Forneça um número de WhatsApp válido:`, instanceToken);
+      return;
+    }
+    
+    // Verificar se o email já está em uso
+    const { data: existingEmail } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .single();
+    
+    if (existingEmail) {
+      await sendMessage(phone, `❌ Este email já está cadastrado. Por favor, use um email diferente:`, instanceToken);
+      return;
+    }
+    
+    // Verificar se o telefone já está em uso
+    const { data: existingPhone } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("phone", phoneFromText)
+      .single();
+    
+    if (existingPhone) {
+      await sendMessage(phone, `❌ Este número de WhatsApp já está cadastrado. Por favor, use um número diferente:`, instanceToken);
+      return;
+    }
+    
+    try {
+      // Create auth user via Admin API (profiles.id references auth.users.id)
+      const tempPassword = Math.random().toString(36).slice(2) + "A1!";
+      const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_SERVICE_ROLE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ email, password: tempPassword, phone: phoneFromText, email_confirm: true, phone_confirm: true }),
+      });
+      const authUser = await authRes.json();
+      console.log("[Reg] Auth API response:", JSON.stringify(authUser).slice(0, 500));
+      
+      if (!authRes.ok || !authUser?.id) {
+        await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
+        return;
+      }
+      
+      // Auth trigger already created a profile row — update it
+      const { error } = await supabase.from("profiles").update({
+        phone: phoneFromText, name, role: "operator",
+      }).eq("id", authUser.id);
+      
+      if (error) {
+        console.log("[Reg] Profile update error:", JSON.stringify(error));
+        await sendMessage(phone, `❌ Erro ao criar cadastro: ${error.message}`, instanceToken);
+        return;
+      }
+      
+      await sendMessage(phone, `✅ Cadastro criado com sucesso, ${name}!\n\nVocê agora pode usar o assistente.\n\nPara começar, envie um comando como:\n- \"Criar OS\" para registrar uma ordem de serviço\n- \"Horas máquina\" para registrar horas trabalhadas\n- \"Ajuda\" para ver comandos disponíveis`, instanceToken);
+      return;
+      
+    } catch (e) {
+      console.error("[Reg] Erro fatal:", e);
+      await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
+      return;
+    }
   }
 
   const isAdmin = user.role === "admin";
