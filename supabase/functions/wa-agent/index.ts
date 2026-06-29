@@ -149,14 +149,14 @@ async function transcribeAudio(base64: string, mimetype: string): Promise<string
   } catch (e) { console.error("[Whisper] Erro:", e); return null; }
 }
 
-async function ocrImage(base64: string): Promise<string> {
+async function analyzeImage(base64: string): Promise<{ type: string; text: string; data?: Record<string, any> }> {
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "HTTP-Referer": "https://terrages.app",
-        "X-Title": "TerraGes OCR",
+        "X-Title": "TerraGes Vision",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -164,17 +164,46 @@ async function ocrImage(base64: string): Promise<string> {
         messages: [{
           role: "user",
           content: [
-            { type: "text", text: "Extraia todo o texto visível na imagem. Se houver valores, datas ou números, destaque-os." },
+            { type: "text", text: `Analise esta imagem e retorne APENAS JSON válido:
+{
+  "type": "nota_fiscal | cupom_fiscal | ordem_servico | comprovante_pagamento | foto_equipamento | documento_identidade | outro",
+  "confidence": 0.95,
+  "text": "todo texto extraído da imagem",
+  "data": {
+    "numero": "número do documento se houver",
+    "data": "data no formato DD/MM/AAAA se houver",
+    "valor": "valor total se houver",
+    "cnpj_cpf": "CNPJ ou CPF se houver",
+    "fornecedor_cliente": "nome do fornecedor ou cliente",
+    "descricao": "descrição breve do conteúdo"
+  }
+}
+
+Tipos:
+- nota_fiscal: NF-e, NFS-e, DANFE (XML/PDF com chave de acesso, CFOP, ICMS)
+- cupom_fiscal: Cupom SAT/NFC-e (QR Code, COO, CCF, valor total)
+- ordem_servico: OS, ordem de serviço (número OS, cliente, equipamento, serviços)
+- comprovante_pagamento: PIX, TED, boleto, cartão (código de barras, QR Code PIX, valor)
+- foto_equipamento: foto de máquina/equipamento (patrimônio, horímetro, placa)
+- documento_identidade: RG, CNH, CPF (dados pessoais)
+- outro: qualquer outro` },
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } },
           ],
         }],
-        max_tokens: 300,
+        max_tokens: 500,
+        temperature: 0.1,
       }),
     });
-    if (!res.ok) { console.error("[OCR] Erro:", await res.text()); return ""; }
+    if (!res.ok) { console.error("[Vision] Erro:", await res.text()); return { type: "outro", text: "", data: {} }; }
     const d = await res.json();
-    return d.choices?.[0]?.message?.content || "";
-  } catch (e) { console.error("[OCR] Erro:", e); return ""; }
+    const content = d.choices?.[0]?.message?.content || "";
+    try {
+      const parsed = JSON.parse(content.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim());
+      return { type: parsed.type || "outro", text: parsed.text || "", data: parsed.data || {} };
+    } catch {
+      return { type: "outro", text: content, data: {} };
+    }
+  } catch (e) { console.error("[Vision] Erro:", e); return { type: "outro", text: "", data: {} }; }
 }
 
 function detectMsgType(payload: any): "text" | "audio" | "image" | "unsupported" {
@@ -214,8 +243,16 @@ async function extractMediaText(payload: any, rawPhone: string, msgId: string, i
     const caption = extractText(payload) || "";
     const media = await getMediaBase64(msgId, rawPhone, instanceToken);
     if (media?.base64) {
-      const ocrResult = await ocrImage(media.base64);
-      if (ocrResult) return `${caption}\n[Texto da imagem: ${ocrResult}]`.trim();
+      const analysis = await analyzeImage(media.base64);
+      const parts = [];
+      if (caption) parts.push(caption);
+      parts.push(`[Imagem: ${analysis.type}]`);
+      if (analysis.text) parts.push(`Texto: ${analysis.text}`);
+      if (analysis.data && Object.keys(analysis.data).length > 0) {
+        const dataStr = Object.entries(analysis.data).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(" | ");
+        if (dataStr) parts.push(`Dados: ${dataStr}`);
+      }
+      return parts.join("\n");
     }
     return caption || null;
   }
@@ -298,6 +335,15 @@ async function resetSession(phone: string): Promise<void> {
 }
 
 // ─── Wizards ────────────────────────────────────────────────
+
+const REGISTRATION_WIZARD = {
+  steps: ["name", "email", "phone"],
+  labels: {
+    name: "👋 Bem-vindo ao TerraGes!\n\nQual seu nome completo?",
+    email: "📧 Qual seu email?",
+    phone: "📱 Confirme seu WhatsApp (formato: 5511999999999):",
+  },
+};
 
 // ─── Step definitions ──────────────────────────────────────
 
@@ -422,6 +468,106 @@ async function processWizard(
   const nextStep = wiz.steps[idx + 1];
   await setSessionState(phone, `wizard:${wizardType}:${nextStep}`, ctx);
   await sendMessage(phone, wiz.labels[nextStep], instanceToken);
+  return true;
+}
+
+async function processRegistrationWizard(
+  userText: string,
+  session: Session,
+  phone: string,
+  instanceToken: string,
+): Promise<boolean> {
+  const wizardMatch = session.state.match(/^wizard:registration:(\w+)$/);
+  if (!wizardMatch) return false;
+
+  const currentStep = wizardMatch[1];
+  const steps = REGISTRATION_WIZARD.steps;
+  const labels = REGISTRATION_WIZARD.labels;
+
+  if (userText.toLowerCase() === "cancelar") {
+    await resetSession(phone);
+    await sendMessage(phone, "❌ Cadastro cancelado.", instanceToken);
+    return true;
+  }
+
+  const ctx = { ...session.context };
+  ctx[currentStep] = userText.trim();
+
+  // Validações por passo
+  if (currentStep === "name" && ctx.name.length < 2) {
+    await sendMessage(phone, "❌ Nome muito curto. Digite seu nome completo:", instanceToken);
+    return true;
+  }
+  if (currentStep === "email" && (!ctx.email.includes("@") || !ctx.email.includes("."))) {
+    await sendMessage(phone, "❌ Email inválido. Digite um email válido:", instanceToken);
+    return true;
+  }
+  if (currentStep === "phone") {
+    const cleanPhone = ctx.phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      await sendMessage(phone, "❌ Telefone inválido. Use formato: 5511999999999", instanceToken);
+      return true;
+    }
+    ctx.phone = cleanPhone;
+  }
+
+  const idx = steps.indexOf(currentStep);
+  if (idx < 0 || idx >= steps.length - 1) {
+    // Finalizou - criar usuário
+    await resetSession(phone);
+
+    // Verificar duplicatas
+    const { data: existingEmail } = await supabase
+      .from("profiles").select("id").eq("email", ctx.email).maybeSingle();
+    if (existingEmail) {
+      await sendMessage(phone, "❌ Este email já está cadastrado. Tente outro:", instanceToken);
+      await setSessionState(phone, "wizard:registration:email", {});
+      return true;
+    }
+
+    const { data: existingPhone } = await supabase
+      .from("profiles").select("id").eq("phone", ctx.phone).maybeSingle();
+    if (existingPhone) {
+      await sendMessage(phone, "❌ Este telefone já está cadastrado. Tente outro:", instanceToken);
+      await setSessionState(phone, "wizard:registration:phone", {});
+      return true;
+    }
+
+    try {
+      const tempPassword = Math.random().toString(36).slice(2) + "A1!";
+      const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_SERVICE_ROLE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+        body: JSON.stringify({ email: ctx.email, password: tempPassword, phone: ctx.phone, email_confirm: true, phone_confirm: true }),
+      });
+      const authUser = await authRes.json();
+
+      if (!authRes.ok || !authUser?.id) {
+        await sendMessage(phone, "❌ Erro ao criar cadastro. Tente novamente.", instanceToken);
+        return true;
+      }
+
+      const { error } = await supabase.from("profiles").update({
+        phone: ctx.phone, name: ctx.name, role: "operator",
+      }).eq("id", authUser.id);
+
+      if (error) {
+        await sendMessage(phone, `❌ Erro: ${error.message}`, instanceToken);
+        return true;
+      }
+
+      await sendMessage(phone, `✅ Cadastro criado, ${ctx.name}!\n\nAgora você pode usar o assistente.\n\nComandos:\n• "Criar OS" - ordem de serviço\n• "Horas máquina" - registrar horas\n• "Ajuda" - ver comandos`, instanceToken);
+    } catch (e) {
+      console.error("[RegWizard] Erro:", e);
+      await sendMessage(phone, "❌ Erro ao criar cadastro.", instanceToken);
+    }
+    return true;
+  }
+
+  // Próximo passo
+  const nextStep = steps[idx + 1];
+  await setSessionState(phone, `wizard:registration:${nextStep}`, ctx);
+  await sendMessage(phone, labels[nextStep], instanceToken);
   return true;
 }
 
@@ -952,100 +1098,35 @@ async function processMessage(payload: any): Promise<void> {
     return;
   }
 
-  console.log(`[WA] ${phone}: ${userText.slice(0, 100)}`);
+console.log(`[WA] ${phone}: ${userText.slice(0, 100)}`);
 
   let user = await authenticateUser(phone);
 
-  // ── Registro simplificado via WhatsApp ──
+  // ── Wizard de Cadastro (para usuários não autenticados) ──
   if (!user) {
-    // Usuário não encontrado — criar novo perfil com base nos dados fornecidos
-    // Formato esperado: "nome,email,telefone" (ex: "João Silva,joao@email.com,5511912345678")
+    const session = await getSession(phone, "operator");
     
-    const parts = userText.split(',');
-    if (parts.length < 2) {
-      await sendMessage(phone, `❌ Formato inválido. Envie no formato: "nome,email,telefone"\nExemplo: "João Silva,joao@email.com,5511912345678"`, instanceToken);
+    // Se já está no wizard de cadastro, processa
+    if (session.state.startsWith("wizard:registration:")) {
+      const handled = await processRegistrationWizard(userText, session, phone, instanceToken);
+      if (handled) return;
+      await resetSession(phone);
+    }
+
+    // Se não está no wizard, verifica se quer iniciar cadastro
+    const wantsRegister = ["cadastrar", "cadastro", "registrar", "começar", "iniciar", "oi", "olá", "ola", "start"].some(kw => 
+      userText.toLowerCase().trim() === kw || userText.toLowerCase().startsWith(kw + " ")
+    );
+
+    if (wantsRegister || session.state === "idle") {
+      await setSessionState(phone, "wizard:registration:name", {});
+      await sendMessage(phone, REGISTRATION_WIZARD.labels.name, instanceToken);
       return;
     }
-    
-    const name = parts[0].trim();
-    const email = parts[1].trim();
-    const phoneFromText = parts[2] ? parts[2].trim() : phone;
-    
-    // Validar campos obrigatórios
-    if (!name || name.length < 2) {
-      await sendMessage(phone, `❌ Nome inválido. Digite seu nome completo (mínimo 2 caracteres):`, instanceToken);
-      return;
-    }
-    
-    if (!email || !email.includes('@')) {
-      await sendMessage(phone, `❌ Email inválido. Por favor, forneça um email válido:`, instanceToken);
-      return;
-    }
-    
-    if (!phoneFromText || !/\d{10,15}/.test(phoneFromText.replace(/\D/g, ''))) {
-      await sendMessage(phone, `❌ Telefone inválido. Forneça um número de WhatsApp válido:`, instanceToken);
-      return;
-    }
-    
-    // Verificar se o email já está em uso
-    const { data: existingEmail } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .single();
-    
-    if (existingEmail) {
-      await sendMessage(phone, `❌ Este email já está cadastrado. Por favor, use um email diferente:`, instanceToken);
-      return;
-    }
-    
-    // Verificar se o telefone já está em uso
-    const { data: existingPhone } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("phone", phoneFromText)
-      .single();
-    
-    if (existingPhone) {
-      await sendMessage(phone, `❌ Este número de WhatsApp já está cadastrado. Por favor, use um número diferente:`, instanceToken);
-      return;
-    }
-    
-    try {
-      // Create auth user via Admin API (profiles.id references auth.users.id)
-      const tempPassword = Math.random().toString(36).slice(2) + "A1!";
-      const authRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_SERVICE_ROLE_KEY, "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
-        body: JSON.stringify({ email, password: tempPassword, phone: phoneFromText, email_confirm: true, phone_confirm: true }),
-      });
-      const authUser = await authRes.json();
-      console.log("[Reg] Auth API response:", JSON.stringify(authUser).slice(0, 500));
-      
-      if (!authRes.ok || !authUser?.id) {
-        await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
-        return;
-      }
-      
-      // Auth trigger already created a profile row — update it
-      const { error } = await supabase.from("profiles").update({
-        phone: phoneFromText, name, role: "operator",
-      }).eq("id", authUser.id);
-      
-      if (error) {
-        console.log("[Reg] Profile update error:", JSON.stringify(error));
-        await sendMessage(phone, `❌ Erro ao criar cadastro: ${error.message}`, instanceToken);
-        return;
-      }
-      
-      await sendMessage(phone, `✅ Cadastro criado com sucesso, ${name}!\n\nVocê agora pode usar o assistente.\n\nPara começar, envie um comando como:\n- \"Criar OS\" para registrar uma ordem de serviço\n- \"Horas máquina\" para registrar horas trabalhadas\n- \"Ajuda\" para ver comandos disponíveis`, instanceToken);
-      return;
-      
-    } catch (e) {
-      console.error("[Reg] Erro fatal:", e);
-      await sendMessage(phone, `❌ Erro ao criar cadastro. Tente novamente mais tarde.`, instanceToken);
-      return;
-    }
+
+    // Se não quer cadastrar, avisa
+    await sendMessage(phone, `❌ Você não tem cadastro no TerraGes.\n\nDigite "cadastrar" para criar sua conta passo a passo.`, instanceToken);
+    return;
   }
 
   const isAdmin = user.role === "admin";
