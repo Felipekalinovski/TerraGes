@@ -10,7 +10,9 @@ const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "http://evo-kapy
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") ?? "";
 const EVOLUTION_INSTANCE = Deno.env.get("EVOLUTION_INSTANCE") ?? "";
 const EVOLUTION_API_VERSION = Deno.env.get("EVOLUTION_API_VERSION") ?? "v2"; // "v1" ou "v2"
-const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "openrouter/free";
+const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "meta-llama/llama-3.3-70b-instruct:free";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+const OPENAI_MODEL = "gpt-4o-mini";
 const WA_AGENT_ENDPOINT = Deno.env.get("WA_AGENT_ENDPOINT") ?? "http://localhost:3001";
 
 // Client global para que todas as funções auxiliares tenham acesso
@@ -670,17 +672,35 @@ async function scheduleEndOfShiftNotifications() {
 // ─── IA ───────────────────────────────────────────────────────────────────────
 
 async function callAI(messages: Array<{ role: string; content: string }>): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  // Primary: OpenRouter
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://terrages.app",
+        "X-Title": "TerraGes OperaAI",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model: OPENROUTER_MODEL, messages }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content ?? "";
+  } catch (e) {
+    console.warn("[AI] OpenRouter falhou, tentando OpenAI gpt-4o-mini:", e);
+  }
+
+  // Fallback: OpenAI gpt-4o-mini
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://terrages.app",
-      "X-Title": "TerraGes OperaAI",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: OPENROUTER_MODEL, messages }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages }),
   });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  if (!res.ok) throw new Error(`OpenAI fallback ${res.status}`);
   const d = await res.json();
   return d.choices?.[0]?.message?.content ?? "";
 }

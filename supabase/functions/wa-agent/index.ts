@@ -4,7 +4,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
-const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "openrouter/free";
+const OPENROUTER_MODEL = Deno.env.get("AI_MODEL_TEXT") ?? "meta-llama/llama-3.3-70b-instruct:free";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+const OPENAI_MODEL = "gpt-4o-mini";
 const VISION_MODEL = Deno.env.get("AI_MODEL_VISION") ?? "google/gemma-4-31b-it:free";
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
 const EVOLUTION_API_URL = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
@@ -635,7 +637,13 @@ function buildSummary(wizardType: string, data: any): string {
     return `📋 *Nova OS*\n\nCliente: ${data.client}\nData: ${data.date}\nHorário: ${data.start_hour}h às ${data.end_hour}h\nValor: R$ ${data.hourly_rate}/h (${data.total_hours}h = R$ ${data.total_value})\nPagamento: ${data.payment_method}\n\nConfirma? (Sim/Não)`;
   }
   if (wizardType === "hours") {
-    return `⏱️ *Registro de Horas*\n\nMáquina: ${data.machine_name}\nOperador: ${data.operator_name}\nProjeto: ${data.project_name}\nData: ${data.date}\n${data.start_time} às ${data.end_time} (${data.total_hours}h)\nValor: R$ ${data.hourly_rate}/h = R$ ${data.total_value}\n\nConfirma? (Sim/Não)`;
+    const calcTH = (s: string, e: string) => {
+      const [sh, sm] = (s || "08:00").split(":").map(Number);
+      const [eh, em] = (e || "17:00").split(":").map(Number);
+      return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
+    };
+    const total_hours = calcTH(data.start_time, data.end_time);
+    return `⏱️ *Horas Máquina*\n\nMáquina: ${data.machine_name}\nOperador: ${data.operator_name}\nProjeto: ${data.project_name}\nData: ${data.date}\nHorário: ${data.start_time} às ${data.end_time} (${total_hours}h)\nValor Total: R$ ${total_hours * data.hourly_rate}\n\nConfirma? (Sim/Não)`;
   }
   if (wizardType === "maintenance") {
     return `🛠️ *Manutenção*\n\nMáquina: ${data.machine_name}\nTipo: ${data.type}\nData: ${data.date}\nDescrição: ${data.description}\nCusto: R$ ${data.cost}\nTécnico: ${data.technician}\nHorímetro: ${data.hour_meter}h\n\nConfirma? (Sim/Não)`;
@@ -658,19 +666,7 @@ interface TriageResult {
 }
 
 async function classifyMessage(text: string, userRole: string): Promise<TriageResult> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://terrages.app",
-      "X-Title": "TerraGes OperaAI",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: OPENROUTER_MODEL,
-      messages: [{
-        role: "user",
-        content: `Classifique a mensagem em UMA categoria:
+  const classifyPrompt = `Classifique a mensagem em UMA categoria:
 
 Categorias:
 - schedule: agendamentos, cronogramas, compromissos
@@ -696,17 +692,56 @@ Regras:
 Usuário é: ${userRole}
 Mensagem: "${text}"
 
-Responda APENAS JSON: {"category":"categoria","confidence":0.9}`,
-      }],
-      temperature: 0.1,
-    }),
-  });
+Responda APENAS JSON: {"category":"categoria","confidence":0.9}`;
 
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-  const d = await res.json();
-  const result = d.choices?.[0]?.message?.content || "";
-  const stripped = result.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  return JSON.parse(stripped);
+  // Primary: OpenRouter
+  try {
+    const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://terrages.app",
+        "X-Title": "TerraGes OperaAI",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [{ role: "user", content: classifyPrompt }],
+        temperature: 0.1,
+      }),
+    });
+    if (!orRes.ok) throw new Error(`OpenRouter ${orRes.status}`);
+    const orData = await orRes.json();
+    const orRaw = orData.choices?.[0]?.message?.content || "";
+    const orStripped = orRaw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    return JSON.parse(orStripped);
+  } catch (e) {
+    console.warn("[Triage] OpenRouter falhou, tentando OpenAI gpt-4o-mini:", e);
+  }
+
+  // Fallback: OpenAI gpt-4o-mini
+  try {
+    const oaRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        messages: [{ role: "user", content: classifyPrompt }],
+        temperature: 0.1,
+      }),
+    });
+    if (!oaRes.ok) throw new Error(`OpenAI ${oaRes.status}`);
+    const oaData = await oaRes.json();
+    const oaRaw = oaData.choices?.[0]?.message?.content || "";
+    const oaStripped = oaRaw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    return JSON.parse(oaStripped);
+  } catch (e) {
+    console.error("[Triage] OpenAI fallback também falhou:", e);
+    return { category: "off_scope", confidence: 0.5 };
+  }
 }
 
 // ─── Agentes Especialistas ─────────────────────────────────
@@ -1054,17 +1089,35 @@ async function execQueries(text: string, user?: { id: string; role: string; hasE
 // ─── AI Call ───────────────────────────────────────────────
 
 async function callAI(messages: { role: string; content: string }[]): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  // Primary: OpenRouter
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://terrages.app",
+        "X-Title": "TerraGes OperaAI",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model: OPENROUTER_MODEL, messages, temperature: 0.3, max_tokens: 600 }),
+    });
+    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+    const d = await res.json();
+    return d.choices?.[0]?.message?.content || "";
+  } catch (e) {
+    console.warn("[AI] OpenRouter falhou, tentando OpenAI como fallback:", e);
+  }
+
+  // Fallback: OpenAI
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://terrages.app",
-      "X-Title": "TerraGes OperaAI",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: OPENROUTER_MODEL, messages, temperature: 0.3, max_tokens: 600 }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages, temperature: 0.3, max_tokens: 600 }),
   });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+  if (!res.ok) throw new Error(`OpenAI fallback ${res.status}`);
   const d = await res.json();
   return d.choices?.[0]?.message?.content || "";
 }
@@ -1133,6 +1186,33 @@ console.log(`[WA] ${phone}: ${userText.slice(0, 100)}`);
 
   // ── Session (Estado de Conversa) ──
   const session = await getSession(phone, user.role);
+
+  // ── Comando de pausar/reativar agente ──
+  const cmd = userText.toLowerCase().trim();
+  const blockCmds = ["pare", "silenciar", "parar", "stop", "bloquear"];
+  const unblockCmds = ["autorizar", "reativar", "ativar", "resume", "desbloquear"];
+
+  if (blockCmds.includes(cmd)) {
+    const ctx = { ...session.context, blocked: true };
+    await supabase.from("conversation_sessions")
+      .update({ context: ctx, updated_at: new Date().toISOString() })
+      .eq("user_phone", phone);
+    await sendMessage(phone, "⏸️ Assistente pausado. Envie *autorizar* para reativar.", instanceToken);
+    return;
+  }
+
+  if (session.context?.blocked) {
+    if (unblockCmds.includes(cmd)) {
+      const ctx = { ...session.context, blocked: false };
+      await supabase.from("conversation_sessions")
+        .update({ context: ctx, current_state: "idle", updated_at: new Date().toISOString() })
+        .eq("user_phone", phone);
+      await sendMessage(phone, "✅ Assistente reativado! Como posso ajudar?", instanceToken);
+      return;
+    }
+    // Bloqueado: não responde nada
+    return;
+  }
 
   // ── Pending action confirmation check ──
   const { data: pendingAction } = await supabase.from("pending_actions")
