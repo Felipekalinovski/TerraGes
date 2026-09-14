@@ -60,6 +60,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
 
   if (!session) return <Navigate to="/login" replace />;
 
+  if (!profile) return <div className="p-8 text-white">Não foi possível carregar seu perfil. Recarregue a página para tentar novamente.</div>;
+  if (!profile.company_id && location.pathname !== '/settings/profile') return <div className="p-8 text-white">Seu vínculo com a empresa precisa ser verificado pelo responsável do TerraGes. Seus dados permanecem preservados.</div>;
+
   if (profile && profile.onboarding_completed === false && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }
@@ -151,7 +154,7 @@ const App: React.FC = () => {
           <Route path="/relatorio-cliente" element={<ProtectedRoute><RelatorioCliente /></ProtectedRoute>} />
 
           {/* WhatsApp Bot Inbox */}
-          <Route path="/whatsapp-inbox" element={<ProtectedRoute requireAccess><WhatsAppInbox /></ProtectedRoute>} />
+          <Route path="/whatsapp-inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
 
           {/* ── Configurações ── */}
           <Route path="/settings"               element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />

@@ -55,9 +55,9 @@ export const whatsappService = {
   /** Conta conversas com rascunhos pendentes */
   async countPendingActions(): Promise<number> {
     const { count, error } = await supabase
-      .from('whatsapp_messages')
+      .from('whatsapp_inbound_events')
       .select('id', { count: 'exact', head: true })
-      .eq('action_status', 'pending');
+      .eq('status', 'needs_review');
 
     if (error) return 0;
     return count ?? 0;
@@ -68,37 +68,12 @@ export const whatsappService = {
    * (Cria o agendamento ou OS no banco baseado nos action_data)
    */
   async approveDraftAction(messageId: string, message: WhatsAppMessage): Promise<void> {
-    if (!message.action_data || message.action_status !== 'pending') return;
-
-    let error: unknown = null;
-
-    if (message.action_type === 'schedule') {
-      const { error: e } = await supabase
-        .from('schedules')
-        .insert([message.action_data as Record<string, unknown>]);
-      error = e;
-    } else if (message.action_type === 'service_order') {
-      const { error: e } = await supabase
-        .from('service_orders')
-        .insert([{ ...(message.action_data as Record<string, unknown>), status: 'pending' }]);
-      error = e;
-    }
-
-    const newStatus = error ? 'failed' : 'completed';
-    await supabase
-      .from('whatsapp_messages')
-      .update({ action_status: newStatus })
-      .eq('id', messageId);
-
-    if (error) throw new Error('Falha ao executar ação do rascunho');
+    throw new Error('Rascunhos antigos estão suspensos. Confira o envio na nova caixa de entrada.');
   },
 
   /** Rejeita/descarta um rascunho pendente */
   async rejectDraftAction(messageId: string): Promise<void> {
-    await supabase
-      .from('whatsapp_messages')
-      .update({ action_status: 'failed' })
-      .eq('id', messageId);
+    throw new Error('Rascunhos antigos estão suspensos.');
   },
 
   /**
@@ -107,25 +82,6 @@ export const whatsappService = {
    * Formato Evolution Go: url, enabled, webhookByEvents, events
    */
   async configureWebhook(evolutionBaseUrl: string, evolutionApiKey: string, instanceName: string): Promise<void> {
-    const webhookUrl = `https://gwusywstresijdjzkujn.supabase.co/functions/v1/wa-agent/webhook`;
-
-    const res = await fetch(`${evolutionBaseUrl}/webhook/set`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': evolutionApiKey,
-      },
-      body: JSON.stringify({
-        enabled: true,
-        url: webhookUrl,
-        webhookByEvents: true,
-        events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'SEND_MESSAGE'],
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Falha ao configurar webhook: ${txt}`);
-    }
+    throw new Error('A conexão é configurada somente no servidor pelo responsável técnico.');
   },
 };

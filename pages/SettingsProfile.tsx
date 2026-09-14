@@ -124,8 +124,6 @@ export const SettingsProfile: React.FC = () => {
       setSaving(true);
       const result = await userService.updateProfile({
         name: formData.name,
-        phone: getRawPhone(),
-        role: formData.role,
       });
 
       if (result.success) {
@@ -162,6 +160,7 @@ export const SettingsProfile: React.FC = () => {
       />
 
       <Layout.Content>
+        <button className="m-4 text-primary underline" onClick={() => navigate('/whatsapp-inbox')}>Vincular meu WhatsApp com segurança</button>
         <div className="p-4 space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* Avatar Upload */}
           <div className="flex flex-col items-center gap-4 py-8 relative">
@@ -231,12 +230,12 @@ export const SettingsProfile: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Telefone de Contato</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">WhatsApp verificado</label>
               <div className="relative group">
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={handlePhoneChange}
+                  readOnly
                   className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
                   placeholder="+55 (11) 99999-9999"
                 />

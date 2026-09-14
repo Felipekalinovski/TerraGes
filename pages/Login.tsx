@@ -43,41 +43,6 @@ export const Login: React.FC = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // 1. Buscar perfil atual
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single();
-
-        if (profileError && profileError.code !== 'PGRST116') throw profileError;
-
-        // 2. Se não tiver empresa vinculada, tentar descobrir via tabela de funcionários
-        if (!profile?.company_id) {
-          const { data: employee, error: empError } = await supabase
-            .from('employees')
-            .select('company_id, role')
-            .eq('email', authData.user.email)
-            .maybeSingle();
-
-          if (employee) {
-            // Vincular perfil à empresa e definir como operador/user
-            await supabase
-              .from('profiles')
-              .update({ 
-                company_id: employee.company_id,
-                role: 'operador' // Funcionários entram como operador por padrão
-              })
-              .eq('id', authData.user.id);
-            
-            // Também vincular o user_id na tabela de funcionários para referência futura
-            await supabase
-              .from('employees')
-              .update({ user_id: authData.user.id })
-              .eq('email', authData.user.email);
-          }
-        }
-
         await refreshProfile();
         navigate('/dashboard');
       }

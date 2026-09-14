@@ -7,8 +7,8 @@
 
 import type { UserRole } from './userService';
 
-export const ADMIN_ROLES: UserRole[] = ['admin', 'gerente', 'proprietario', 'dono'];
-export const OPERATOR_ROLE = 'operador';
+export const ADMIN_ROLES: UserRole[] = ['admin', 'gestor'];
+export const OPERATOR_ROLE = 'operator';
 
 /**
  * Verifica se é admin/gerente (acesso total)
@@ -38,7 +38,7 @@ export function canViewData(role: string | undefined): boolean {
  */
 export function canInsertData(role: string | undefined): boolean {
   if (!role) return false;
-  return true; // Todos logados podem inserir
+  return isAdminUser(role) || isOperator(role);
 }
 
 /**
@@ -90,7 +90,8 @@ export function getRoleLabel(role: string | undefined): string {
   if (!role) return 'Usuário';
   const labels: Record<string, string> = {
     admin: 'Administrador',
-    gerente: 'Gerente',
+    gestor: 'Gestor',
+    operator: 'Operador',
     proprietario: 'Proprietário',
     dono: 'Dono',
     engenheiro: 'Engenheiro',
@@ -127,6 +128,8 @@ export function getAllowedRoutes(role: string | undefined): string[] {
     '/dashboard',
     '/hora-maquina',
     '/service-orders/new',
+    '/whatsapp-inbox',
+    '/settings/profile',
   ];
 
   return isAdminUser(role) ? adminRoutes : operatorRoutes;
