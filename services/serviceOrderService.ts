@@ -1,5 +1,6 @@
 
 import { supabase } from './supabaseClient';
+import { uploadPrivateFile, resolvePrivateFile } from './storageService';
 import { Employee } from './employeeService';
 import { Machine } from './machineService';
 import { intelligenceService } from './intelligenceService';
@@ -43,7 +44,7 @@ export const serviceOrderService = {
             throw error;
         }
 
-        return data || [];
+        return Promise.all((data || []).map(async order=>({...order,receipt_url:await resolvePrivateFile(order.receipt_url)})));
     },
 
     // Buscar por ID
@@ -59,7 +60,7 @@ export const serviceOrderService = {
             throw error;
         }
 
-        return data;
+        return data ? {...data, receipt_url:await resolvePrivateFile(data.receipt_url)} : null;
     },
 
     // Criar nova ordem
@@ -112,21 +113,7 @@ export const serviceOrderService = {
     // Upload de comprovante/recibo
     async uploadReceipt(file: File): Promise<string | null> {
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `receipt-${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('service-receipts')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('service-receipts')
-                .getPublicUrl(filePath);
-
-            return publicUrl;
+            return await uploadPrivateFile('service-receipts',file);
         } catch (error) {
             console.error('Error uploading receipt:', error);
             return null;

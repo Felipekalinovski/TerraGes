@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { uploadPrivateFile, resolvePrivateFile } from './storageService';
+export type UserRole = 'admin' | 'gestor' | 'operator';
 
 export interface UserProfile {
     id: string;
@@ -36,7 +38,8 @@ class UserService {
 
             return {
                 ...data,
-                company_name: data.company?.name
+                company_name: data.company?.name,
+                avatar_url: await resolvePrivateFile(data.avatar_url)
             };
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -58,7 +61,9 @@ class UserService {
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    ...updates,
+                    ...(updates.name !== undefined ? {name:updates.name} : {}),
+                    ...(updates.avatar_url !== undefined ? {avatar_url:updates.avatar_url} : {}),
+                    ...(updates.onboarding_completed !== undefined ? {onboarding_completed:updates.onboarding_completed} : {}),
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id);
@@ -83,29 +88,10 @@ class UserService {
                 throw new Error('No authenticated user');
             }
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
-
-            // Upload file to storage
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, {
-                    cacheControl: '3600',
-                    upsert: true
-                });
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            // Update profile with new avatar URL
-            await this.updateProfile({ avatar_url: publicUrl });
-
-            return { success: true, url: publicUrl };
+            const reference = await uploadPrivateFile('avatars',file);
+            const result = await this.updateProfile({avatar_url:reference});
+            if (!result.success) throw new Error(result.error);
+            return {success:true,url:await resolvePrivateFile(reference)};
         } catch (error: any) {
             console.error('Error uploading avatar:', error);
             return { success: false, error: error.message };

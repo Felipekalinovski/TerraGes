@@ -26,3 +26,9 @@ dist-ssr
 # WhatsApp agent local files
 whatsapp-agent/.env
 whatsapp-agent/server.err
+
+# Credentials are configured locally, never committed
+.env
+.env.*
+!.env.example
+.agent/mcp_config.json

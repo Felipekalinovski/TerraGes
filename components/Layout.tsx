@@ -244,8 +244,8 @@ Layout.Sidebar = () => {
             </button>
           ))}
 
-          {/* WhatsApp Bot - apenas admin */}
-          {isAdminUser(userRole) && (
+          {/* Caixa de entrada: RLS limita cada operador aos próprios envios. */}
+          {userRole && (
             <button
               onClick={() => navigate('/whatsapp-inbox')}
               className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
