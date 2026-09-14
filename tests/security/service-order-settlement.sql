@@ -37,6 +37,10 @@ DO $$ DECLARE t public.transactions; BEGIN
   RAISE EXCEPTION 'FAIL: settled amount silently changed';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN
+  UPDATE public.service_orders SET id=gen_random_uuid() WHERE id='a6000000-0000-4000-8000-000000000001';
+  RAISE EXCEPTION 'FAIL: settled source identity changed';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
   DELETE FROM public.service_orders WHERE id='a6000000-0000-4000-8000-000000000001';
   RAISE EXCEPTION 'FAIL: settlement source deleted';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;

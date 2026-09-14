@@ -21,8 +21,8 @@ BEGIN
   RETURN OLD;
  END IF;
  IF TG_OP='UPDATE' AND OLD.status='completed' THEN
-  IF ROW(NEW.status,NEW.date,NEW.client,NEW.machine_id,NEW.operator_id,NEW.start_hour,NEW.end_hour,NEW.hourly_rate,NEW.payment_method)
-   IS DISTINCT FROM ROW(OLD.status,OLD.date,OLD.client,OLD.machine_id,OLD.operator_id,OLD.start_hour,OLD.end_hour,OLD.hourly_rate,OLD.payment_method) THEN
+  IF ROW(NEW.id,NEW.status,NEW.date,NEW.client,NEW.machine_id,NEW.operator_id,NEW.start_hour,NEW.end_hour,NEW.hourly_rate,NEW.payment_method)
+   IS DISTINCT FROM ROW(OLD.id,OLD.status,OLD.date,OLD.client,OLD.machine_id,OLD.operator_id,OLD.start_hour,OLD.end_hour,OLD.hourly_rate,OLD.payment_method) THEN
    RAISE EXCEPTION 'completed_order_requires_adjustment' USING ERRCODE='42501';
   END IF;
   RETURN NEW;
