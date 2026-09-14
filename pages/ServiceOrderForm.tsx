@@ -1,3 +1,4 @@
+import { resolvePrivateFile } from '../services/storageService';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from '../components/Layout';
@@ -19,6 +20,7 @@ export const ServiceOrderForm: React.FC = () => {
     const [machines, setMachines] = useState<Machine[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
 
+    const [receiptPreview, setReceiptPreview] = useState('');
     const [formData, setFormData] = useState<ServiceOrderFormData>({
         date: new Date().toISOString().split('T')[0],
         client: '',
@@ -33,6 +35,13 @@ export const ServiceOrderForm: React.FC = () => {
         description: '',
         receipt_url: ''
     });
+    useEffect(() => {
+        let active = true;
+        setReceiptPreview('');
+        resolvePrivateFile(formData.receipt_url).then(url => { if (active) setReceiptPreview(url || ''); });
+        return () => { active = false; };
+    }, [formData.receipt_url]);
+
 
     useEffect(() => {
         loadDependencies();
@@ -195,7 +204,7 @@ export const ServiceOrderForm: React.FC = () => {
                   ) : formData.receipt_url ? (
                     <div className="flex flex-col items-center gap-4 text-center">
                       <div className="relative group/img shadow-2xl rounded-2xl overflow-hidden border-2 border-primary/20">
-                        <img src={formData.receipt_url} alt="Comprovante" className="h-48 object-cover transition-transform group-hover/img:scale-105" />
+                        <img src={receiptPreview} alt="Comprovante" className="h-48 object-cover transition-transform group-hover/img:scale-105" />
                         <div className="absolute inset-0 bg-primary/20 mix-blend-overlay opacity-0 group-hover/img:opacity-100 transition-opacity"></div>
                       </div>
                       <div className="flex flex-col items-center gap-2">

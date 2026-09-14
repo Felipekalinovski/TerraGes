@@ -35,6 +35,8 @@ DO $$ BEGIN
 END $$;
 SELECT set_config('request.jwt.claims','{"sub":"a1000000-0000-4000-8000-000000000002","role":"authenticated","user_metadata":{"role":"admin","company_id":"b1000000-0000-4000-8000-000000000001"}}',true);
 INSERT INTO public.hora_maquina(id,machine_name,project_name,date,start_time,end_time,total_hours,machine_id) VALUES('a3000000-0000-4000-8000-000000000002','isolation-fixture-hours','Obra de teste','2026-09-14','08:00','09:00',1,'a2000000-0000-4000-8000-000000000001');
+INSERT INTO public.service_orders(id,date,client,machine_id,start_hour,end_hour,hourly_rate,status)
+VALUES('a4000000-0000-4000-8000-000000000002','2026-09-14','isolation-fixture-client','a2000000-0000-4000-8000-000000000001',10,11,100,'pending');
 DO $$ BEGIN
  IF private.is_manager() THEN RAISE EXCEPTION 'FAIL: metadata role escalation'; END IF;
  IF (SELECT count(*) FROM public.machines WHERE name LIKE 'isolation-fixture-%')<>1 THEN RAISE EXCEPTION 'FAIL: assigned asset visibility'; END IF;
@@ -58,6 +60,9 @@ END $$;
 SELECT set_config('request.jwt.claims','{"sub":"a1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM public.hora_maquina WHERE id='a3000000-0000-4000-8000-000000000002') THEN RAISE EXCEPTION 'FAIL: manager cannot see own team'; END IF;
+ UPDATE public.service_orders SET status='completed' WHERE id='a4000000-0000-4000-8000-000000000002';
+ IF NOT EXISTS(SELECT 1 FROM public.transactions WHERE title LIKE '%isolation-fixture-client' AND company_id=private.current_company()) THEN RAISE EXCEPTION 'FAIL: manager completion of operator order'; END IF;
+
  IF public.create_whatsapp_pairing() NOT LIKE 'VINCULAR %' THEN RAISE EXCEPTION 'FAIL: pairing'; END IF;
 END $$;
 SELECT set_config('request.jwt.claims','{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);

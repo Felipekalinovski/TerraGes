@@ -13,7 +13,7 @@
 - Áudio OGG/MP3/WAV/M4A, imagem JPG/PNG/WebP, PDF, TXT/CSV. Outros formatos, incluindo DOCX/XLSX, são recusados nesta etapa. A validação de formato não equivale a antivírus ou certificação do conteúdo.
 - Deduplicação por instância + identificador de mensagem. Conteúdo recebido não executa ferramentas, SQL nem lançamentos. Transcrição e extração vão para conferência humana na caixa de entrada. Não há confirmação automática de dados operacionais ou financeiros.
 - Falhas são registradas sem detalhes sensíveis de provedores. Mídia validada é preservada antes da inferência. Reenvio de um evento duplicado não reprocessa falha; o usuário deve enviar uma nova mensagem. Recuperação automática de tarefas interrompidas ainda não implementada.
-- Rotinas antigas `cron-notifications`, `cron-insights`, `generate-embedding`, `upx-sync` e funções de debug ficam suspensas (HTTP 503) enquanto não têm autorização por empresa validada. `ai-proxy` exige usuário autenticado e empresa ativa.
+- Rotinas antigas `cron-notifications`, `cron-insights`, `generate-embedding`, `upx-sync` e funções de debug ficam suspensas (HTTP 401 sem autenticação; 503 quando autenticadas) enquanto não têm autorização por empresa validada. `ai-proxy` exige usuário autenticado e empresa ativa.
 - Removida configuração com credencial administrativa do estado atual do repositório. O histórico continua exigindo rotação da credencial.
 
 ## Configuração necessária antes de liberar WhatsApp real
@@ -38,3 +38,8 @@
 Não há garantia absoluta contra vazamento enquanto houver credencial privilegiada antiga válida. Também faltam teste real no provedor, antivírus para anexos, recuperação durável de eventos interrompidos, limites de consumo por empresa, provisionamento administrativo com trilha de auditoria e fluxo transacional de aprovação dos lançamentos. Arquivos/LLM são conteúdo não confiável; a tela mostra o texto como texto, sem interpretar HTML.
 
 As regras de contenção não devem ser revertidas para restaurar rotinas antigas. Para corrigir problemas de acesso, verificar os vínculos e aplicar uma migração aditiva específica. Migrações e Edge Functions precisam continuar versionadas junto com o site.
+
+
+## Resultado no ambiente ativo
+
+Migração inicial aplicada e suite SQL repetida com sucesso: 0 tabelas públicas sem RLS, 0 buckets públicos, 0 concessões de tabela para anon, 0 usuários de teste remanescentes. Há 20 vínculos ativos e quatro operadores antigos sem vínculo. Chamadas HTTP sem credenciais ao WhatsApp retornaram `secure_webhook_configuration_required` (503); chamadas ao proxy e rotinas de debug foram bloqueadas (401). A revisão automática de Supabase ainda indica bloqueios intencionais sem políticas, duas RPCs autenticadas de vínculo, extensão vector no esquema público e proteção de senhas vazadas desabilitada; não é uma certificação de segurança.
