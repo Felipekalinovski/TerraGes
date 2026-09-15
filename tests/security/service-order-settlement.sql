@@ -75,3 +75,27 @@ DO $$ BEGIN
   AND transaction_id=(SELECT id FROM pg_temp.settlement_test_ids)) THEN RAISE EXCEPTION 'FAIL: settlement audit link'; END IF;
 END $$;
 SELECT 'PASS: settlement authorization, isolation, duplicate prevention, payment confirmation, protected completion, rollback and machine meter' AS test_result;
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims','{"sub":"a1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM public.get_service_order_settlements() WHERE service_order_id='a6000000-0000-4000-8000-000000000001' AND transaction_id=(SELECT id FROM pg_temp.settlement_test_ids)) THEN RAISE EXCEPTION 'FAIL: manager cannot see source link'; END IF;
+END $$;
+SELECT set_config('request.jwt.claims','{"sub":"b1000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM public.get_service_order_settlements() WHERE service_order_id='a6000000-0000-4000-8000-000000000001') THEN RAISE EXCEPTION 'FAIL: foreign manager sees source link'; END IF;
+END $$;
+SELECT set_config('request.jwt.claims','{"sub":"a1000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM public.get_service_order_settlements()) THEN RAISE EXCEPTION 'FAIL: operator sees financial source links'; END IF;
+ UPDATE public.transactions SET status='paid' WHERE id=(SELECT id FROM pg_temp.settlement_test_ids);
+ IF FOUND THEN RAISE EXCEPTION 'FAIL: operator changes receipt status'; END IF;
+END $$;
+SET LOCAL ROLE anon;
+SELECT set_config('request.jwt.claims','{"role":"anon"}',true);
+DO $$ BEGIN
+ BEGIN PERFORM * FROM public.get_service_order_settlements(); RAISE EXCEPTION 'FAIL: anonymous source links'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{}',true);
+SELECT 'PASS: settlement metadata isolation, manager-only receipt and anonymous rejection' AS test_result;

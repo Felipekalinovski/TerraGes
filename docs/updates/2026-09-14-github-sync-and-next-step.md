@@ -1,5 +1,7 @@
 # Sincronização Supabase/GitHub e próximo incremento — 14/09/2026
 
+> Registro histórico. Em 15/09, o usuário autorizou o merge com deploy automático: PR #2 integrado na main (`84b9d29`) e produção publicada. A proposta abaixo evoluiu para a migração e telas descritas em [Etapa 3](2026-09-15-service-order-settlement.md).
+
 ## Alterações já publicadas
 O commit `8b8c393f082ef1222705ef4948090db4677db4b4`, no PR #2, já contém as alterações da etapa 2. Foram conferidos os nomes das migrações `20260914143229_whatsapp_reliable_workflow` e `20260914143438_whatsapp_worker_extension_schema` no banco e no GitHub.
 

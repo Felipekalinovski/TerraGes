@@ -79,7 +79,7 @@ export const ServiceOrderReceipt: React.FC = () => {
                             <p className="text-gray-400 text-sm mt-1">Gestão Inteligente de Terraplanagem</p>
                         </div>
                         <div className="text-right">
-                            <h2 className="text-xl font-bold">RECIBO DE SERVIÇO</h2>
+                            <h2 className="text-xl font-bold">ORDEM DE SERVIÇO</h2>
                             <p className="text-primary text-sm font-mono">#{order.id.slice(0, 8).toUpperCase()}</p>
                         </div>
                     </div>
@@ -150,9 +150,9 @@ export const ServiceOrderReceipt: React.FC = () => {
                                 <span className="font-bold text-gray-800">{order.payment_method}</span>
                             </div>
                             <div className="flex justify-between text-sm text-gray-500">
-                                <span>Status</span>
+                                <span>Situação do serviço</span>
                                 <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${order.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                    {order.status === 'completed' ? 'PAGO' : 'AGUARDANDO'}
+                                    {order.status === 'completed' ? 'CONCLUÍDO' : order.status === 'cancelled' ? 'CANCELADO' : 'PENDENTE'}
                                 </span>
                             </div>
                             <div className="border-t-2 border-gray-800 pt-3 flex justify-between items-center">
@@ -161,6 +161,8 @@ export const ServiceOrderReceipt: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    <p className="text-sm text-gray-600">Esta folha registra o serviço e não comprova quitação. A situação do recebimento deve ser consultada no Financeiro.</p>
 
                     {/* Signatures */}
                     <div className="grid grid-cols-2 gap-16 pt-16">

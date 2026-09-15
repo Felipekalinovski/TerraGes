@@ -1,6 +1,9 @@
 import { resolvePrivateFile } from '../services/storageService';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { isAdminUser } from '../services/roleService';
+import { validateServiceOrderCompletion, serviceOrderErrorMessage } from '../services/serviceOrderRules';
 import { Layout } from '../components/Layout';
 import { useNavigate, useParams } from 'react-router-dom';
 import { serviceOrderService, ServiceOrderFormData } from '../services/serviceOrderService';
@@ -9,19 +12,7 @@ import { employeeService, Employee } from '../services/employeeService';
 import { analyzeReceipt } from '../services/aiService';
 import { ArrowLeft, Save, Loader2, Camera, Upload, ScanLine, CheckCircle2, Download, Sparkles } from 'lucide-react';
 
-export const ServiceOrderForm: React.FC = () => {
-    const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
-    const isEditing = !!id;
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const [loading, setLoading] = useState(false);
-    const [analyzing, setAnalyzing] = useState(false);
-    const [machines, setMachines] = useState<Machine[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
-
-    const [receiptPreview, setReceiptPreview] = useState('');
-    const [formData, setFormData] = useState<ServiceOrderFormData>({
+const emptyOrder = (): ServiceOrderFormData => ({
         date: new Date().toISOString().split('T')[0],
         client: '',
         machine_id: '',
@@ -35,6 +26,24 @@ export const ServiceOrderForm: React.FC = () => {
         description: '',
         receipt_url: ''
     });
+
+export const ServiceOrderForm: React.FC = () => {
+    const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const isEditing = !!id;
+    const { profile } = useAuth();
+    const canComplete = isAdminUser(profile?.role);
+    const [completed, setCompleted] = useState(false);
+    const [loadError, setLoadError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [loading, setLoading] = useState(!!id);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [machines, setMachines] = useState<Machine[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+
+    const [receiptPreview, setReceiptPreview] = useState('');
+    const [formData, setFormData] = useState<ServiceOrderFormData>(emptyOrder);
     useEffect(() => {
         let active = true;
         setReceiptPreview('');
@@ -44,52 +53,42 @@ export const ServiceOrderForm: React.FC = () => {
 
 
     useEffect(() => {
-        loadDependencies();
-        if (isEditing) {
-            loadOrder();
-        }
-    }, [id]);
-
-    const loadDependencies = async () => {
-        try {
-            const [machinesData, employeesData] = await Promise.all([
-                machineService.getAll(),
-                employeeService.getAll()
-            ]);
-            setMachines(machinesData);
-            setEmployees(employeesData);
-        } catch (error) {
-            console.error('Error loading dependencies:', error);
-        }
-    };
-
-    const loadOrder = async () => {
-        if (!id) return;
+        let active = true;
         setLoading(true);
-        try {
-            const order = await serviceOrderService.getById(id);
-            if (order) {
-                setFormData({
-                    date: order.date,
-                    client: order.client,
-                    machine_id: order.machine_id,
-                    operator_id: order.operator_id,
-                    start_hour: order.start_hour,
-                    end_hour: order.end_hour,
-                    hourly_rate: order.hourly_rate,
-                    payment_method: order.payment_method,
-                    status: order.status,
-                    location: order.location || '',
-                    description: order.description || '',
-                    receipt_url: order.receipt_url || ''
-                });
+        setLoadError('');
+        setCompleted(false);
+        setFormData(emptyOrder());
+        const load = async () => {
+            try {
+                const [machinesData, employeesData, order] = await Promise.all([
+                    machineService.getAll(),
+                    employeeService.getAll(),
+                    id ? serviceOrderService.getById(id) : Promise.resolve(null)
+                ]);
+                if (!active) return;
+                if (id && !order) throw new Error('order_not_found');
+                setMachines(machinesData);
+                setEmployees(employeesData);
+                if (order) {
+                    setCompleted(order.status === 'completed');
+                    setFormData({
+                        date: order.date, client: order.client, machine_id: order.machine_id,
+                        operator_id: order.operator_id || '', start_hour: order.start_hour,
+                        end_hour: order.end_hour, hourly_rate: order.hourly_rate,
+                        payment_method: order.payment_method, status: order.status,
+                        location: order.location || '', description: order.description || '',
+                        receipt_url: order.receipt_url || ''
+                    });
+                }
+            } catch (error) {
+                if (active) setLoadError('Não foi possível carregar os dados da OS. Volte à lista e tente novamente.');
+            } finally {
+                if (active) setLoading(false);
             }
-        } catch (error) {
-            console.error('Error loading order:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+        void load();
+        return () => { active = false; };
+    }, [id]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -100,7 +99,7 @@ export const ServiceOrderForm: React.FC = () => {
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
+        if (completed || loading || !e.target.files || e.target.files.length === 0) return;
 
         const file = e.target.files[0];
         setAnalyzing(true);
@@ -138,6 +137,13 @@ export const ServiceOrderForm: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (completed || loading || analyzing || loadError) return;
+        if (formData.status === 'completed') {
+            if (!canComplete) { alert('Somente um gestor pode concluir a OS.'); return; }
+            const validation = validateServiceOrderCompletion(formData);
+            if (validation) { alert(validation); return; }
+            if (!window.confirm(`Concluir esta OS no valor de R$ ${calculateTotal()}? A receita ficará pendente no Financeiro até a confirmação do recebimento. Os dados de faturamento não poderão ser alterados após concluir.`)) return;
+        }
         setLoading(true);
         try {
             if (isEditing && id) {
@@ -148,7 +154,7 @@ export const ServiceOrderForm: React.FC = () => {
             navigate('/service-orders');
         } catch (error) {
             console.error('Error saving order:', error);
-            alert('Erro ao salvar Ordem de Serviço.');
+            alert(serviceOrderErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -162,7 +168,7 @@ export const ServiceOrderForm: React.FC = () => {
   return (
     <Layout>
       <Layout.Header 
-        title={isEditing ? 'Editar O.S.' : 'Nova Ordem de Serviço'} 
+        title={completed ? 'Consultar O.S.' : isEditing ? 'Editar O.S.' : 'Nova Ordem de Serviço'}
         subTitle="Módulo de faturamento e registro operacional de campo"
         showBack={true}
         onBackClick={() => navigate('/service-orders')}
@@ -170,7 +176,10 @@ export const ServiceOrderForm: React.FC = () => {
 
       <Layout.Content>
         <div className="p-4 pb-32 animate-in slide-in-from-bottom-4 duration-700">
+          {loadError && <p role="alert" className="mb-4 text-red-400">{loadError}</p>}
+          {completed && <p role="status" className="mb-4 p-4 rounded-2xl bg-positive/10 text-gray-200">OS concluída. Os dados de faturamento estão protegidos. Consulte a situação do recebimento no Financeiro.</p>}
           <form onSubmit={handleSubmit} className="space-y-8">
+            <fieldset disabled={completed || loading || analyzing || !!loadError} className="space-y-8">
 
             {/* AI HUB: Digitalização Inteligente */}
             <div className="bg-surface-dark/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
@@ -186,7 +195,7 @@ export const ServiceOrderForm: React.FC = () => {
                 </h3>
 
                 <div
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => { if (!completed && !loading && !analyzing && !loadError) fileInputRef.current?.click(); }}
                   className={`relative z-10 border-2 border-dashed rounded-[24px] p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all duration-500 overflow-hidden ${
                     analyzing ? 'border-primary/50 bg-primary/5' : 
                     formData.receipt_url ? 'border-positive/30 bg-positive/5' : 
@@ -387,7 +396,7 @@ export const ServiceOrderForm: React.FC = () => {
               <div className="md:col-span-2 bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Método de Liquidação</label>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Forma de pagamento prevista</label>
                     <select
                       name="payment_method"
                       required
@@ -395,7 +404,7 @@ export const ServiceOrderForm: React.FC = () => {
                       onChange={handleChange}
                       className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
                     >
-                      <option value="Pix" className="bg-brand-dark">Pix (Imediato)</option>
+                      <option value="Pix" className="bg-brand-dark">Pix</option>
                       <option value="Cartão" className="bg-brand-dark">Cartão Débito/Crédito</option>
                       <option value="Boleto" className="bg-brand-dark">Boleto Bancário</option>
                       <option value="Faturado" className="bg-brand-dark">Faturamento Mensal</option>
@@ -413,12 +422,13 @@ export const ServiceOrderForm: React.FC = () => {
                       className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
                     >
                       <option value="pending" className="bg-brand-dark text-warning">Aguardando Aprovação / Pendente</option>
-                      <option value="completed" className="bg-brand-dark text-positive">Finalizada / Entregue</option>
+                      <option value="completed" disabled={!canComplete} className="bg-brand-dark text-positive">Finalizada / Entregue</option>
                       <option value="cancelled" className="bg-brand-dark text-red-500">Cancelada / Abortada</option>
                     </select>
                   </div>
                 </div>
 
+                <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente, inclusive para Pix ou dinheiro. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
                 <div className="group">
                   <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
                   <textarea
@@ -433,6 +443,7 @@ export const ServiceOrderForm: React.FC = () => {
               </div>
             </div>
 
+            </fieldset>
             {/* Persistent Control Bar */}
             <div className="fixed bottom-10 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto">
               {isEditing && (
@@ -446,14 +457,14 @@ export const ServiceOrderForm: React.FC = () => {
                 </button>
               )}
 
-              <button
+              {!completed && <button
                 type="submit"
-                disabled={loading || analyzing}
+                disabled={loading || analyzing || !!loadError}
                 className="h-18 bg-primary text-black font-black uppercase tracking-[0.2em] text-sm rounded-[24px] shadow-neon flex items-center justify-center gap-4 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
               >
                 {loading ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} strokeWidth={2.5} />}
-                {isEditing ? 'Sincronizar Protocolo' : 'Gerar Ordem de Serviço'}
-              </button>
+                {formData.status === 'completed' ? 'Concluir OS e gerar receita pendente' : isEditing ? 'Salvar alterações' : 'Gerar Ordem de Serviço'}
+              </button>}
             </div>
           </form>
         </div>

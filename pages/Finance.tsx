@@ -5,6 +5,7 @@ import { Plus, FileText, ArrowUpRight, ArrowDownLeft, Sparkles, X, Loader2, Copy
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { generateReport, analyzeDocument } from '../services/aiService';
 import { Upload } from 'lucide-react';
+import { serviceOrderErrorMessage } from '../services/serviceOrderRules';
 import { transactionService, type Transaction as SupabaseTransaction } from '../services/transactionService';
 
 const COLORS = ['#9E3D07', '#256611', '#404040'];
@@ -34,6 +35,7 @@ export const Finance: React.FC = () => {
   // State for Transaction Modal (Add/Edit)
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const linkedOrderId = transactions.find(t => t.id === editingId)?.service_order_id;
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -157,7 +159,7 @@ export const Finance: React.FC = () => {
       alert('Transação excluída com sucesso!');
     } catch (error) {
       console.error('Error deleting transaction:', error);
-      alert('Erro ao excluir transação.');
+      alert(serviceOrderErrorMessage(error));
     }
   };
 
@@ -178,7 +180,7 @@ export const Finance: React.FC = () => {
       };
 
       if (editingId) {
-        await transactionService.update(editingId, transactionData);
+        await transactionService.update(editingId, linkedOrderId ? { status: formData.status } : transactionData);
         alert('Transação atualizada com sucesso!');
       } else {
         await transactionService.create(transactionData);
@@ -189,7 +191,7 @@ export const Finance: React.FC = () => {
       setShowModal(false);
     } catch (error) {
       console.error('Error saving transaction:', error);
-      alert('Erro ao salvar transação.');
+      alert(serviceOrderErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -255,6 +257,7 @@ export const Finance: React.FC = () => {
           </div>
         </div>
 
+        <p className="px-4 mb-4 text-sm text-gray-400">O saldo considera somente receitas recebidas e despesas pagas. Lançamentos pendentes aparecem na lista.</p>
         {/* Summary Summary */}
         <div className="px-4 grid grid-cols-2 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
           <div className="bg-surface-dark/50 p-5 rounded-[32px] border border-white/5 shadow-lg relative overflow-hidden group">
@@ -384,9 +387,9 @@ export const Finance: React.FC = () => {
                       <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
                         <Pencil size={12} strokeWidth={3} />
                       </button>
-                      <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg bg-negative/5 hover:bg-negative/20 text-negative/60 hover:text-negative transition-colors">
+                      {!t.service_order_id && <button onClick={() => handleDelete(t.id)} className="p-1.5 rounded-lg bg-negative/5 hover:bg-negative/20 text-negative/60 hover:text-negative transition-colors">
                         <Trash2 size={12} strokeWidth={3} />
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 </div>
@@ -475,12 +478,14 @@ export const Finance: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveTransaction} className="p-6 space-y-5">
+              {linkedOrderId && <p className="text-sm text-gray-300">Receita da OS #{linkedOrderId.slice(0, 8)}. Os dados de faturamento estão protegidos. Marque como recebido apenas após conferir o pagamento.</p>}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Descrição do Item</label>
                 <div className="relative group">
                   <input
                     type="text"
                     required
+                    disabled={saving || !!linkedOrderId}
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:text-white/20 transition-all"
@@ -496,6 +501,7 @@ export const Finance: React.FC = () => {
                   <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 h-14">
                     <button
                       type="button"
+                      disabled={saving || !!linkedOrderId}
                       onClick={() => setFormData({ ...formData, type: 'expense' })}
                       className={`flex-1 py-1 text-[9px] font-black uppercase tracking-tighter rounded-xl transition-all ${formData.type === 'expense' ? 'bg-negative text-white shadow-neon-sm' : 'text-gray-500 hover:text-white'}`}
                     >
@@ -503,6 +509,7 @@ export const Finance: React.FC = () => {
                     </button>
                     <button
                       type="button"
+                      disabled={saving || !!linkedOrderId}
                       onClick={() => setFormData({ ...formData, type: 'income' })}
                       className={`flex-1 py-1 text-[9px] font-black uppercase tracking-tighter rounded-xl transition-all ${formData.type === 'income' ? 'bg-positive text-white shadow-neon-sm' : 'text-gray-500 hover:text-white'}`}
                     >
@@ -513,12 +520,13 @@ export const Finance: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Status</label>
                   <select
+                    disabled={saving}
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                     className="w-full h-14 px-4 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-white uppercase tracking-widest focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all appearance-none italic"
                   >
-                    <option value="paid" className="bg-surface-dark">Liquidado</option>
-                    <option value="pending" className="bg-surface-dark">Agendado</option>
+                    <option value="paid" className="bg-surface-dark">{formData.type === 'income' ? 'Recebido' : 'Pago'}</option>
+                    <option value="pending" className="bg-surface-dark">Pendente</option>
                   </select>
                 </div>
               </div>
@@ -530,7 +538,8 @@ export const Finance: React.FC = () => {
                     <input
                       type="date"
                       required
-                      value={formData.date}
+                      disabled={saving || !!linkedOrderId}
+                    value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all appearance-none"
                     />
@@ -544,7 +553,8 @@ export const Finance: React.FC = () => {
                       type="number"
                       required
                       step="0.01"
-                      value={formData.amount}
+                      disabled={saving || !!linkedOrderId}
+                    value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/5 text-sm font-black text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none placeholder:text-white/20 transition-all font-mono"
                       placeholder="0.00"
@@ -568,7 +578,7 @@ export const Finance: React.FC = () => {
                   ) : (
                     <>
                       {editingId ? <Check size={24} strokeWidth={3} /> : <ArrowUpRight size={24} strokeWidth={3} />}
-                      {editingId ? 'Confirmar Edição' : 'Efetivar Lançamento'}
+                      {linkedOrderId ? 'Salvar situação do recebimento' : editingId ? 'Confirmar Edição' : 'Efetivar Lançamento'}
                     </>
                   )}
                 </button>
