@@ -1,31 +1,47 @@
+import React, { useState } from "react";
+import { supabase } from "../services/supabaseClient";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Mail,
+  Lock,
+  Loader2,
+  Truck,
+  Clock3,
+  Wallet,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowUpRight,
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
-import React, { useState } from 'react';
-import { supabase } from '../services/supabaseClient';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader2, Truck } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { Brand } from "../components/Layout";
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
   const { refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const handleGoogleLogin = async () => {
+    setError(null);
+    setIsLoading(true);
     try {
       const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
       });
       if (authError) throw authError;
     } catch (err: any) {
-      setError(err.message || 'Erro ao entrar com Google');
+      setError("Não foi possível entrar com Google. Tente novamente.");
+      setIsLoading(false);
     }
   };
 
@@ -35,129 +51,148 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
 
       if (authError) throw authError;
 
       if (authData.user) {
         await refreshProfile();
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao realizar login');
+      setError(
+        err.code === "invalid_credentials"
+          ? "E-mail ou senha incorretos. Confira os dados e tente novamente."
+          : err.code === "email_not_confirmed"
+            ? "Confirme seu e-mail para acessar sua conta."
+            : "Não foi possível entrar. Confira sua conexão e tente novamente.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 animate-gradient pointer-events-none" />
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-[400px] z-10 animate-in fade-in zoom-in duration-500">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center size-20 bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/10 rounded-3xl mb-6 shadow-lg shadow-primary/10">
-            <Truck className="text-primary" size={36} strokeWidth={1.5} />
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-1">TerraGes <span className="text-primary italic">OS</span></h1>
-          <p className="text-[10px] text-accent font-bold uppercase tracking-[0.3em]">Sistemas de Gestão de Ativos</p>
+    <div className="tg-auth">
+      <aside className="tg-auth-brand">
+        <Brand />
+        <div className="tg-auth-story">
+          <p className="tg-eyebrow">Do campo ao escritório</p>
+          <h2>
+            Mais controle.
+            <br />
+            Mais tempo para fazer acontecer.
+          </h2>
+          <p>Sua operação conectada, com as informações certas sempre à mão.</p>
+          <ul>
+            <li>
+              <Truck size={22} /> Frota e serviços no mesmo lugar
+            </li>
+            <li>
+              <Clock3 size={22} /> Horas registradas com clareza
+            </li>
+            <li>
+              <Wallet size={22} /> Financeiro que acompanha a operação
+            </li>
+          </ul>
         </div>
-
-        <div className="bg-surface-dark border border-white/5 p-8 rounded-[32px] shadow-xl relative group">
-          
-          <form onSubmit={handleLogin} className="space-y-6 relative">
+        <span className="tg-auth-story tg-muted">
+          TerraGes · Gestão de operações
+        </span>
+      </aside>
+      <main className="tg-auth-main">
+        <div className="tg-auth-form">
+          <p className="tg-eyebrow">Bem-vindo ao TerraGes</p>
+          <h1>Vamos ao trabalho?</h1>
+          <p>Entre na sua conta para acompanhar sua operação.</p>
+          <form onSubmit={handleLogin}>
             {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold uppercase tracking-widest text-center animate-shake">
+              <div role="alert" className="tg-alert">
                 {error}
               </div>
             )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-2 ml-4 tracking-widest">Seu E-mail</label>
-                <div className="relative">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 focus-within:text-primary transition-colors" size={18} />
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full h-14 pl-14 pr-6 rounded-[20px] bg-white/5 border border-white/5 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all placeholder:text-gray-700 text-sm font-medium"
-                    placeholder="exemplo@engeman.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase text-gray-500 mb-2 ml-4 tracking-widest">Sua Senha</label>
-                <div className="relative">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 focus-within:text-primary transition-colors" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full h-14 pl-14 pr-6 rounded-[20px] bg-white/5 border border-white/5 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all placeholder:text-gray-700 text-sm font-medium"
-                    placeholder="••••••••"
-                  />
-                </div>
+            <div className="tg-field">
+              <label htmlFor="login-email">E-mail</label>
+              <div className="tg-input">
+                <Mail size={18} />
+                <input
+                  id="login-email"
+                  type="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  placeholder="voce@empresa.com.br"
+                />
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-14 bg-primary hover:brightness-110 active:scale-[0.98] text-black font-black uppercase tracking-[0.2em] italic text-xs rounded-[20px] transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
-            >
-              {isLoading ? <Loader2 size={20} className="animate-spin" /> : "Entrar com E-mail"}
+            <div className="tg-field">
+              <label htmlFor="login-password">Senha</label>
+              <div className="tg-input">
+                <Lock size={18} />
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  placeholder="Digite sua senha"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            <Link className="tg-link" to="/forgot-password">
+              Esqueci minha senha
+            </Link>
+            <button className="tg-button" type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 size={19} className="tg-spin" />
+                  Entrando…
+                </>
+              ) : (
+                <>
+                  Entrar na minha conta <ArrowRight size={18} />
+                </>
+              )}
             </button>
-
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-white/10"></div>
-              <span className="flex-shrink-0 mx-4 text-white/40 text-[10px] font-black uppercase tracking-widest">ou</span>
-              <div className="flex-grow border-t border-white/10"></div>
-            </div>
-
+            <div className="tg-divider">ou continue com</div>
             <button
               type="button"
+              disabled={isLoading}
               onClick={handleGoogleLogin}
-              className="w-full h-14 bg-white hover:bg-gray-200 active:scale-[0.98] text-black font-black uppercase tracking-widest text-xs rounded-[20px] transition-all flex items-center justify-center gap-3"
+              className="tg-button tg-button-secondary"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
               Entrar com Google
             </button>
-            
-            <button 
-              type="button" 
-              onClick={() => navigate('/forgot-password')} 
-              className="w-full text-center text-[9px] text-gray-600 hover:text-primary transition-colors font-black uppercase tracking-widest pt-2"
-            >
-              Recuperar Acesso
-            </button>
           </form>
+          <div className="tg-auth-footer">
+            Sua empresa ainda não usa o TerraGes?
+            <br />
+            <Link to="/signup">
+              Cadastrar empresa <ArrowUpRight size={16} />
+            </Link>
+          </div>
         </div>
-
-        <div className="mt-10 text-center">
-          <p className="text-[10px] text-gray-600 uppercase font-black tracking-widest mb-4">Novo Gestor?</p>
-          <button 
-            onClick={() => navigate('/signup')} 
-            className="px-8 py-3 rounded-full border border-white/5 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/5 hover:border-white/10 transition-all"
-          >
-            Cadastrar Empresa
-          </button>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };

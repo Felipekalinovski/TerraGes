@@ -3,7 +3,7 @@ import {Session,User} from '@supabase/supabase-js';
 import {supabase} from '../services/supabaseClient';
 import {userService,UserProfile} from '../services/userService';
 interface AuthContextType {session:Session|null;user:User|null;profile:UserProfile|null;loading:boolean;signOut:()=>Promise<void>;refreshProfile:()=>Promise<void>;}
-const AuthContext=createContext<AuthContextType>({session:null,user:null,profile:null,loading:true,signOut:async()=>{},refreshProfile:async()=>{}});
+export const AuthContext=createContext<AuthContextType>({session:null,user:null,profile:null,loading:true,signOut:async()=>{},refreshProfile:async()=>{}});
 export const AuthProvider:React.FC<{children:React.ReactNode}>=({children})=>{
   const [session,setSession]=useState<Session|null>(null),[profile,setProfile]=useState<UserProfile|null>(null),[loading,setLoading]=useState(true);
   const generation=useRef(0);

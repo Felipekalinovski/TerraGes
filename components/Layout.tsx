@@ -1,54 +1,62 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { userService, UserProfile } from '../services/userService';
-import { whatsappService } from '../services/whatsappService';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import type { UserProfile } from "../services/userService";
+import { isAdminUser, getRoleLabel } from "../services/roleService";
+import { ThemeToggle } from "./ThemeToggle";
 import {
-  LayoutDashboard,
-  Truck,
-  Home,
-  Wallet,
-  Hammer,
-  ChevronLeft,
-  X,
-  LogOut,
-  Sparkles,
-  MessageSquare,
+  ArrowLeft,
+  BarChart3,
   CalendarDays,
-  Wrench,
-  Users,
-  BarChart2,
-  MapPin,
   ClipboardList,
+  Clock3,
+  HardHat,
+  LayoutDashboard,
+  LogOut,
   Menu,
+  MessageSquare,
   Settings,
+  Sparkles,
+  Truck,
+  Users,
+  Wallet,
+  Wrench,
+  X,
   FileText,
-  Clock,
-  Phone
-} from 'lucide-react';
-import { ThemeToggle } from './ThemeToggle';
-import { isAdminUser, canViewFinance, canViewReports, canAccessSettings, canManageTeam, canViewSchedule, canViewData } from '../services/roleService';
+  MapPin,
+} from "lucide-react";
+import "../styles/workspace.css";
 
-// Context for shared layout state
-interface LayoutContextType {
-  isSidebarOpen: boolean;
-  setIsSidebarOpen: (open: boolean) => void;
-  userProfile: UserProfile | null;
-  isActive: (path: string) => boolean;
-  navigate: (path: string | number) => void;
+interface LayoutState {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  profile: UserProfile | null;
 }
-
-const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
-
-const useLayout = () => {
-  const context = useContext(LayoutContext);
-  if (!context) throw new Error('useLayout must be used within a Layout provider');
-  return context;
-};
-
+const LayoutContext = createContext<LayoutState | null>(null);
+function useLayout() {
+  const value = useContext(LayoutContext);
+  if (!value) throw new Error("Layout required");
+  return value;
+}
+interface HeaderProps {
+  title: string;
+  subTitle?: string;
+  showBack?: boolean;
+  onBackClick?: () => void;
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+}
 interface LayoutProps {
   children: React.ReactNode;
   hideNav?: boolean;
+  title?: string;
+  showBack?: boolean;
 }
 
 export const Layout: React.FC<LayoutProps> & {
@@ -56,261 +64,321 @@ export const Layout: React.FC<LayoutProps> & {
   Sidebar: React.FC;
   Content: React.FC<{ children: React.ReactNode }>;
   Navigation: React.FC;
-} = ({ children, hideNav = false }) => {
-  const navigate = useNavigate();
+} = ({ children, hideNav = false, title, showBack }) => {
+  const { profile } = useAuth();
+  const [open, setOpen] = useState(false);
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
   useEffect(() => {
-    userService.getCurrentProfile().then(setUserProfile);
-  }, []);
-
-  const isActive = (path: string) => location.pathname.startsWith(path);
-
-  const contextValue = {
-    isSidebarOpen,
-    setIsSidebarOpen,
-    userProfile,
-    isActive,
-    navigate: (path: string | number) => {
-      if (typeof path === 'number') navigate(path); else navigate(path);
-      setIsSidebarOpen(false);
-    }
-  };
-
+    setOpen(false);
+  }, [location.pathname]);
   return (
-    <LayoutContext.Provider value={contextValue}>
-      <div className="flex h-screen bg-brand-dark text-white w-full overflow-hidden font-sans">
-
+    <LayoutContext.Provider value={{ open, setOpen, profile }}>
+      <div className="tg-app">
+        <a href="#main-content" className="tg-skip">
+          Pular para o conteúdo
+        </a>
         <Layout.Sidebar />
-
-        <div className="flex-1 flex flex-col relative w-full h-full overflow-y-auto">
+        <div className="tg-workspace">
+          {title && <Layout.Header title={title} showBack={showBack} />}
           {children}
-          {!hideNav && <Layout.Navigation />}
         </div>
-
+        {!hideNav && <Layout.Navigation />}
       </div>
     </LayoutContext.Provider>
   );
 };
 
-interface HeaderProps {
-  title: string;
-  subTitle?: string;
-  showBack?: boolean;
-  actions?: React.ReactNode;
+export function Brand() {
+  return (
+    <div className="tg-brand">
+      <span className="tg-brand-mark">
+        <HardHat size={23} strokeWidth={2} />
+      </span>
+      <span>
+        Terra<span className="tg-brand-accent">Ges</span>
+        <small>Gestão de operações</small>
+      </span>
+    </div>
+  );
 }
 
-Layout.Header = ({ title, subTitle, showBack, actions }) => {
-  const { setIsSidebarOpen, navigate, userProfile } = useLayout();
-
+Layout.Header = ({
+  title,
+  subTitle,
+  showBack,
+  onBackClick,
+  actions,
+  children,
+}) => {
+  const { setOpen, profile } = useLayout();
+  const navigate = useNavigate();
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between p-4 bg-brand-dark/80 border-b border-white/5 h-18 backdrop-blur-md">
-      <div className="flex items-center gap-3">
+    <header className="tg-header">
+      <div className="tg-header-title">
         {showBack ? (
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-            <ChevronLeft size={24} />
+          <button
+            className="tg-icon-button"
+            onClick={onBackClick || (() => navigate(-1))}
+            aria-label="Voltar"
+          >
+            <ArrowLeft size={20} />
           </button>
         ) : (
-          <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-            <Menu size={24} />
+          <button
+            className="tg-icon-button tg-mobile-only"
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menu"
+            aria-haspopup="dialog"
+          >
+            <Menu size={21} />
           </button>
         )}
         <div>
-          <h1 className="text-xl font-heading font-black tracking-tight uppercase leading-none text-white">
-            {title}
-          </h1>
-          {subTitle && <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5">{subTitle}</p>}
+          <h1>{title}</h1>
+          {subTitle && <p>{subTitle}</p>}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="tg-header-actions">
         {actions}
+        {children}
         <ThemeToggle />
         <button
-          onClick={() => navigate('/settings/profile')}
-          className="size-9 rounded-full border-2 border-white/10 hover:border-primary/50 transition-all overflow-hidden p-0.5 bg-surface-dark"
+          onClick={() => navigate("/settings/profile")}
+          className="tg-avatar"
+          aria-label="Meu perfil"
+          title={profile?.name || "Meu perfil"}
         >
-          <img
-            src={userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=00E599&color=000`}
-            className="size-full rounded-full object-cover"
-            alt="Profile"
-          />
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" />
+          ) : (
+            (profile?.name || "TG")
+              .split(" ")
+              .slice(0, 2)
+              .map((n) => n[0])
+              .join("")
+          )}
         </button>
       </div>
     </header>
   );
 };
 
-Layout.Sidebar = () => {
-  const { isSidebarOpen, setIsSidebarOpen, userProfile, isActive, navigate } = useLayout();
-  const { signOut, profile } = useAuth();
-  const [whatsappPending, setWhatsappPending] = useState(0);
-
-  const userRole = profile?.role;
-  const canView = canViewData(userRole); // true para admin, false para operador
-
-  useEffect(() => {
-    whatsappService.countPendingActions().then(setWhatsappPending).catch(() => {});
-  }, []);
-
-  // Menu base para todos os usuários logados
-  const navItems: Array<{ icon: React.ReactNode; label: string; path: string }> = [
-    { icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' },
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: React.ElementType;
+  end?: boolean;
+};
+function NavigationContent({ close }: { close?: () => void }) {
+  const { profile } = useLayout();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const admin = isAdminUser(profile?.role);
+  const [signingOut, setSigningOut] = useState(false);
+  const [error, setError] = useState("");
+  const groups: { label: string; items: MenuItem[] }[] = [
+    {
+      label: "Área de trabalho",
+      items: [
+        { label: "Visão geral", path: "/dashboard", icon: LayoutDashboard },
+        {
+          label: "Caixa de entrada",
+          path: "/whatsapp-inbox",
+          icon: MessageSquare,
+        },
+        ...(admin
+          ? [{ label: "Assistente IA", path: "/chat", icon: Sparkles }]
+          : []),
+      ],
+    },
+    {
+      label: "Operação",
+      items: [
+        ...(admin ? [{ label: "Frota", path: "/fleet", icon: Truck }] : []),
+        {
+          label: "Ordens de serviço",
+          path: "/service-orders",
+          icon: ClipboardList,
+        },
+        { label: "Horas trabalhadas", path: "/hora-maquina", icon: Clock3 },
+        {
+          label: "Diário de obra",
+          path: admin ? "/rdo" : "/rdo/new",
+          icon: HardHat,
+        },
+        ...(admin
+          ? [
+              { label: "Agenda", path: "/schedule", icon: CalendarDays },
+              { label: "Manutenções", path: "/maintenance", icon: Wrench },
+              { label: "Equipe", path: "/employees", icon: Users },
+            ]
+          : []),
+      ],
+    },
+    ...(admin
+      ? [
+          {
+            label: "Gestão",
+            items: [
+              { label: "Orçamentos", path: "/orcamentos", icon: FileText },
+              { label: "Financeiro", path: "/finance", icon: Wallet },
+              { label: "Relatórios", path: "/reports", icon: BarChart3 },
+              {
+                label: "Relatório por cliente",
+                path: "/relatorio-cliente",
+                icon: FileText,
+              },
+              { label: "Obras", path: "/settings/projects", icon: MapPin },
+              {
+                label: "Configurações",
+                path: "/settings",
+                icon: Settings,
+                end: true,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
-
-  // Admin/gerente pode ver chat IA
-  if (canView) {
-    navItems.push({ icon: <MessageSquare size={20} />, label: 'Chat com IA', path: '/chat' });
-  }
-
-  // Agenda - apenas admin visualiza, operador apenas vê próprio schedule através deoutro lugar
-  if (canViewSchedule(userRole)) {
-    navItems.push({ icon: <CalendarDays size={20} />, label: 'Agenda', path: '/schedule' });
-  }
-
-  // Frota admin apenas
-  if (canView) {
-    navItems.push({ icon: <Truck size={20} />, label: 'Minha Frota', path: '/fleet' });
-  }
-
-  // Manutenção - adminvisualiza
-  if (canView) {
-    navItems.push({ icon: <Wrench size={20} />, label: 'Manutenção', path: '/maintenance' });
-  }
-
-  // Equipe - admin/gerente
-  if (canManageTeam(userRole)) {
-    navItems.push({ icon: <Users size={20} />, label: 'Equipe', path: '/employees' });
-  }
-
-  // Ordens de Serviço - todos podem ver masOperator não cria
-  navItems.push({ icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' });
-
-  // Orçamentos - admin
-  if (canView) {
-    navItems.push({ icon: <FileText size={20} />, label: 'Orçamentos', path: '/orcamentos' });
-  }
-
-  // Hora-Máquina - todos veem para registrar
-  navItems.push({ icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' });
-
-  // Relatório Cliente - todos podem acessar
-  navItems.push({ icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' });
-
-  // RDO - operador pode inserir, adminvisualiza
-  navItems.push({ icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' });
-
-  // Admin exclusive items (financeiro, relatórios, configurações)
-  if (isAdminUser(userRole)) {
-    navItems.push(
-      { icon: <Wallet size={20} />, label: 'Financeiro', path: '/finance' },
-      { icon: <BarChart2 size={20} />, label: 'Relatórios', path: '/reports' },
-      { icon: <MapPin size={20} />, label: 'Gerenciar Obras', path: '/settings/projects' },
-      { icon: <Settings size={20} />, label: 'Configurações', path: '/settings' }
-    );
-  }
-
   return (
     <>
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity md:hidden" onClick={() => setIsSidebarOpen(false)} />
-      )}
-      <aside className={`fixed md:static top-0 left-0 bottom-0 w-72 md:shrink-0 bg-surface-dark z-50 shadow-2xl transform transition-transform duration-500 ease-out border-r border-white/5 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-black shadow-lg shadow-primary/20">
-              <Truck size={22} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h2 className="text-lg font-heading font-black tracking-tight text-white uppercase italic leading-none">TerraGes</h2>
-              <p className="text-[8px] font-bold text-accent tracking-[0.3em] uppercase mt-0.5">Gestão de Ativos</p>
-            </div>
-          </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
+      <div className="tg-sidebar-top">
+        <Brand />
+        {close && (
+          <button
+            className="tg-sidebar-close"
+            onClick={close}
+            aria-label="Fechar menu"
+          >
+            <X size={22} />
+          </button>
+        )}
+      </div>
+      <div className="tg-company">
+        <span className="tg-company-icon">
+          <HardHat size={17} />
+        </span>
+        <div>
+          <strong>{profile?.company_name || "Minha empresa"}</strong>
+          <small>{getRoleLabel(profile?.role)}</small>
         </div>
-
-        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${isActive(item.path)
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-            >
-              <span className={isActive(item.path) ? 'text-primary' : 'text-gray-500 group-hover:text-primary transition-colors'}>{item.icon}</span>
-              <span className="text-sm font-bold tracking-tight uppercase">{item.label}</span>
-            </button>
-          ))}
-
-          {/* Caixa de entrada: RLS limita cada operador aos próprios envios. */}
-          {userRole && (
-            <button
-              onClick={() => navigate('/whatsapp-inbox')}
-              className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
-                isActive('/whatsapp-inbox')
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <span className={isActive('/whatsapp-inbox') ? 'text-green-400' : 'text-gray-500 group-hover:text-green-400 transition-colors'}>
-                <Phone size={20} />
-              </span>
-              <span className="text-sm font-bold tracking-tight uppercase flex-1">WhatsApp Bot</span>
-              {whatsappPending > 0 && (
-                <span className="size-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
-                  {whatsappPending}
-                </span>
-              )}
-            </button>
-          )}
-        </nav>
-
-        <div className="p-4 bg-black/40 border-t border-white/5 mt-auto">
-          <button onClick={async () => { await signOut(); navigate('/login'); }} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-negative/10 text-negative hover:bg-negative/20 text-xs font-black uppercase tracking-widest transition-all">
-            <LogOut size={16} /> Sair da Conta
+      </div>
+      <nav className="tg-sidebar-nav" aria-label="Navegação principal">
+        {groups.map((group) => (
+          <div className="tg-nav-group" key={group.label}>
+            <p>{group.label}</p>
+            {group.items.map(({ label, path, icon: Icon, end }) => (
+              <NavLink
+                key={path}
+                to={path}
+                end={end}
+                onClick={close}
+                className={({ isActive }) =>
+                  `tg-nav-link${isActive ? " is-active" : ""}`
+                }
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="tg-sidebar-footer">
+        <div className="tg-account">
+          <span className="tg-avatar">
+            {(profile?.name || "TG").slice(0, 2).toUpperCase()}
+          </span>
+          <div>
+            <strong>{profile?.name || "Minha conta"}</strong>
+            <small>{getRoleLabel(profile?.role)}</small>
+          </div>
+          <button
+            disabled={signingOut}
+            aria-label="Sair da conta"
+            title="Sair da conta"
+            onClick={async () => {
+              setSigningOut(true);
+              setError("");
+              try {
+                await signOut();
+                navigate("/login");
+              } catch {
+                setError("Não foi possível sair. Tente novamente.");
+                setSigningOut(false);
+              }
+            }}
+          >
+            <LogOut size={18} />
           </button>
         </div>
+        {error && <p role="alert">{error}</p>}
+      </div>
+    </>
+  );
+}
+
+Layout.Sidebar = () => {
+  const { open, setOpen } = useLayout();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (open && !dialog.current?.open) dialog.current?.showModal();
+    if (!open && dialog.current?.open) dialog.current?.close();
+  }, [open]);
+  return (
+    <>
+      <aside className="tg-sidebar tg-desktop-sidebar">
+        <NavigationContent />
       </aside>
+      <dialog
+        ref={dialog}
+        className="tg-mobile-dialog"
+        aria-label="Menu de navegação"
+        onCancel={() => setOpen(false)}
+        onClose={() => setOpen(false)}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setOpen(false);
+        }}
+      >
+        <aside className="tg-sidebar">
+          <NavigationContent close={() => setOpen(false)} />
+        </aside>
+      </dialog>
     </>
   );
 };
 
 Layout.Content = ({ children }) => (
-  <main className="flex-1 overflow-x-hidden pb-20 md:pb-6">
+  <main id="main-content" tabIndex={-1} className="tg-main">
     {children}
   </main>
 );
-
 Layout.Navigation = () => {
-  const { navigate, isActive, setIsSidebarOpen } = useLayout();
-  const { profile } = useAuth();
-  const isAdmin = isAdminUser(profile?.role);
-
+  const { setOpen, profile } = useLayout();
+  const admin = isAdminUser(profile?.role);
+  const items = [
+    { label: "Início", path: "/dashboard", icon: LayoutDashboard },
+    { label: "Envios", path: "/whatsapp-inbox", icon: MessageSquare },
+    { label: "Serviços", path: "/service-orders", icon: ClipboardList },
+    admin
+      ? { label: "Financeiro", path: "/finance", icon: Wallet }
+      : { label: "Horas", path: "/hora-maquina", icon: Clock3 },
+  ];
   return (
-    <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
-      <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
-        <LayoutDashboard size={22} strokeWidth={isActive('/dashboard') ? 3 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Início</span>
-      </button>
-      <button onClick={() => navigate('/orcamentos')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
-        <FileText size={22} strokeWidth={isActive('/orcamentos') ? 2.5 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Orçamentos</span>
-      </button>
-      <button onClick={() => navigate('/service-orders')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
-        <ClipboardList size={22} strokeWidth={isActive('/service-orders') ? 2.5 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Serviços</span>
-      </button>
-      {isAdmin && (
-        <button onClick={() => navigate('/finance')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/finance') ? 'text-primary' : 'text-gray-500'}`}>
-          <Wallet size={22} strokeWidth={isActive('/finance') ? 2.5 : 2} />
-          <span className="text-[8px] font-black uppercase tracking-tighter text-current">Dinheiro</span>
-        </button>
-      )}
-      <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-1 text-gray-500 hover:text-primary transition-colors">
-        <Menu size={22} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Mais</span>
+    <nav className="tg-bottom-nav" aria-label="Atalhos do celular">
+      {items.map(({ label, path, icon: Icon }) => (
+        <NavLink
+          to={path}
+          key={path}
+          className={({ isActive }) => (isActive ? "is-active" : "")}
+        >
+          <Icon size={20} />
+          <span>{label}</span>
+        </NavLink>
+      ))}
+      <button onClick={() => setOpen(true)} aria-haspopup="dialog">
+        <Menu size={20} />
+        <span>Menu</span>
       </button>
     </nav>
   );

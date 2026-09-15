@@ -1,47 +1,25 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#F97316" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f5f7" />
+  <script>
+    try {
+      const saved = localStorage.getItem('terrages-theme') || localStorage.getItem('theme');
+      const theme = saved === 'dark' || saved === 'light' ? saved : 'light';
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    } catch { document.documentElement.dataset.theme = 'light'; }
+  </script>
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   <link rel="apple-touch-icon" href="/icon.png" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <title>TerraGes</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            heading: ['Outfit', 'sans-serif'],
-          },
-          backgroundImage: {
-            'brand-gradient': 'radial-gradient(circle at top left, #1C1917, #050505)',
-            'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01))',
-          },
-          colors: {
-            primary: "#F97316",
-            "primary-hover": "#EA580C",
-            positive: "#22C55E",
-            negative: "#EF4444",
-            warning: "#F59E0B",
-            accent: "#22C55E",
-          },
-          boxShadow: {
-            'neon': '0 0 10px rgba(249, 115, 22, 0.25)',
-            'neon-accent': '0 0 10px rgba(34, 197, 94, 0.25)',
-            'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.8)',
-          }
-        }
-      }
-    }
-  </script>
+
   <!-- Service Worker disabled for development to prevent caching issues with Vite
   <script>
     if ('serviceWorker' in navigator) {

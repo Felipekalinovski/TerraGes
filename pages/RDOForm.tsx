@@ -79,7 +79,7 @@ export const RDOForm: React.FC = () => {
       />
 
       <Layout.Content>
-        <div className="px-4 space-y-8 pb-40 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="tg-readable-form px-4 space-y-8 pb-40 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
           {/* Main Info Card */}
           <div className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 shadow-glass space-y-6">
@@ -87,9 +87,9 @@ export const RDOForm: React.FC = () => {
             
             <div className="space-y-4">
               <div className="group">
-                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Projeto / Obra Ativa *</label>
+                <label htmlFor="field-rdoform-1" className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Projeto / Obra Ativa *</label>
                 <div className="relative">
-                  <select
+                  <select id="field-rdoform-1"
                     value={formData.project_id}
                     onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
                     className="w-full h-14 pl-12 pr-10 rounded-2xl bg-white/5 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none transition-all shadow-glass-sm"
@@ -109,9 +109,9 @@ export const RDOForm: React.FC = () => {
               </div>
 
               <div className="group">
-                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Momento do Registro *</label>
+                <label htmlFor="field-rdoform-2" className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Momento do Registro *</label>
                 <div className="relative">
-                  <input
+                  <input id="field-rdoform-2"
                     type="datetime-local"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -129,9 +129,9 @@ export const RDOForm: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="group">
-                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Condição Climática</label>
+                <label htmlFor="field-rdoform-3" className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Condição Climática</label>
                 <div className="relative">
-                  <select
+                  <select id="field-rdoform-3"
                     value={formData.weather}
                     onChange={(e) => setFormData({ ...formData, weather: e.target.value })}
                     className="w-full h-14 pl-12 pr-10 rounded-2xl bg-white/5 border border-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none transition-all shadow-glass-sm"
@@ -149,9 +149,9 @@ export const RDOForm: React.FC = () => {
               </div>
 
               <div className="group">
-                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Efetivo de Campo</label>
+                <label htmlFor="field-rdoform-4" className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Efetivo de Campo</label>
                 <div className="relative">
-                  <input
+                  <input id="field-rdoform-4"
                     type="number"
                     value={formData.team_size}
                     onChange={(e) => setFormData({ ...formData, team_size: Number(e.target.value) })}
@@ -166,7 +166,7 @@ export const RDOForm: React.FC = () => {
           {/* Activities Card */}
           <div className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 shadow-glass space-y-4">
             <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading px-1">Atividades Executadas *</h3>
-            <textarea
+            <textarea aria-label="Atividades executadas"
               value={formData.activities}
               onChange={(e) => setFormData({ ...formData, activities: e.target.value })}
               rows={4}
@@ -181,9 +181,9 @@ export const RDOForm: React.FC = () => {
             
             <div className="space-y-4">
               <div className="group">
-                <label className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Vincular Equipamento</label>
+                <label htmlFor="field-rdoform-5" className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1 group-focus-within:text-primary transition-colors">Vincular Equipamento</label>
                 <div className="relative">
-                  <select
+                  <select id="field-rdoform-5"
                     value=""
                     onChange={(e) => {
                       const val = e.target.value;
@@ -232,7 +232,7 @@ export const RDOForm: React.FC = () => {
                <AlertTriangle size={14} className="text-warning" />
                <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic font-heading">Ocorrências & Observações</h3>
             </div>
-            <textarea
+            <textarea aria-label="Ocorrências e observações"
               value={formData.occurrences}
               onChange={(e) => setFormData({ ...formData, occurrences: e.target.value })}
               rows={3}
@@ -253,7 +253,7 @@ export const RDOForm: React.FC = () => {
       </Layout.Content>
 
       {/* Action Persistence Bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/95 to-transparent z-40">
+      <div className="tg-form-actions">
         <div className="max-w-md mx-auto space-y-3">
           <button
             onClick={handleSubmit}

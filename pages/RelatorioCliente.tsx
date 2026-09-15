@@ -48,7 +48,7 @@ const ReportView: React.FC<{
   copied: boolean;
 }> = ({ project, aiSummary, loadingAi, onShare, onCopy, copied }) => {
   // Group records by machine for the detail table
-  const byMachine = project.records.reduce((acc, r) => {
+  const byMachine = project.records.reduce<Record<string, { hours: number; value: number; days: Set<string> }>>((acc, r) => {
     if (!acc[r.machine_name]) acc[r.machine_name] = { hours: 0, value: 0, days: new Set<string>() };
     acc[r.machine_name].hours += r.total_hours;
     acc[r.machine_name].value += r.total_value;
