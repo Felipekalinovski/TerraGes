@@ -2,42 +2,42 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './pages/Login';
-import { SignUp } from './pages/SignUp';
-import { ForgotPassword } from './pages/ForgotPassword';
-import { Dashboard } from './pages/Dashboard';
-import { Fleet } from './pages/Fleet';
-import { RDO } from './pages/RDO';
-import { Finance } from './pages/Finance';
-import { Settings } from './pages/Settings';
-import { SettingsProfile } from './pages/SettingsProfile';
-import { SettingsCompany } from './pages/SettingsCompany';
-import { SettingsNotifications } from './pages/SettingsNotifications';
-import { SettingsSecurity } from './pages/SettingsSecurity';
-import { SettingsIntegrations } from './pages/SettingsIntegrations';
-import { AIChat } from './pages/AIChat';
-import { Schedule } from './pages/Schedule';
-import { ScheduleForm } from './pages/ScheduleForm';
-import { MaintenanceForm } from './pages/MaintenanceForm';
-import { MaintenanceHistory } from './pages/MaintenanceHistory';
-import { Maintenance } from './pages/Maintenance';
-import { Employees } from './pages/Employees';
-import { EmployeeForm } from './pages/EmployeeForm';
-import { EmployeeDetails } from './pages/EmployeeDetails';
-import { FleetForm } from './pages/FleetForm';
-import { RDOForm } from './pages/RDOForm';
-import { Reports } from './pages/Reports';
-import { SettingsProjects } from './pages/SettingsProjects';
-import { ServiceOrderList } from './pages/ServiceOrderList';
-import { ServiceOrderForm } from './pages/ServiceOrderForm';
-import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
+const SignUp = React.lazy(() => import('./pages/SignUp').then(module => ({ default: module.SignUp })));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword').then(module => ({ default: module.ForgotPassword })));
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const Fleet = React.lazy(() => import('./pages/Fleet').then(module => ({ default: module.Fleet })));
+const RDO = React.lazy(() => import('./pages/RDO').then(module => ({ default: module.RDO })));
+const Finance = React.lazy(() => import('./pages/Finance').then(module => ({ default: module.Finance })));
+const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
+const SettingsProfile = React.lazy(() => import('./pages/SettingsProfile').then(module => ({ default: module.SettingsProfile })));
+const SettingsCompany = React.lazy(() => import('./pages/SettingsCompany').then(module => ({ default: module.SettingsCompany })));
+const SettingsNotifications = React.lazy(() => import('./pages/SettingsNotifications').then(module => ({ default: module.SettingsNotifications })));
+const SettingsSecurity = React.lazy(() => import('./pages/SettingsSecurity').then(module => ({ default: module.SettingsSecurity })));
+const SettingsIntegrations = React.lazy(() => import('./pages/SettingsIntegrations').then(module => ({ default: module.SettingsIntegrations })));
+const AIChat = React.lazy(() => import('./pages/AIChat').then(module => ({ default: module.AIChat })));
+const Schedule = React.lazy(() => import('./pages/Schedule').then(module => ({ default: module.Schedule })));
+const ScheduleForm = React.lazy(() => import('./pages/ScheduleForm').then(module => ({ default: module.ScheduleForm })));
+const MaintenanceForm = React.lazy(() => import('./pages/MaintenanceForm').then(module => ({ default: module.MaintenanceForm })));
+const MaintenanceHistory = React.lazy(() => import('./pages/MaintenanceHistory').then(module => ({ default: module.MaintenanceHistory })));
+const Maintenance = React.lazy(() => import('./pages/Maintenance').then(module => ({ default: module.Maintenance })));
+const Employees = React.lazy(() => import('./pages/Employees').then(module => ({ default: module.Employees })));
+const EmployeeForm = React.lazy(() => import('./pages/EmployeeForm').then(module => ({ default: module.EmployeeForm })));
+const EmployeeDetails = React.lazy(() => import('./pages/EmployeeDetails').then(module => ({ default: module.EmployeeDetails })));
+const FleetForm = React.lazy(() => import('./pages/FleetForm').then(module => ({ default: module.FleetForm })));
+const RDOForm = React.lazy(() => import('./pages/RDOForm').then(module => ({ default: module.RDOForm })));
+const Reports = React.lazy(() => import('./pages/Reports').then(module => ({ default: module.Reports })));
+const SettingsProjects = React.lazy(() => import('./pages/SettingsProjects').then(module => ({ default: module.SettingsProjects })));
+const ServiceOrderList = React.lazy(() => import('./pages/ServiceOrderList').then(module => ({ default: module.ServiceOrderList })));
+const ServiceOrderForm = React.lazy(() => import('./pages/ServiceOrderForm').then(module => ({ default: module.ServiceOrderForm })));
+const ServiceOrderReceipt = React.lazy(() => import('./pages/ServiceOrderReceipt').then(module => ({ default: module.ServiceOrderReceipt })));
 
 // ── Novos módulos ──────────────────────────────────────────────────────────────
-import { Orcamento } from './pages/Orcamento';
-import { OrcamentoForm } from './pages/OrcamentoForm';
-import { HoraMaquinaPage } from './pages/HoraMaquina';
-import { RelatorioCliente } from './pages/RelatorioCliente';
-import { Onboarding } from './pages/Onboarding';
-import { WhatsAppInbox } from './pages/WhatsAppInbox';
+const Orcamento = React.lazy(() => import('./pages/Orcamento').then(module => ({ default: module.Orcamento })));
+const OrcamentoForm = React.lazy(() => import('./pages/OrcamentoForm').then(module => ({ default: module.OrcamentoForm })));
+const HoraMaquinaPage = React.lazy(() => import('./pages/HoraMaquina').then(module => ({ default: module.HoraMaquinaPage })));
+const RelatorioCliente = React.lazy(() => import('./pages/RelatorioCliente').then(module => ({ default: module.RelatorioCliente })));
+const Onboarding = React.lazy(() => import('./pages/Onboarding').then(module => ({ default: module.Onboarding })));
+const WhatsAppInbox = React.lazy(() => import('./pages/WhatsAppInbox').then(module => ({ default: module.WhatsAppInbox })));
 
 import { Loader2 } from 'lucide-react';
 import { isAdminUser, canViewData } from './services/roleService';
@@ -88,6 +88,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <React.Suspense fallback={<div className="tg-loading" role="status"><Loader2 size={22} className="tg-spin" />Carregando tela…</div>}>
         <Routes>
           {/* ── Públicas ── */}
           <Route path="/login"           element={<Login />} />
@@ -167,6 +168,7 @@ const App: React.FC = () => {
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        </React.Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

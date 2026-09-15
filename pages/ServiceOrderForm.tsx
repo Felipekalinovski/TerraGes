@@ -175,74 +175,22 @@ export const ServiceOrderForm: React.FC = () => {
       />
 
       <Layout.Content>
-        <div className="p-4 pb-32 animate-in slide-in-from-bottom-4 duration-700">
+        <div className="tg-readable-form p-4 pb-32 animate-in slide-in-from-bottom-4 duration-700">
           {loadError && <p role="alert" className="mb-4 text-red-400">{loadError}</p>}
           {completed && <p role="status" className="mb-4 p-4 rounded-2xl bg-positive/10 text-gray-200">OS concluída. Os dados de faturamento estão protegidos. Consulte a situação do recebimento no Financeiro.</p>}
           <form onSubmit={handleSubmit} className="space-y-8">
             <fieldset disabled={completed || loading || analyzing || !!loadError} className="space-y-8">
 
-            {/* AI HUB: Digitalização Inteligente */}
-            <div className="bg-surface-dark/40 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 shadow-glass relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
-                    <ScanLine size={120} className="text-primary rotate-12" />
-                </div>
-                
-                <h3 className="text-lg font-black text-white italic uppercase tracking-widest mb-6 flex items-center gap-3">
-                  <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                    <Sparkles size={18} />
-                  </div>
-                  TerraScan <span className="text-primary/50 text-xs ml-1 font-medium">Digitalização AI</span>
-                </h3>
-
-                <div
-                  onClick={() => { if (!completed && !loading && !analyzing && !loadError) fileInputRef.current?.click(); }}
-                  className={`relative z-10 border-2 border-dashed rounded-[24px] p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all duration-500 overflow-hidden ${
-                    analyzing ? 'border-primary/50 bg-primary/5' : 
-                    formData.receipt_url ? 'border-positive/30 bg-positive/5' : 
-                    'border-white/5 hover:border-primary/30 hover:bg-white/[0.02]'
-                  }`}
-                >
-                  {analyzing ? (
-                    <div className="flex flex-col items-center gap-4 py-4">
-                      <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-sm font-black text-primary uppercase tracking-[0.2em] animate-pulse">Processando Neuronios...</span>
-                        <span className="text-[10px] text-gray-500 font-medium italic mt-1">Extraindo dados técnicos da imagem</span>
-                      </div>
-                    </div>
-                  ) : formData.receipt_url ? (
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <div className="relative group/img shadow-2xl rounded-2xl overflow-hidden border-2 border-primary/20">
-                        <img src={receiptPreview} alt="Comprovante" className="h-48 object-cover transition-transform group-hover/img:scale-105" />
-                        <div className="absolute inset-0 bg-primary/20 mix-blend-overlay opacity-0 group-hover/img:opacity-100 transition-opacity"></div>
-                      </div>
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="text-[10px] font-black text-positive uppercase tracking-widest flex items-center gap-2 px-4 py-2 bg-positive/10 rounded-full border border-positive/20">
-                          <CheckCircle2 size={12} /> Digitalização Analisada
-                        </span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Clique para substituir imagem</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-4 text-center py-6">
-                      <div className="size-20 rounded-full bg-white/5 flex items-center justify-center text-primary border border-white/5 group-hover:scale-110 group-hover:shadow-neon transition-all duration-500">
-                        <Camera size={38} strokeWidth={1.5} />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-black text-white uppercase tracking-widest">Carregar Comprovante</span>
-                        <span className="text-[10px] text-gray-500 font-bold italic">A IA preencherá os campos automaticamente</span>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
-            </div>
+            <section className="tg-panel tg-scan">
+              <div><Sparkles size={20}/><h3>Preencher com uma imagem</h3><span className="tg-badge">Opcional</span></div>
+              <p className="tg-muted">Fotografe a folha de serviço. Revise os dados sugeridos antes de salvar.</p>
+              {receiptPreview && <img src={receiptPreview} alt="Comprovante anexado" className="tg-scan-preview"/>}
+              <button type="button" className="tg-button tg-button-secondary" disabled={completed || loading || analyzing || !!loadError} onClick={() => fileInputRef.current?.click()}>
+                {analyzing ? <Loader2 size={19} className="tg-spin"/> : <Camera size={19}/>}
+                {analyzing ? 'Analisando imagem…' : formData.receipt_url ? 'Substituir imagem' : 'Adicionar imagem'}
+              </button>
+              <input type="file" aria-label="Imagem da folha de serviço" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*"/>
+            </section>
 
             {/* FORM SECTIONS: Grid Design */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -256,8 +204,8 @@ export const ServiceOrderForm: React.FC = () => {
                   
                   <div className="space-y-4">
                     <div className="group">
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Cliente / Local</label>
-                      <input
+                      <label htmlFor="field-serviceorderform-1" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Cliente / Local</label>
+                      <input id="field-serviceorderform-1"
                         type="text"
                         name="client"
                         required
@@ -269,8 +217,8 @@ export const ServiceOrderForm: React.FC = () => {
                     </div>
                     
                     <div className="group">
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Data de Execução</label>
-                      <input
+                      <label htmlFor="field-serviceorderform-2" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Data de Execução</label>
+                      <input id="field-serviceorderform-2"
                         type="date"
                         name="date"
                         required
@@ -291,8 +239,8 @@ export const ServiceOrderForm: React.FC = () => {
                   
                   <div className="space-y-4">
                     <div className="group">
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Equipamento Utilizado</label>
-                      <select
+                      <label htmlFor="field-serviceorderform-3" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Equipamento Utilizado</label>
+                      <select id="field-serviceorderform-3"
                         name="machine_id"
                         required
                         value={formData.machine_id}
@@ -307,8 +255,8 @@ export const ServiceOrderForm: React.FC = () => {
                     </div>
 
                     <div className="group">
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Operador Responsável</label>
-                      <select
+                      <label htmlFor="field-serviceorderform-4" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Operador Responsável</label>
+                      <select id="field-serviceorderform-4"
                         name="operator_id"
                         required
                         value={formData.operator_id}
@@ -333,9 +281,9 @@ export const ServiceOrderForm: React.FC = () => {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Inicial</label>
+                    <label htmlFor="field-serviceorderform-5" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Inicial</label>
                     <div className="relative">
-                      <input
+                      <input id="field-serviceorderform-5"
                         type="number"
                         name="start_hour"
                         step="0.1"
@@ -349,9 +297,9 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
 
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Final</label>
+                    <label htmlFor="field-serviceorderform-6" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Horímetro Final</label>
                     <div className="relative">
-                      <input
+                      <input id="field-serviceorderform-6"
                         type="number"
                         name="end_hour"
                         step="0.1"
@@ -365,9 +313,9 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
 
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Valor/Hora (BRL)</label>
+                    <label htmlFor="field-serviceorderform-7" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Valor/Hora (BRL)</label>
                     <div className="relative">
-                      <input
+                      <input id="field-serviceorderform-7"
                         type="number"
                         name="hourly_rate"
                         step="0.01"
@@ -396,8 +344,8 @@ export const ServiceOrderForm: React.FC = () => {
               <div className="md:col-span-2 bg-surface-dark/40 backdrop-blur-md p-7 rounded-[32px] border border-white/5 shadow-glass space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Forma de pagamento prevista</label>
-                    <select
+                    <label htmlFor="field-serviceorderform-8" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Forma de pagamento prevista</label>
+                    <select id="field-serviceorderform-8"
                       name="payment_method"
                       required
                       value={formData.payment_method}
@@ -413,8 +361,8 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
 
                   <div className="group">
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Fluxo da Ordem</label>
-                    <select
+                    <label htmlFor="field-serviceorderform-9" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Fluxo da Ordem</label>
+                    <select id="field-serviceorderform-9"
                       name="status"
                       required
                       value={formData.status}
@@ -430,8 +378,8 @@ export const ServiceOrderForm: React.FC = () => {
 
                 <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente, inclusive para Pix ou dinheiro. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
                 <div className="group">
-                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
-                  <textarea
+                  <label htmlFor="field-serviceorderform-10" className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
+                  <textarea id="field-serviceorderform-10"
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
@@ -445,7 +393,7 @@ export const ServiceOrderForm: React.FC = () => {
 
             </fieldset>
             {/* Persistent Control Bar */}
-            <div className="fixed bottom-10 left-4 right-4 z-50 flex flex-col gap-3 max-w-md mx-auto">
+            <div className="tg-form-actions flex flex-col gap-3">
               {isEditing && (
                 <button
                   type="button"

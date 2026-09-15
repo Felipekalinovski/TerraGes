@@ -1,206 +1,250 @@
-import React, { useEffect, useState } from 'react';
-import { Layout } from '../components/Layout';
-import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User, Clock, DollarSign, Download, Upload, Edit2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { serviceOrderService, ServiceOrder } from '../services/serviceOrderService';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  ClipboardList,
+  CalendarDays,
+  Clock3,
+  ArrowUpRight,
+  FileText,
+  RefreshCw,
+} from "lucide-react";
+import { Layout } from "../components/Layout";
+import {
+  serviceOrderService,
+  type ServiceOrder,
+} from "../services/serviceOrderService";
+import { useAuth } from "../contexts/AuthContext";
+
+const statuses = {
+  all: "Todas",
+  pending: "Pendentes",
+  completed: "Concluídas",
+  cancelled: "Canceladas",
+};
+const money = (value: number) =>
+  Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+const dateLabel = (value: string) =>
+  new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR");
+const normalize = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
 export const ServiceOrderList: React.FC = () => {
-    const navigate = useNavigate();
-    const { profile } = useAuth();
-    const [orders, setOrders] = useState<ServiceOrder[]>([]);
-    const [loading, setLoading] = useState(true);
-
-
-    useEffect(() => {
-        if (profile) {
-            loadOrders();
-        }
-    }, [profile]);
-
-    const loadOrders = async () => {
-        try {
-            const data = await serviceOrderService.getAll();
-            
-            // Tenant and record ownership are enforced by RLS.
-            setOrders(data);
-        } catch (error) {
-            console.error('Error loading service orders:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'completed': return 'text-positive bg-positive/20';
-            case 'pending': return 'text-warning bg-warning/20';
-            case 'cancelled': return 'text-red-400 bg-red-400/20';
-            default: return 'text-gray-400 bg-gray-400/20';
-        }
-    };
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'completed': return 'Concluído';
-            case 'pending': return 'Pendente';
-            case 'cancelled': return 'Cancelado';
-            default: return status;
-        }
-    };
-
+  const { profile } = useAuth();
+  const [orders, setOrders] = useState<ServiceOrder[]>([]);
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState("");
+  const [query, setQuery] = useState(""),
+    [status, setStatus] = useState<keyof typeof statuses>("all");
+  async function loadOrders() {
+    setLoading(true);
+    setError("");
+    try {
+      setOrders(await serviceOrderService.getAll());
+    } catch {
+      setError(
+        "Não foi possível carregar as ordens de serviço. Tente novamente.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    setOrders([]);
+    if (profile) void loadOrders();
+  }, [profile?.id, profile?.company_id]);
+  const filtered = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          (status === "all" || o.status === status) &&
+          normalize(
+            `${o.id} ${o.client} ${o.machine?.name || ""} ${o.operator?.name || ""}`,
+          ).includes(normalize(query.trim())),
+      ),
+    [orders, status, query],
+  );
   return (
     <Layout>
-      <Layout.Header 
-        title="Ordens de Serviço" 
-        subTitle="Gestão de faturamento e entregas operacionais"
+      <Layout.Header
+        title="Ordens de serviço"
+        subTitle="Do trabalho em campo à conclusão"
       />
-
       <Layout.Content>
-        <div className="flex flex-col h-full animate-in fade-in duration-700">
-          
-          {/* Advanced KPI Section */}
-          <div className="px-4 py-6 grid grid-cols-2 gap-4">
-            <div className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 shadow-glass flex flex-col items-center group hover:border-primary/20 transition-all">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary mb-3 group-hover:scale-110 transition-transform">
-                  <FileText size={22} />
-                </div>
-                <div className="flex flex-col items-center">
-                  <p className="text-3xl font-black text-white italic tracking-tighter">{orders.length}</p>
-                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-1">Total de Ordens</p>
-                </div>
+        <div className="tg-page">
+          <div className="tg-page-heading">
+            <div>
+              <p className="tg-eyebrow">Operação</p>
+              <h2>Cada serviço, sob controle.</h2>
+              <p className="tg-muted">
+                Encontre ordens, acompanhe a execução e acesse a folha de
+                serviço.
+              </p>
             </div>
-            
-            <div className="bg-surface-dark/40 backdrop-blur-md p-5 rounded-[32px] border border-white/5 shadow-glass flex flex-col items-center group hover:border-positive/20 transition-all">
-                <div className="p-2.5 rounded-2xl bg-positive/10 text-positive mb-3 group-hover:scale-110 transition-transform">
-                  <Activity size={22} />
-                </div>
-                <div className="flex flex-col items-center">
-                  <p className="text-3xl font-black text-white italic tracking-tighter">
-                    {orders.filter(o => o.status === 'completed').length}
-                  </p>
-                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-1">O.S. Concluídas</p>
-                </div>
-            </div>
+            <Link className="tg-button" to="/service-orders/new">
+              <Plus size={18} /> Nova ordem
+            </Link>
           </div>
-
-          {/* Intelligent Search Hub */}
-          <div className="px-4 mb-8 flex gap-3">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={20} />
+          <div className="tg-toolbar">
+            <label className="tg-search">
+              <Search size={19} />
               <input
-                type="text"
-                placeholder="Localizar protocolo ou cliente..."
-                className="w-full h-14 bg-surface-dark/40 backdrop-blur-md border border-white/5 rounded-2xl pl-12 pr-4 text-sm text-white font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-gray-600 transition-all shadow-glass-sm"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar cliente, máquina ou nº da OS"
+                aria-label="Buscar ordens de serviço"
               />
-            </div>
-            <button className="size-14 bg-surface-dark/40 backdrop-blur-md border border-white/5 rounded-2xl flex items-center justify-center text-gray-400 hover:text-primary transition-all active:scale-95 shadow-glass-sm">
-              <Filter size={22} />
-            </button>
+            </label>
             <button
-              onClick={() => navigate('/service-orders/new')}
-              className="size-14 bg-primary rounded-2xl flex items-center justify-center text-black shadow-neon transition-all hover:brightness-110 active:scale-90"
+              className="tg-button tg-button-secondary"
+              onClick={loadOrders}
+              disabled={loading}
             >
-              <Plus size={26} strokeWidth={3} />
+              <RefreshCw size={17} className={loading ? "tg-spin" : ""} />{" "}
+              Atualizar
             </button>
           </div>
-
-          {/* Dynamic Order Table/List */}
-          <div className="px-4 pb-32 space-y-4">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest animate-pulse">Sincronizando faturas...</p>
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="py-20 text-center flex flex-col items-center justify-center bg-surface-dark/20 rounded-[32px] border border-white/5 border-dashed">
-                 <FileText size={48} className="text-gray-700 mb-4" />
-                 <p className="text-sm font-bold text-gray-500 italic uppercase tracking-widest">Nenhuma ordem detectada</p>
-              </div>
-            ) : (
-              orders.map((order) => (
-                <div
-                  key={order.id}
-                  onClick={() => navigate(`/service-orders/${order.id}`)}
-                  className="bg-surface-dark/40 backdrop-blur-md p-6 rounded-[32px] border border-white/5 hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer group shadow-glass"
-                >
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
-                       <div className="size-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary border border-white/5 font-black italic group-hover:bg-primary/10 transition-colors">
-                          OS
-                       </div>
-                       <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Protocolo</span>
-                          <span className="font-bold text-white group-hover:text-primary transition-colors tracking-tighter">#{order.id.slice(0, 8).toUpperCase()}</span>
-                       </div>
-                    </div>
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] italic border shadow-sm ${
-                      order.status === 'completed' ? 'bg-positive/10 text-positive border-positive/20' : 
-                      order.status === 'pending' ? 'bg-warning/10 text-warning border-warning/20' : 
-                      'bg-gray-500/10 text-gray-400 border-white/10'
-                    }`}>
-                      {getStatusLabel(order.status)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
-                       <User size={16} className="text-primary" />
-                       <span className="text-xs font-bold text-white truncate">{order.client}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <Calendar size={14} className="text-gray-500" />
-                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{new Date(order.date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-3 justify-end">
-                        <Clock size={14} className="text-gray-500" />
-                        <span className="text-[11px] font-black text-white italic tracking-tighter">{order.total_hours.toFixed(1)}H ACUMULADAS</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                       <div className="flex items-center gap-2">
-                          <div className="size-2 rounded-full bg-primary animate-pulse"></div>
-                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{order.operator?.name || 'OPERADOR N/A'}</span>
-                       </div>
-                       <div className="flex items-center gap-1 font-black text-lg text-primary italic tracking-tight">
-                          <span className="text-xs mr-1 not-italic opacity-50 font-medium">BRL</span>
-                          {order.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                       </div>
-                    </div>
-                  </div>
-
-                  {/* Actions Footer - Premium Hidden Actions */}
-                  <div className="mt-6 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/service-orders/${order.id}/receipt`);
-                      }}
-                      className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-3 border border-white/5 transition-all"
-                    >
-                      <Download size={16} className="text-primary" />
-                      Visualizar Folha OS
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/service-orders/${order.id}`);
-                      }}
-                      className="size-12 bg-white/5 hover:bg-white/10 text-white rounded-2xl flex items-center justify-center border border-white/5 transition-all"
-                    >
-                      <Edit2 size={16} className="text-primary" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="tg-filters" aria-label="Filtrar por situação">
+            {Object.entries(statuses).map(([key, label]) => (
+              <button
+                key={key}
+                className="tg-filter"
+                aria-pressed={status === key}
+                onClick={() => setStatus(key as keyof typeof statuses)}
+              >
+                {label}
+                <span>
+                  {loading || error
+                    ? "—"
+                    : key === "all"
+                      ? orders.length
+                      : orders.filter((o) => o.status === key).length}
+                </span>
+              </button>
+            ))}
           </div>
+          {error ? (
+            <div className="tg-alert" role="alert">
+              {error}
+            </div>
+          ) : loading ? (
+            <div className="tg-loading" role="status">
+              <RefreshCw size={20} className="tg-spin" />
+              Carregando serviços…
+            </div>
+          ) : (
+            <>
+              <p className="tg-muted" role="status">
+                {filtered.length}{" "}
+                {filtered.length === 1
+                  ? "ordem encontrada"
+                  : "ordens encontradas"}
+              </p>
+              {filtered.length === 0 ? (
+                <section className="tg-panel tg-empty">
+                  <ClipboardList size={34} />
+                  <h3>
+                    {orders.length
+                      ? "Nenhum serviço com esses filtros"
+                      : "Sua próxima operação começa aqui"}
+                  </h3>
+                  <p>
+                    {orders.length
+                      ? "Tente outro cliente, máquina ou situação."
+                      : "Crie uma ordem para organizar cliente, máquina e horas trabalhadas."}
+                  </p>
+                  {orders.length ? (
+                    <button
+                      className="tg-button tg-button-secondary"
+                      onClick={() => {
+                        setQuery("");
+                        setStatus("all");
+                      }}
+                    >
+                      Limpar filtros
+                    </button>
+                  ) : (
+                    <Link to="/service-orders/new" className="tg-button">
+                      Criar primeira ordem
+                    </Link>
+                  )}
+                </section>
+              ) : (
+                <div className="tg-order-grid">
+                  {filtered.map((order) => (
+                    <article key={order.id} className="tg-panel tg-order">
+                      <div className="tg-order-top">
+                        <span className="tg-order-id">
+                          OS #{order.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className={`tg-badge tg-badge-${order.status}`}>
+                          {
+                            {
+                              pending: "Pendente",
+                              completed: "Concluída",
+                              cancelled: "Cancelada",
+                            }[order.status]
+                          }
+                        </span>
+                      </div>
+                      <h3>
+                        <Link to={`/service-orders/${order.id}`}>
+                          {order.client || "Cliente não informado"}
+                        </Link>
+                      </h3>
+                      <p className="tg-muted">
+                        {order.machine?.name || "Máquina não informada"} ·{" "}
+                        {order.operator?.name || "Operador não informado"}
+                      </p>
+                      <div className="tg-order-meta">
+                        <span>
+                          <CalendarDays size={15} />
+                          {dateLabel(order.date)}
+                        </span>
+                        <span>
+                          <Clock3 size={15} />
+                          {Number(order.total_hours || 0).toLocaleString(
+                            "pt-BR",
+                            { maximumFractionDigits: 1 },
+                          )}{" "}
+                          horas
+                        </span>
+                      </div>
+                      <div className="tg-order-footer">
+                        <strong>{money(order.total_value)}</strong>
+                        <div className="tg-order-buttons">
+                          <Link
+                            className="tg-icon-button"
+                            to={`/service-orders/${order.id}/receipt`}
+                            aria-label={`Folha da OS ${order.id.slice(0, 8)}`}
+                            title="Folha de serviço"
+                          >
+                            <FileText size={19} />
+                          </Link>
+                          <Link
+                            className="tg-button tg-button-secondary"
+                            to={`/service-orders/${order.id}`}
+                          >
+                            Abrir OS <ArrowUpRight size={16} />
+                          </Link>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </Layout.Content>
     </Layout>
   );
 };
-

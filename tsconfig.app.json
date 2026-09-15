@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "components",
+    "contexts",
+    "hooks",
+    "pages",
+    "services",
+    "types",
+    "tests/ui"
+  ],
+  "exclude": [
+    "supabase",
+    "temp_backup",
+    "node_modules",
+    "dist"
+  ]
+}
