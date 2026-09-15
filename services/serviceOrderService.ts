@@ -60,7 +60,7 @@ export const serviceOrderService = {
             throw error;
         }
 
-        return data ? {...data, receipt_url:await resolvePrivateFile(data.receipt_url)} : null;
+        return data; // Keep the storage key; only the view resolves its temporary URL.
     },
 
     // Criar nova ordem

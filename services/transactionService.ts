@@ -9,6 +9,7 @@ export interface Transaction {
     date: string;
     status: 'paid' | 'pending';
     created_at: string;
+    service_order_id?: string;
 }
 
 export interface TransactionFormData {
@@ -33,7 +34,10 @@ export const transactionService = {
             throw error;
         }
 
-        return data || [];
+        const { data: links, error: linkError } = await supabase.rpc('get_service_order_settlements');
+        if (linkError) throw linkError;
+        const sources = new Map<string, string>((links || []).map((link: { transaction_id: string; service_order_id: string }) => [link.transaction_id, link.service_order_id]));
+        return (data || []).map(transaction => ({ ...transaction, service_order_id: sources.get(transaction.id) }));
     },
 
     // Buscar transações por tipo
@@ -123,7 +127,8 @@ export const transactionService = {
     }> {
         const { data, error } = await supabase
             .from('transactions')
-            .select('type, amount, category');
+            .select('type, amount, category')
+            .eq('status', 'paid');
 
         if (error) {
             console.error('Error fetching transaction stats:', error);

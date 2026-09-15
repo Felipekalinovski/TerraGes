@@ -4,7 +4,6 @@ import { Search, Plus, Filter, FileText, ChevronRight, Activity, Calendar, User,
 import { useNavigate } from 'react-router-dom';
 import { serviceOrderService, ServiceOrder } from '../services/serviceOrderService';
 import { useAuth } from '../contexts/AuthContext';
-import { isAdminUser } from '../services/roleService';
 
 export const ServiceOrderList: React.FC = () => {
     const navigate = useNavigate();
@@ -12,7 +11,6 @@ export const ServiceOrderList: React.FC = () => {
     const [orders, setOrders] = useState<ServiceOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const isAdmin = isAdminUser(profile?.role);
 
     useEffect(() => {
         if (profile) {
@@ -22,15 +20,9 @@ export const ServiceOrderList: React.FC = () => {
 
     const loadOrders = async () => {
         try {
-            let data = await serviceOrderService.getAll();
+            const data = await serviceOrderService.getAll();
             
-            // RBAC Filter: If not admin, show only own orders
-            if (!isAdmin && profile?.id) {
-                // In a real app, this should be filtered on the server (RLS)
-                // For now, we perform frontend filtering as a first layer
-                data = data.filter(order => order.operator_id === profile.id);
-            }
-            
+            // Tenant and record ownership are enforced by RLS.
             setOrders(data);
         } catch (error) {
             console.error('Error loading service orders:', error);
@@ -87,7 +79,7 @@ export const ServiceOrderList: React.FC = () => {
                   <p className="text-3xl font-black text-white italic tracking-tighter">
                     {orders.filter(o => o.status === 'completed').length}
                   </p>
-                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-1">O.S. Liquidadas</p>
+                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em] mt-1">O.S. Concluídas</p>
                 </div>
             </div>
           </div>
@@ -190,7 +182,7 @@ export const ServiceOrderList: React.FC = () => {
                       className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-3 border border-white/5 transition-all"
                     >
                       <Download size={16} className="text-primary" />
-                      Digitalizar Recibo
+                      Visualizar Folha OS
                     </button>
                     <button
                       onClick={(e) => {
