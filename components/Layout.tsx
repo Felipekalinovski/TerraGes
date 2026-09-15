@@ -35,7 +35,7 @@ interface LayoutContextType {
   setIsSidebarOpen: (open: boolean) => void;
   userProfile: UserProfile | null;
   isActive: (path: string) => boolean;
-  navigate: (path: string) => void;
+  navigate: (path: string | number) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -73,8 +73,8 @@ export const Layout: React.FC<LayoutProps> & {
     setIsSidebarOpen,
     userProfile,
     isActive,
-    navigate: (path: string) => {
-      navigate(path);
+    navigate: (path: string | number) => {
+      if (typeof path === 'number') navigate(path); else navigate(path);
       setIsSidebarOpen(false);
     }
   };

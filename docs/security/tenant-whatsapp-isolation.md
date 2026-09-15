@@ -1,5 +1,7 @@
 # Isolamento e entrada do WhatsApp — 14/09/2026
 
+> Registro da etapa 1. A fila, a retomada e a confirmação evoluíram na [etapa 2](whatsapp-reliable-workflow.md). As restrições de segurança e as pendências de credenciais continuam aplicáveis.
+
 ## Escopo implementado
 
 - Autorização baseada em `private.tenant_memberships`, inacessível aos clientes. Metadados editáveis, telefone informado e campos de perfil não concedem privilégios.
