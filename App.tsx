@@ -34,6 +34,7 @@ import { ServiceOrderReceipt } from './pages/ServiceOrderReceipt';
 // ── Novos módulos ──────────────────────────────────────────────────────────────
 import { Orcamento } from './pages/Orcamento';
 import { OrcamentoForm } from './pages/OrcamentoForm';
+import { OrcamentoCalculator } from './pages/OrcamentoCalculator';
 import { HoraMaquinaPage } from './pages/HoraMaquina';
 import { RelatorioCliente } from './pages/RelatorioCliente';
 import { Onboarding } from './pages/Onboarding';
@@ -144,6 +145,7 @@ const App: React.FC = () => {
 
           {/* Orçamentos */}
           <Route path="/orcamentos"       element={<ProtectedRoute requireAccess><Orcamento /></ProtectedRoute>} />
+          <Route path="/orcamentos/calculadora" element={<ProtectedRoute requireAccess><OrcamentoCalculator /></ProtectedRoute>} />
           <Route path="/orcamentos/novo"  element={<ProtectedRoute><OrcamentoForm /></ProtectedRoute>} />
           <Route path="/orcamentos/:id"   element={<ProtectedRoute><OrcamentoForm /></ProtectedRoute>} />
 

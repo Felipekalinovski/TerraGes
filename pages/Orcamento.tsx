@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import {
   Plus, Search, FileText, ChevronRight, TrendingUp,
-  CheckCircle2, Clock, XCircle, Loader2, Send,
+  CheckCircle2, Clock, XCircle, Loader2, Send, Calculator,
 } from 'lucide-react';
 import {
   orcamentoService, Orcamento as OrcamentoType, OrcamentoStatus,
@@ -69,12 +69,21 @@ export const Orcamento: React.FC = () => {
         title="Orçamentos"
         subTitle="Propostas comerciais"
         actions={
-          <button
-            onClick={() => navigate('/orcamentos/novo')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-black text-xs font-black uppercase tracking-wider hover:bg-primary/90 active:scale-95 transition-all"
-          >
-            <Plus size={14} /> Novo
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/orcamentos/calculadora')}
+              aria-label="Abrir calculadora de orçamento"
+              className="flex size-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary transition-all hover:bg-primary/20 active:scale-95"
+            >
+              <Calculator size={17} />
+            </button>
+            <button
+              onClick={() => navigate('/orcamentos/novo')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-black text-xs font-black uppercase tracking-wider hover:bg-primary/90 active:scale-95 transition-all"
+            >
+              <Plus size={14} /> Novo
+            </button>
+          </div>
         }
       />
 
@@ -96,6 +105,20 @@ export const Orcamento: React.FC = () => {
               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-0.5">Pendentes</p>
             </div>
           </div>
+
+          <button
+            onClick={() => navigate('/orcamentos/calculadora')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/15 to-transparent p-4 text-left transition-all hover:border-primary/35 active:scale-[0.99]"
+          >
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-black">
+              <Calculator size={21} strokeWidth={2.5} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-white">Calcular volume, cargas e horas</span>
+              <span className="mt-0.5 block text-xs text-gray-500">Monte um preço rápido e transforme em orçamento.</span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-primary" />
+          </button>
 
           {/* Valor aprovado banner */}
           {stats.valorAprovado > 0 && (

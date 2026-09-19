@@ -4,10 +4,16 @@ import { Layout } from '../components/Layout';
 import {
   Save, Trash2, Plus, Loader2, CheckCircle2,
   User, MapPin, Wrench, Clock, DollarSign, FileText,
-  ChevronDown, Send, XCircle,
+  ChevronDown, Send, XCircle, Calculator, Layers3, Truck,
 } from 'lucide-react';
 import { orcamentoService, OrcamentoFormData, OrcamentoMachine, calcTotalValue, STATUS_CONFIG, OrcamentoStatus, formatOrcamentoNumber } from '../services/orcamentoService';
 import { machineService, Machine } from '../services/machineService';
+import { EARTHWORK_QUOTE_DRAFT_KEY } from './OrcamentoCalculator';
+import {
+  buildEarthworkQuoteDescription,
+  calculateEarthworkEstimate,
+  EarthworkEstimate,
+} from '../supabase/functions/_shared/earthwork-calculator';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +84,7 @@ export const OrcamentoForm: React.FC = () => {
     total_value:     0,
     discount:        0,
     notes:           '',
+    calculation_details: null,
     status:          'rascunho',
     valid_until:     '',
   });
@@ -108,20 +115,64 @@ export const OrcamentoForm: React.FC = () => {
         total_value:     orc.total_value,
         discount:        orc.discount,
         notes:           orc.notes           ?? '',
+        calculation_details: orc.calculation_details ?? null,
         status:          orc.status,
         valid_until:     orc.valid_until     ?? '',
       });
     }).finally(() => setLoading(false));
   }, [id, isEdit, navigate]);
 
-  // Recalculate total when rates change
+  // Recalculate total from the deterministic estimate or from the simple hourly model.
   useEffect(() => {
-    const total = calcTotalValue(form.hourly_rate, form.estimated_hours, form.discount);
+    const total = form.calculation_details?.result.total
+      ?? calcTotalValue(form.hourly_rate, form.estimated_hours, form.discount);
     setForm(prev => ({ ...prev, total_value: total }));
-  }, [form.hourly_rate, form.estimated_hours, form.discount]);
+  }, [form.hourly_rate, form.estimated_hours, form.discount, form.calculation_details]);
+
+  // Receive a validated result from the quick calculator once.
+  useEffect(() => {
+    if (isEdit) return;
+    const raw = sessionStorage.getItem(EARTHWORK_QUOTE_DRAFT_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(EARTHWORK_QUOTE_DRAFT_KEY);
+    try {
+      const saved = JSON.parse(raw) as EarthworkEstimate;
+      const estimate = calculateEarthworkEstimate(saved.input);
+      const description = buildEarthworkQuoteDescription(estimate);
+      const details = estimate.result;
+      const notes = [
+        `Memória de cálculo TerraGes: ${details.bankVolumeM3} m³ no corte; ${details.looseVolumeM3} m³ soltos; ${details.truckloads} carga(s); ${details.estimatedHours} h estimadas.`,
+        `Composição: máquina ${formatCurrency(details.machineCost)}, transporte ${formatCurrency(details.haulCost)}, material ${formatCurrency(details.materialCost)}, mobilização ${formatCurrency(details.mobilizationCost)} e margem ${formatCurrency(details.contingencyValue)}.`,
+        'Estimativa preliminar sujeita à vistoria e confirmação das condições reais da obra.',
+      ].join('\n');
+      setForm(current => ({
+        ...current,
+        service_type: current.service_type || 'Escavação',
+        description: current.description || description,
+        machines: [{
+          machine_id: '__manual__',
+          machine_name: estimate.input.equipmentName,
+          hourly_rate: estimate.input.hourlyRate,
+          estimated_hours: details.estimatedHours,
+        }],
+        hourly_rate: estimate.input.hourlyRate,
+        estimated_hours: details.estimatedHours,
+        discount: estimate.input.discount,
+        total_value: details.total,
+        notes: current.notes || notes,
+        calculation_details: estimate,
+      }));
+    } catch {
+      // Invalid browser state is ignored instead of being persisted.
+    }
+  }, [isEdit]);
 
   const set = useCallback(<K extends keyof OrcamentoFormData>(key: K, value: OrcamentoFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const setPricing = useCallback((key: 'hourly_rate' | 'estimated_hours' | 'discount', value: number) => {
+    setForm(prev => ({ ...prev, [key]: value, calculation_details: null }));
   }, []);
 
   // Machine line items
@@ -132,7 +183,7 @@ export const OrcamentoForm: React.FC = () => {
       hourly_rate: form.hourly_rate || 0,
       estimated_hours: form.estimated_hours || 0,
     };
-    set('machines', [...form.machines, newItem]);
+    setForm(prev => ({ ...prev, machines: [...prev.machines, newItem], calculation_details: null }));
   };
 
   const updateMachineItem = (idx: number, key: keyof OrcamentoMachine, val: any) => {
@@ -146,11 +197,15 @@ export const OrcamentoForm: React.FC = () => {
       }
       return newM;
     });
-    set('machines', updated);
+    setForm(prev => ({ ...prev, machines: updated, calculation_details: null }));
   };
 
   const removeMachineItem = (idx: number) => {
-    set('machines', form.machines.filter((_, i) => i !== idx));
+    setForm(prev => ({
+      ...prev,
+      machines: prev.machines.filter((_, i) => i !== idx),
+      calculation_details: null,
+    }));
   };
 
   const handleSave = async (status?: OrcamentoStatus) => {
@@ -208,6 +263,49 @@ export const OrcamentoForm: React.FC = () => {
 
       <Layout.Content>
         <div className="px-4 pb-36 pt-4 space-y-4 animate-in fade-in duration-500">
+
+          {/* ── Calculadora rápida ── */}
+          {form.calculation_details ? (
+            <div className="rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-black">
+                  <Calculator size={20} strokeWidth={2.5} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white">Estimativa aplicada ao orçamento</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-400">As premissas e a composição do preço ficam registradas junto da proposta.</p>
+                </div>
+                <button onClick={() => navigate('/orcamentos/calculadora')} className="rounded-xl border border-primary/25 px-3 py-2 text-xs font-black text-primary">
+                  Recalcular
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-xl bg-black/25 p-3">
+                  <Layers3 size={15} className="mb-1.5 text-primary" />
+                  <p className="text-base font-black text-white">{form.calculation_details.result.bankVolumeM3} m³</p>
+                  <p className="text-[10px] font-bold text-gray-500">NO CORTE</p>
+                </div>
+                <div className="rounded-xl bg-black/25 p-3">
+                  <Truck size={15} className="mb-1.5 text-primary" />
+                  <p className="text-base font-black text-white">{form.calculation_details.result.truckloads}</p>
+                  <p className="text-[10px] font-bold text-gray-500">CARGAS</p>
+                </div>
+                <div className="rounded-xl bg-black/25 p-3">
+                  <Clock size={15} className="mb-1.5 text-primary" />
+                  <p className="text-base font-black text-white">{form.calculation_details.result.estimatedHours} h</p>
+                  <p className="text-[10px] font-bold text-gray-500">ESTIMADAS</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => navigate('/orcamentos/calculadora')} className="flex w-full items-center gap-3 rounded-[24px] border border-dashed border-primary/30 bg-primary/5 p-4 text-left transition-all hover:bg-primary/10">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><Calculator size={19} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black text-white">Calcular volume, cargas e horas</span>
+                <span className="mt-0.5 block text-xs text-gray-500">Use as medidas da obra para sugerir o preço.</span>
+              </span>
+            </button>
+          )}
 
           {/* ── Cliente ── */}
           <Section title="Cliente" icon={<User size={14} />}>
@@ -364,7 +462,7 @@ export const OrcamentoForm: React.FC = () => {
                 <input
                   type="number"
                   value={form.hourly_rate || ''}
-                  onChange={e => set('hourly_rate', Number(e.target.value))}
+                  onChange={e => setPricing('hourly_rate', Number(e.target.value))}
                   placeholder="0,00"
                   className={inputCls}
                   min={0}
@@ -374,7 +472,7 @@ export const OrcamentoForm: React.FC = () => {
                 <input
                   type="number"
                   value={form.estimated_hours || ''}
-                  onChange={e => set('estimated_hours', Number(e.target.value))}
+                  onChange={e => setPricing('estimated_hours', Number(e.target.value))}
                   placeholder="0"
                   className={inputCls}
                   min={0}
@@ -387,7 +485,7 @@ export const OrcamentoForm: React.FC = () => {
                 <input
                   type="number"
                   value={form.discount || ''}
-                  onChange={e => set('discount', Number(e.target.value))}
+                  onChange={e => setPricing('discount', Number(e.target.value))}
                   placeholder="0,00"
                   className={inputCls}
                   min={0}
@@ -410,8 +508,12 @@ export const OrcamentoForm: React.FC = () => {
                 <p className="text-2xl font-black text-white mt-0.5">{formatCurrency(form.total_value)}</p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] text-gray-500 font-bold">{form.estimated_hours}h × {formatCurrency(form.hourly_rate)}</p>
-                {form.discount > 0 && (
+                <p className="text-[9px] text-gray-500 font-bold">
+                  {form.calculation_details
+                    ? 'Inclui a composição da calculadora'
+                    : `${form.estimated_hours}h × ${formatCurrency(form.hourly_rate)}`}
+                </p>
+                {!form.calculation_details && form.discount > 0 && (
                   <p className="text-[9px] text-negative font-bold">- {formatCurrency(form.discount)} desconto</p>
                 )}
               </div>
