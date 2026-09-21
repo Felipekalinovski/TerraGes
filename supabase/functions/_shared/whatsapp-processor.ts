@@ -1,7 +1,5 @@
 import {IntakeError,MAX_MEDIA_BYTES,readLimited,validateMedia} from './whatsapp-validation.ts';
-import {handleWhatsAppAgentTurn} from './whatsapp-agent-orchestrator.ts';
-import {handleTerragesActionTurn} from './whatsapp-action-engine.ts';
-import {handleTerragesQueryTurn} from './whatsapp-query-engine.ts';
+import {routeWhatsAppSkillTurn} from './whatsapp-skill-router.ts';
 export type Dependencies = {db:any;env:(key:string)=>string|undefined;fetcher?:typeof fetch};
 function encodeBase64(bytes:Uint8Array) {
   let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(binary);
@@ -74,9 +72,7 @@ export async function processWhatsAppJob({db,env,fetcher=fetch}:Dependencies,eve
         }
     }
     if(!extracted.trim())throw new IntakeError('empty_analysis',502);
-    const query=await handleTerragesQueryTurn({db,env,fetcher,event,text:extracted.trim()});
-    const action=query.handled?query:await handleTerragesActionTurn({db,env,fetcher,event,text:extracted.trim()});
-    const agent=action.handled?action:await handleWhatsAppAgentTurn({db,env,fetcher,event,input,text:extracted.trim()});
+    const agent=await routeWhatsAppSkillTurn({db,env,fetcher,event,input,text:extracted.trim()});
     const done=await db.rpc('finish_whatsapp_job',{p_event_id:event.id,p_token:token,p_text:extracted,p_error:null,p_retryable:false});
     if(done.error || !done.data)throw new IntakeError('lease_lost',503);
     if(agent.handled){

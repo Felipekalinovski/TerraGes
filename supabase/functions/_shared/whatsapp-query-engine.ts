@@ -9,11 +9,34 @@ const money=(value:unknown)=>new Intl.NumberFormat('pt-BR',{style:'currency',cur
 export function isTerragesQueryCandidate(text:string){
  const value=normalize(text);
  return /\b(qual|quais|quanto|quantas|mostre|mostrar|listar|liste|ver|veja|consulta|consultar|status|situacao|situacao|saldo|resumo|aberta|abertas|pendente|pendentes)\b/.test(value)
-  &&/\b(maquina|maquinas|equipamento|equipamentos|horimetro|manutencao|manutencoes|ordem de servico|\bos\b|rdos?|despesa|despesas|gasto|gastos|financeir\w*|receita|saldo)\b/.test(value);
+  &&/\b(maquina|maquinas|equipamento|equipamentos|horimetro|manutencao|manutencoes|ordem de servico|\bos\b|rdos?|despesa|despesas|gasto|gastos|financeir\w*|receita|saldo|status)\b/.test(value);
 }
 
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 function defaultStart(){const d=new Date(`${today()}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-30);return d.toISOString().slice(0,10);}
+function isoDate(day:string,month:string,year:string){const value=`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;return validDate(value)?value:null;}
+function datesInText(text:string){
+ const iso=[...text.matchAll(/\b(20\d{2})-(\d{2})-(\d{2})\b/g)].map(match=>validDate(match[0])?match[0]:null).filter(Boolean) as string[];
+ const brazilian=[...text.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/g)].map(match=>isoDate(match[1],match[2],match[3])).filter(Boolean) as string[];
+ return [...iso,...brazilian].slice(0,2);
+}
+function monthStart(){return `${today().slice(0,8)}01`;}
+function inferMachineQuery(text:string){
+ const match=text.match(/\b(?:status|situa[cç][aã]o|hor[ií]metro|horas?)\s+(?:da|do|de)\s+([^?!,.;]{2,100})/i);
+ return match?.[1].trim()??null;
+}
+export function inferDeterministicQuery(text:string){
+ const value=normalize(text),dates=datesInText(text);let intent:QueryType|null=null;
+ if(/\b(resumo|saldo|receitas?|financeir\w*)\b/.test(value))intent='financial_summary';
+ else if(/\b(despesa|despesas|gasto|gastos)\b/.test(value))intent='expense_summary';
+ else if(/\b(rdos?|relatorio diario)\b/.test(value))intent='recent_rdos';
+ else if(/\b(ordem de servico|\bos\b)\b/.test(value))intent='open_service_orders';
+ else if(/\b(manutencao|manutencoes|revisao|revisoes)\b/.test(value))intent='maintenance_alerts';
+ else if(/\b(maquina|maquinas|equipamento|equipamentos|horimetro|horas?|status|situacao)\b/.test(value))intent='machine_status';
+ if(!intent)return null;
+ const start=value.includes('este mes')?monthStart():dates[0]??defaultStart(),end=value.includes('este mes')?today():dates[1]??today();
+ return {intent,machine_query:intent==='machine_status'?inferMachineQuery(text):null,start_date:start,end_date:end,limit:10};
+}
 async function extractQuery(text:string,env:(key:string)=>string|undefined,fetcher:typeof fetch){
  const key=env('OPENROUTER_API_KEY'),model=env('AI_MODEL_TEXT');if(!key||!model)throw new IntakeError('query_model_not_configured',503);
  const response=await fetcher('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({model,temperature:0,max_tokens:500,response_format:{type:'json_object'},messages:[
@@ -45,7 +68,7 @@ async function deliver({db,env,fetcher,event,text,inputText,query}:{db:any;env:(
 
 export async function handleTerragesQueryTurn({db,env,fetcher=fetch,event,text}:{db:any;env:(key:string)=>string|undefined;fetcher?:typeof fetch;event:any;text:string}){
  if(!isTerragesQueryCandidate(text))return {handled:false as const};
- const query=await extractQuery(text,env,fetcher);if(query.intent==='other')return {handled:false as const};
+ const query=inferDeterministicQuery(text)??await extractQuery(text,env,fetcher);if(query.intent==='other')return {handled:false as const};
  const result=await db.rpc('run_whatsapp_operational_query',{p_event_id:event.id,p_query_type:query.intent,p_machine_query:query.machine_query,p_start_date:query.start_date,p_end_date:query.end_date,p_limit:query.limit});
  if(result.error){if(result.error.message==='manager_required'){const delivery=await deliver({db,env,fetcher,event,text:'Essa consulta é restrita a administrador ou gestor da empresa.',inputText:text,query});return {handled:true as const,delivery};}throw new IntakeError('operational_query_failed',503);}
  const delivery=await deliver({db,env,fetcher,event,text:formatQueryResponse(result.data),inputText:text,query});return {handled:true as const,delivery};
