@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import type { EarthworkEstimate } from '../supabase/functions/_shared/earthwork-calculator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ export interface Orcamento {
   total_value: number;
   discount: number;
   notes?: string;
+  calculation_details?: EarthworkEstimate | null;
 
   status: OrcamentoStatus;
   valid_until?: string;
