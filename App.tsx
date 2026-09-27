@@ -40,6 +40,7 @@ import { Onboarding } from './pages/Onboarding';
 import { WhatsAppInbox } from './pages/WhatsAppInbox';
 import { OperatorFieldEntry } from './pages/OperatorFieldEntry';
 import { FieldEntries } from './pages/FieldEntries';
+import { WhatsAppPairing } from './pages/WhatsAppPairing';
 
 import { Loader2 } from 'lucide-react';
 import { isAdminUser, canViewData } from './services/roleService';
@@ -74,7 +75,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   }
 
   // Operador é write-only: fora do perfil, sua única tela de negócio é o envio de campo.
-  if (!canViewData(profile?.role) && !['/field-entry', '/settings/profile'].includes(location.pathname)) {
+  if (!canViewData(profile?.role) && !['/field-entry', '/settings/profile', '/settings/whatsapp'].includes(location.pathname)) {
     return <Navigate to="/field-entry" replace />;
   }
 
@@ -170,6 +171,7 @@ const App: React.FC = () => {
           {/* ── Configurações ── */}
           <Route path="/settings"               element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
           <Route path="/settings/profile"       element={<ProtectedRoute><SettingsProfile /></ProtectedRoute>} />
+          <Route path="/settings/whatsapp"      element={<ProtectedRoute><WhatsAppPairing /></ProtectedRoute>} />
           <Route path="/settings/company"       element={<ProtectedRoute requiredRole="admin"><SettingsCompany /></ProtectedRoute>} />
           <Route path="/settings/notifications" element={<ProtectedRoute><SettingsNotifications /></ProtectedRoute>} />
           <Route path="/settings/security"      element={<ProtectedRoute><SettingsSecurity /></ProtectedRoute>} />
