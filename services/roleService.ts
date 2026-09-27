@@ -107,6 +107,7 @@ export function getRoleLabel(role: string | undefined): string {
 export function getAllowedRoutes(role: string | undefined): string[] {
   const adminRoutes = [
     '/dashboard',
+    '/field-entries',
     '/chat',
     '/schedule',
     '/fleet',
@@ -125,10 +126,7 @@ export function getAllowedRoutes(role: string | undefined): string[] {
   ];
 
   const operatorRoutes = [
-    '/dashboard',
-    '/hora-maquina',
-    '/service-orders/new',
-    '/whatsapp-inbox',
+    '/field-entry',
     '/settings/profile',
   ];
 
