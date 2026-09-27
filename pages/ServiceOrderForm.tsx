@@ -144,7 +144,7 @@ export const ServiceOrderForm: React.FC = () => {
             if (!canComplete) { alert('Somente um gestor pode concluir a OS.'); return; }
             const validation = validateServiceOrderCompletion(formData);
             if (validation) { alert(validation); return; }
-            const documentLabel = formData.billing_document_type === 'nfse' ? 'NFS-e (ficará aguardando aprovação fiscal)' : formData.billing_document_type === 'receipt' ? 'OS/recibo sem emissão de NFS-e' : 'faturamento adiado';
+            const documentLabel = formData.billing_document_type === 'accountant' ? 'dados organizados para enviar ao contador/sistema fiscal' : formData.billing_document_type === 'receipt' ? 'OS/recibo do serviço' : 'faturamento adiado';
             if (!window.confirm(`Concluir esta OS no valor de R$ ${calculateTotal()}? Documento: ${documentLabel}. A receita ficará pendente no Financeiro até a confirmação do recebimento. Os dados de faturamento não poderão ser alterados após concluir.`)) return;
         }
         setLoading(true);
@@ -424,11 +424,11 @@ export const ServiceOrderForm: React.FC = () => {
                       onChange={handleChange}
                       className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
                     >
-                      <option value="receipt" className="bg-brand-dark">OS / recibo — sem emitir NFS-e agora</option>
-                      <option value="nfse" className="bg-brand-dark">Emitir NFS-e — após aprovação</option>
+                      <option value="receipt" className="bg-brand-dark">OS / recibo do serviço</option>
+                      <option value="accountant" className="bg-brand-dark">Preparar dados para contador / sistema fiscal</option>
                       <option value="deferred" className="bg-brand-dark">Faturar depois</option>
                     </select>
-                    <p className="mt-2 text-xs text-gray-500">A escolha define o documento deste serviço. OS/recibo não é documento fiscal quando houver obrigação legal de NFS-e.</p>
+                    <p className="mt-2 text-xs text-gray-500">A escolha define o destino do serviço após a conclusão. O TerraGes não emite NFS-e: quando necessário, ele organiza os dados para o contador ou sistema fiscal externo.</p>
                   </div>
 
                   <div className="group">
@@ -447,7 +447,7 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente. Se escolher NFS-e, a emissão ficará aguardando aprovação fiscal; OS/recibo não dispara nota. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
+                <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente. Se escolher contador/sistema fiscal, o Financeiro solicitará os dados cadastrais do cliente e montará o pacote de faturamento. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
                 <div className="group">
                   <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
                   <textarea

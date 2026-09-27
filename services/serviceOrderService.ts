@@ -9,6 +9,7 @@ export interface ServiceOrder {
     id: string;
     date: string;
     client: string;
+    client_id?: string | null;
     machine_id: string;
     operator_id: string;
     start_hour: number;
@@ -17,8 +18,8 @@ export interface ServiceOrder {
     hourly_rate: number;
     total_value: number;
     payment_method: 'Pix' | 'Cartão' | 'Boleto' | 'Faturado' | 'Dinheiro' | 'Cheque';
-    billing_document_type: 'nfse' | 'receipt' | 'deferred';
-    billing_document_status?: 'not_issued' | 'awaiting_approval' | 'ready' | 'issued' | 'deferred' | 'cancelled' | 'error';
+    billing_document_type: 'accountant' | 'receipt' | 'deferred';
+    billing_document_status?: 'not_issued' | 'not_prepared' | 'awaiting_client_data' | 'ready' | 'sent_to_accountant' | 'external_invoice_recorded' | 'deferred' | 'consolidated' | 'cancelled' | 'error';
     status: 'pending' | 'completed' | 'cancelled';
     location?: string;
     description?: string;
