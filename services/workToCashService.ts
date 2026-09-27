@@ -142,6 +142,14 @@ export const workToCashService = {
     return data as string;
   },
 
+  async resumeDeferred(documentId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('resume_deferred_billing_document', {
+      p_document_id: documentId,
+    });
+    if (error) throw error;
+    return data as string;
+  },
+
   async createCharge(documentId: string, dueDate: string, method: ChargeMethod): Promise<string> {
     const { data, error } = await supabase.rpc('create_billing_charge', {
       p_document_id: documentId,
@@ -168,6 +176,7 @@ export function workToCashErrorMessage(error: unknown): string {
   if (message.includes('service_order_not_billable')) return 'Só é possível medir OS concluídas e disponíveis para faturamento.';
   if (message.includes('duplicate_service_order')) return 'Há uma OS duplicada na seleção.';
   if (message.includes('nfse_document_not_approvable')) return 'Esta NFS-e não está aguardando aprovação.';
+  if (message.includes('deferred_document_not_resumable')) return 'Este faturamento adiado já foi retomado ou não está disponível.';
   if (message.includes('charge_already_exists')) return 'Este documento já possui uma cobrança ativa.';
   if (message.includes('document_not_chargeable')) return 'O documento ainda não está pronto para cobrança.';
   if (message.includes('manager_required')) return 'Esta ação exige um administrador ou gestor.';
