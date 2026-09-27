@@ -38,6 +38,9 @@ import { HoraMaquinaPage } from './pages/HoraMaquina';
 import { RelatorioCliente } from './pages/RelatorioCliente';
 import { Onboarding } from './pages/Onboarding';
 import { WhatsAppInbox } from './pages/WhatsAppInbox';
+import { OperatorFieldEntry } from './pages/OperatorFieldEntry';
+import { FieldEntries } from './pages/FieldEntries';
+import { WhatsAppPairing } from './pages/WhatsAppPairing';
 
 import { Loader2 } from 'lucide-react';
 import { isAdminUser, canViewData } from './services/roleService';
@@ -68,7 +71,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   }
   
   if (profile && profile.onboarding_completed !== false && location.pathname === '/onboarding') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={canViewData(profile?.role) ? '/dashboard' : '/field-entry'} replace />;
+  }
+
+  // Operador é write-only: fora do perfil, sua única tela de negócio é o envio de campo.
+  if (!canViewData(profile?.role) && !['/field-entry', '/settings/profile', '/settings/whatsapp'].includes(location.pathname)) {
+    return <Navigate to="/field-entry" replace />;
   }
 
   // Verificação de admin (requiredRole)
@@ -98,7 +106,11 @@ const App: React.FC = () => {
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ── Dashboard ── */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute requireAccess><Dashboard /></ProtectedRoute>} />
+
+          {/* ── Operação write-only ── */}
+          <Route path="/field-entry" element={<ProtectedRoute><OperatorFieldEntry /></ProtectedRoute>} />
+          <Route path="/field-entries" element={<ProtectedRoute requireAccess><FieldEntries /></ProtectedRoute>} />
 
           {/* ── IA ── */}
           <Route path="/chat"        element={<ProtectedRoute requireAccess><AIChat /></ProtectedRoute>} />
@@ -133,10 +145,10 @@ const App: React.FC = () => {
           <Route path="/reports" element={<ProtectedRoute requireAccess><Reports /></ProtectedRoute>} />
 
           {/* ── Ordens de Serviço ── */}
-          <Route path="/service-orders"           element={<ProtectedRoute><ServiceOrderList /></ProtectedRoute>} />
-          <Route path="/service-orders/new"       element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
-          <Route path="/service-orders/:id"       element={<ProtectedRoute><ServiceOrderForm /></ProtectedRoute>} />
-          <Route path="/service-orders/:id/receipt" element={<ProtectedRoute><ServiceOrderReceipt /></ProtectedRoute>} />
+          <Route path="/service-orders"           element={<ProtectedRoute requireAccess><ServiceOrderList /></ProtectedRoute>} />
+          <Route path="/service-orders/new"       element={<ProtectedRoute requireAccess><ServiceOrderForm /></ProtectedRoute>} />
+          <Route path="/service-orders/:id"       element={<ProtectedRoute requireAccess><ServiceOrderForm /></ProtectedRoute>} />
+          <Route path="/service-orders/:id/receipt" element={<ProtectedRoute requireAccess><ServiceOrderReceipt /></ProtectedRoute>} />
 
           {/* ────────────────────────────────────────────────────────────────── */}
           {/* ── NOVOS MÓDULOS ─────────────────────────────────────────────── */}
@@ -148,24 +160,25 @@ const App: React.FC = () => {
           <Route path="/orcamentos/:id"   element={<ProtectedRoute><OrcamentoForm /></ProtectedRoute>} />
 
           {/* Hora-Máquina */}
-          <Route path="/hora-maquina" element={<ProtectedRoute><HoraMaquinaPage /></ProtectedRoute>} />
+          <Route path="/hora-maquina" element={<ProtectedRoute requireAccess><HoraMaquinaPage /></ProtectedRoute>} />
 
           {/* Relatório para o Cliente */}
-          <Route path="/relatorio-cliente" element={<ProtectedRoute><RelatorioCliente /></ProtectedRoute>} />
+          <Route path="/relatorio-cliente" element={<ProtectedRoute requireAccess><RelatorioCliente /></ProtectedRoute>} />
 
           {/* WhatsApp Bot Inbox */}
-          <Route path="/whatsapp-inbox" element={<ProtectedRoute><WhatsAppInbox /></ProtectedRoute>} />
+          <Route path="/whatsapp-inbox" element={<ProtectedRoute requireAccess><WhatsAppInbox /></ProtectedRoute>} />
 
           {/* ── Configurações ── */}
           <Route path="/settings"               element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
           <Route path="/settings/profile"       element={<ProtectedRoute><SettingsProfile /></ProtectedRoute>} />
+          <Route path="/settings/whatsapp"      element={<ProtectedRoute><WhatsAppPairing /></ProtectedRoute>} />
           <Route path="/settings/company"       element={<ProtectedRoute requiredRole="admin"><SettingsCompany /></ProtectedRoute>} />
           <Route path="/settings/notifications" element={<ProtectedRoute><SettingsNotifications /></ProtectedRoute>} />
           <Route path="/settings/security"      element={<ProtectedRoute><SettingsSecurity /></ProtectedRoute>} />
           <Route path="/settings/integrations"  element={<ProtectedRoute requiredRole="admin"><SettingsIntegrations /></ProtectedRoute>} />
           <Route path="/settings/projects"      element={<ProtectedRoute requiredRole="admin"><SettingsProjects /></ProtectedRoute>} />
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

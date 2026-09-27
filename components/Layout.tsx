@@ -27,6 +27,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { ManagerNotifications } from './ManagerNotifications';
 import { isAdminUser, canViewFinance, canViewReports, canAccessSettings, canManageTeam, canViewSchedule, canViewData } from '../services/roleService';
 
 // Context for shared layout state
@@ -126,6 +127,7 @@ Layout.Header = ({ title, subTitle, showBack, actions }) => {
       </div>
       <div className="flex items-center gap-2">
         {actions}
+        {isAdminUser(userProfile?.role) && <ManagerNotifications />}
         <ThemeToggle />
         <button
           onClick={() => navigate('/settings/profile')}
@@ -151,13 +153,14 @@ Layout.Sidebar = () => {
   const canView = canViewData(userRole); // true para admin, false para operador
 
   useEffect(() => {
+    if (!canView) { setWhatsappPending(0); return; }
     whatsappService.countPendingActions().then(setWhatsappPending).catch(() => {});
-  }, []);
+  }, [canView]);
 
-  // Menu base para todos os usuários logados
-  const navItems: Array<{ icon: React.ReactNode; label: string; path: string }> = [
-    { icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' },
-  ];
+  // Operador: somente tela de envio. Gestor/admin: navegação completa.
+  const navItems: Array<{ icon: React.ReactNode; label: string; path: string }> = canView
+    ? [{ icon: <LayoutDashboard size={20} />, label: 'Início', path: '/dashboard' }]
+    : [{ icon: <ClipboardList size={20} />, label: 'Registrar serviço', path: '/field-entry' }];
 
   // Admin/gerente pode ver chat IA
   if (canView) {
@@ -184,26 +187,26 @@ Layout.Sidebar = () => {
     navItems.push({ icon: <Users size={20} />, label: 'Equipe', path: '/employees' });
   }
 
-  // Ordens de Serviço - todos podem ver masOperator não cria
-  navItems.push({ icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' });
+  // Ordens de Serviço - somente gestor/admin.
+  if (canView) {
+    navItems.push({ icon: <ClipboardList size={20} />, label: 'Ordens de Serviço', path: '/service-orders' });
+  }
 
   // Orçamentos - admin
   if (canView) {
     navItems.push({ icon: <FileText size={20} />, label: 'Orçamentos', path: '/orcamentos' });
   }
 
-  // Hora-Máquina - todos veem para registrar
-  navItems.push({ icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' });
-
-  // Relatório Cliente - todos podem acessar
-  navItems.push({ icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' });
-
-  // RDO - operador pode inserir, adminvisualiza
-  navItems.push({ icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' });
+  if (canView) {
+    navItems.push({ icon: <Clock size={20} />, label: 'Hora-Máquina', path: '/hora-maquina' });
+    navItems.push({ icon: <BarChart2 size={20} />, label: 'Rel. Cliente', path: '/relatorio-cliente' });
+    navItems.push({ icon: <Hammer size={20} />, label: 'Diário de Obra / RDO', path: '/rdo' });
+  }
 
   // Admin exclusive items (financeiro, relatórios, configurações)
   if (isAdminUser(userRole)) {
     navItems.push(
+      { icon: <ClipboardList size={20} />, label: 'Registros de Campo', path: '/field-entries' },
       { icon: <Wallet size={20} />, label: 'Financeiro', path: '/finance' },
       { icon: <BarChart2 size={20} />, label: 'Relatórios', path: '/reports' },
       { icon: <MapPin size={20} />, label: 'Gerenciar Obras', path: '/settings/projects' },
@@ -244,8 +247,8 @@ Layout.Sidebar = () => {
             </button>
           ))}
 
-          {/* Caixa de entrada: RLS limita cada operador aos próprios envios. */}
-          {userRole && (
+          {/* Caixa de entrada administrativa do WhatsApp. */}
+          {canView && userRole && (
             <button
               onClick={() => navigate('/whatsapp-inbox')}
               className={`flex items-center gap-4 w-full px-4 py-3 rounded-xl transition-all duration-300 group ${
@@ -290,18 +293,24 @@ Layout.Navigation = () => {
 
   return (
     <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
-      <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
+      {!isAdmin && (
+        <button onClick={() => navigate('/field-entry')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/field-entry') ? 'text-primary scale-105' : 'text-gray-500'}`}>
+          <ClipboardList size={22} strokeWidth={isActive('/field-entry') ? 3 : 2} />
+          <span className="text-[8px] font-black uppercase tracking-tighter text-current">Registrar</span>
+        </button>
+      )}
+      {isAdmin && <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
         <LayoutDashboard size={22} strokeWidth={isActive('/dashboard') ? 3 : 2} />
         <span className="text-[8px] font-black uppercase tracking-tighter text-current">Início</span>
-      </button>
-      <button onClick={() => navigate('/orcamentos')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
+      </button>}
+      {isAdmin && <button onClick={() => navigate('/orcamentos')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
         <FileText size={22} strokeWidth={isActive('/orcamentos') ? 2.5 : 2} />
         <span className="text-[8px] font-black uppercase tracking-tighter text-current">Orçamentos</span>
-      </button>
-      <button onClick={() => navigate('/service-orders')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
+      </button>}
+      {isAdmin && <button onClick={() => navigate('/service-orders')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
         <ClipboardList size={22} strokeWidth={isActive('/service-orders') ? 2.5 : 2} />
         <span className="text-[8px] font-black uppercase tracking-tighter text-current">Serviços</span>
-      </button>
+      </button>}
       {isAdmin && (
         <button onClick={() => navigate('/finance')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/finance') ? 'text-primary' : 'text-gray-500'}`}>
           <Wallet size={22} strokeWidth={isActive('/finance') ? 2.5 : 2} />
