@@ -3,7 +3,7 @@ import { Layout } from '../components/Layout';
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  CalendarDays,
+  Building2,
   Check,
   CheckCircle2,
   CircleDollarSign,
@@ -11,28 +11,35 @@ import {
   Clock3,
   Copy,
   CreditCard,
+  FileCheck2,
   FileText,
   Loader2,
   Pencil,
   Plus,
   ReceiptText,
+  Send,
   Sparkles,
   Trash2,
+  UserRound,
   X,
 } from 'lucide-react';
 import { generateReport } from '../services/aiService';
 import { serviceOrderErrorMessage } from '../services/serviceOrderRules';
 import { transactionService, type Transaction as SupabaseTransaction } from '../services/transactionService';
 import {
+  formatAccountantPackage,
   workToCashService,
   workToCashErrorMessage,
   type BillingCharge,
+  type BillingClient,
+  type BillingClientInput,
   type BillingDocument,
   type ChargeMethod,
   type ServiceMeasurement,
 } from '../services/workToCashService';
 
 type FinanceTab = 'overview' | 'billing' | 'receivables' | 'transactions';
+type ClientForm = BillingClientInput & { document_type?: 'cpf' | 'cnpj' | 'other' | '' };
 
 const localDate = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', {
@@ -62,19 +69,61 @@ const formatDate = (value?: string | null) => {
   return Number.isNaN(date.valueOf()) ? value : date.toLocaleDateString('pt-BR');
 };
 
+const emptyClient = (name = ''): ClientForm => ({
+  name,
+  legal_name: '',
+  document_type: 'cnpj',
+  document_number: '',
+  email: '',
+  phone: '',
+  billing_email: '',
+  billing_contact: '',
+  address_line: '',
+  address_number: '',
+  address_complement: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  postal_code: '',
+  notes: '',
+});
+
+const fromClient = (client: BillingClient): ClientForm => ({
+  name: client.name || '',
+  legal_name: client.legal_name || '',
+  document_type: client.document_type || 'cnpj',
+  document_number: client.document_number || '',
+  email: client.email || '',
+  phone: client.phone || '',
+  billing_email: client.billing_email || '',
+  billing_contact: client.billing_contact || '',
+  address_line: client.address_line || '',
+  address_number: client.address_number || '',
+  address_complement: client.address_complement || '',
+  neighborhood: client.neighborhood || '',
+  city: client.city || '',
+  state: client.state || '',
+  postal_code: client.postal_code || '',
+  notes: client.notes || '',
+});
+
 const documentLabel = (document: BillingDocument) => {
-  if (document.document_type === 'nfse') return 'NFS-e';
+  if (document.document_type === 'accountant') return 'Dados para contador';
   if (document.document_type === 'deferred') return 'Faturar depois';
+  if (document.document_type === 'nfse') return 'Fluxo fiscal antigo';
   return 'OS / recibo';
 };
 
 const statusLabel = (document: BillingDocument) => {
   const labels: Record<string, string> = {
-    awaiting_approval: 'Aguardando aprovação',
-    ready: document.document_type === 'nfse' ? 'Pronta para emissão/cobrança' : 'Pronto para cobrança',
-    issued: 'Emitido',
+    awaiting_approval: 'Fluxo antigo',
+    issued: 'Nota registrada (legado)',
+    awaiting_client_data: 'Faltam dados do cliente',
+    ready: document.document_type === 'accountant' ? 'Pacote pronto' : 'Pronto para cobrança',
+    sent_to_accountant: 'Enviado ao contador',
+    external_invoice_recorded: 'Nota externa registrada',
     deferred: 'Adiado',
-    cancelled: 'Cancelado',
+    cancelled: 'Consolidado/cancelado',
     error: 'Erro',
   };
   return labels[document.status] || document.status;
@@ -86,6 +135,7 @@ export const Finance: React.FC = () => {
   const [documents, setDocuments] = useState<BillingDocument[]>([]);
   const [charges, setCharges] = useState<BillingCharge[]>([]);
   const [measurements, setMeasurements] = useState<ServiceMeasurement[]>([]);
+  const [clients, setClients] = useState<BillingClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -97,6 +147,13 @@ export const Finance: React.FC = () => {
   });
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+
+  const [packageTarget, setPackageTarget] = useState<BillingDocument | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [clientForm, setClientForm] = useState<ClientForm>(emptyClient());
+
+  const [invoiceTarget, setInvoiceTarget] = useState<BillingDocument | null>(null);
+  const [invoiceForm, setInvoiceForm] = useState({ number: '', date: localDate() });
 
   const [chargeTarget, setChargeTarget] = useState<BillingDocument | null>(null);
   const [chargeForm, setChargeForm] = useState<{ dueDate: string; method: ChargeMethod }>({
@@ -125,18 +182,20 @@ export const Finance: React.FC = () => {
   const loadAll = async () => {
     try {
       setLoading(true);
-      const [transactionData, statsData, documentData, chargeData, measurementData] = await Promise.all([
+      const [transactionData, statsData, documentData, chargeData, measurementData, clientData] = await Promise.all([
         transactionService.getAll(),
         transactionService.getStats(),
         workToCashService.getDocuments(),
         workToCashService.getCharges(),
         workToCashService.getMeasurements(),
+        workToCashService.getClients(),
       ]);
       setTransactions(transactionData);
       setStats(statsData);
       setDocuments(documentData);
       setCharges(chargeData);
       setMeasurements(measurementData);
+      setClients(clientData);
     } catch (error) {
       console.error('Error loading finance pipeline:', error);
       alert('Não foi possível carregar o Financeiro. Atualize a página e tente novamente.');
@@ -184,7 +243,7 @@ export const Finance: React.FC = () => {
     () =>
       documents.filter(
         document =>
-          !['cancelled', 'issued'].includes(document.status) &&
+          document.status !== 'cancelled' &&
           !activeChargeByDocument.has(document.id),
       ),
     [documents, activeChargeByDocument],
@@ -221,8 +280,10 @@ export const Finance: React.FC = () => {
             despesasPagas: money(stats.totalExpense),
           },
           pipeline: {
-            aguardandoAprovacaoNfse: documents.filter(d => d.document_type === 'nfse' && d.status === 'awaiting_approval').length,
-            documentosProntos: documents.filter(d => d.status === 'ready').length,
+            aguardandoDadosCliente: documents.filter(d => d.status === 'awaiting_client_data').length,
+            pacotesProntos: documents.filter(d => d.document_type === 'accountant' && d.status === 'ready').length,
+            enviadosAoContador: documents.filter(d => d.status === 'sent_to_accountant').length,
+            notasExternasRegistradas: documents.filter(d => d.status === 'external_invoice_recorded').length,
             cobrancasAbertas: openCharges.length,
             medicoes: measurements.length,
           },
@@ -237,7 +298,7 @@ export const Finance: React.FC = () => {
     }
   };
 
-  const copyToClipboard = () => {
+  const copyReport = () => {
     if (!report) return;
     navigator.clipboard.writeText(report);
     setCopied(true);
@@ -246,7 +307,12 @@ export const Finance: React.FC = () => {
 
   const toggleOrderSelection = (document: BillingDocument) => {
     const order = document.service_order;
-    if (!order || measuredOrderIds.has(order.id)) return;
+    if (
+      !order ||
+      document.document_type !== 'accountant' ||
+      ['sent_to_accountant', 'external_invoice_recorded'].includes(document.status) ||
+      measuredOrderIds.has(order.id)
+    ) return;
 
     if (selectedOrderIds.includes(order.id)) {
       setSelectedOrderIds(current => current.filter(id => id !== order.id));
@@ -277,11 +343,79 @@ export const Finance: React.FC = () => {
     }
   };
 
-  const handleApproveNfse = async (document: BillingDocument) => {
-    if (!confirm('Aprovar os dados desta NFS-e? Esta ação apenas libera o documento para a próxima etapa; a nota ainda não será emitida sem o conector fiscal.')) return;
+  const sourceClientName = (document: BillingDocument) =>
+    document.service_order?.client || document.measurement?.client || 'Cliente';
+
+  const openPackageModal = (document: BillingDocument) => {
+    const current = document.client_profile || clients.find(
+      client => client.name.trim().toLowerCase() === sourceClientName(document).trim().toLowerCase(),
+    );
+    setPackageTarget(document);
+    setSelectedClientId(current?.id || '');
+    setClientForm(current ? fromClient(current) : emptyClient(sourceClientName(document)));
+  };
+
+  const selectExistingClient = (id: string) => {
+    setSelectedClientId(id);
+    const client = clients.find(item => item.id === id);
+    if (client) setClientForm(fromClient(client));
+    else if (packageTarget) setClientForm(emptyClient(sourceClientName(packageTarget)));
+  };
+
+  const handlePreparePackage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!packageTarget) return;
+    try {
+      setActionLoading(`package-${packageTarget.id}`);
+      const input: BillingClientInput = {
+        ...clientForm,
+        document_type: clientForm.document_type || undefined,
+      };
+      const clientId = await workToCashService.saveClient(input, selectedClientId || null);
+      await workToCashService.prepareAccountantPackage(packageTarget.id, clientId);
+      setPackageTarget(null);
+      await loadAll();
+    } catch (error) {
+      alert(workToCashErrorMessage(error));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const copyPackage = async (document: BillingDocument) => {
+    if (!document.package_data) return;
+    await navigator.clipboard.writeText(formatAccountantPackage(document.package_data));
+    alert('Dados de faturamento copiados. Agora você pode colar no WhatsApp, e-mail ou sistema do contador.');
+  };
+
+  const markPackageSent = async (document: BillingDocument) => {
+    if (!confirm('Marcar este pacote como enviado ao contador/sistema fiscal?')) return;
     try {
       setActionLoading(document.id);
-      await workToCashService.approveNfse(document.id);
+      await workToCashService.markPackageSent(document.id, 'manual');
+      await loadAll();
+    } catch (error) {
+      alert(workToCashErrorMessage(error));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openInvoiceModal = (document: BillingDocument) => {
+    setInvoiceTarget(document);
+    setInvoiceForm({
+      number: document.document_number || '',
+      date: document.external_invoice_date || localDate(),
+    });
+  };
+
+  const handleRecordExternalInvoice = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!invoiceTarget) return;
+    try {
+      setActionLoading(`invoice-${invoiceTarget.id}`);
+      await workToCashService.recordExternalInvoice(invoiceTarget.id, invoiceForm.number, invoiceForm.date);
+      setInvoiceTarget(null);
       await loadAll();
     } catch (error) {
       alert(workToCashErrorMessage(error));
@@ -291,7 +425,7 @@ export const Finance: React.FC = () => {
   };
 
   const handleResumeDeferred = async (document: BillingDocument) => {
-    if (!confirm('Retomar o faturamento deste serviço e deixá-lo pronto para cobrança?')) return;
+    if (!confirm('Retomar este faturamento e preparar os dados para o contador/sistema fiscal?')) return;
     try {
       setActionLoading(document.id);
       await workToCashService.resumeDeferred(document.id);
@@ -424,7 +558,7 @@ export const Finance: React.FC = () => {
     {
       label: 'A faturar',
       value: toBillAmount,
-      note: `${toBillDocuments.length} documento(s)`,
+      note: `${toBillDocuments.length} item(ns) no fluxo`,
       icon: <FileText size={22} />,
       className: 'text-primary',
     },
@@ -455,7 +589,7 @@ export const Finance: React.FC = () => {
     <Layout>
       <Layout.Header
         title="Financeiro"
-        subTitle="Medições, faturamento, recebíveis & caixa"
+        subTitle="Medições, contador, recebíveis & caixa"
         actions={
           <div className="flex gap-2">
             <button
@@ -528,20 +662,18 @@ export const Finance: React.FC = () => {
                 <div className="mt-6 bg-surface-dark/40 rounded-[32px] border border-white/5 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <p className="text-[9px] font-black text-primary uppercase tracking-[0.25em]">Work-to-Cash</p>
+                      <p className="text-[9px] font-black text-primary uppercase tracking-[0.25em]">Serviço → Caixa</p>
                       <h2 className="text-lg font-black text-white uppercase italic">Fluxo de faturamento</h2>
                     </div>
                     <ClipboardCheck className="text-primary" size={24} />
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {[
-                      {
-                        label: 'NFS-e aguardando',
-                        value: documents.filter(d => d.document_type === 'nfse' && d.status === 'awaiting_approval').length,
-                      },
-                      { label: 'Documentos prontos', value: documents.filter(d => d.status === 'ready').length },
+                      { label: 'Faltam dados cliente', value: documents.filter(d => d.status === 'awaiting_client_data').length },
+                      { label: 'Pacotes prontos', value: documents.filter(d => d.document_type === 'accountant' && d.status === 'ready').length },
+                      { label: 'Enviados contador', value: documents.filter(d => d.status === 'sent_to_accountant').length },
                       { label: 'Cobranças abertas', value: openCharges.length },
-                      { label: 'Medições', value: measurements.filter(m => m.status !== 'cancelled').length },
+                      { label: 'Clientes cadastrados', value: clients.length },
                     ].map(item => (
                       <div key={item.label} className="bg-black/20 rounded-2xl border border-white/5 p-4">
                         <p className="text-2xl font-black text-white">{item.value}</p>
@@ -551,56 +683,16 @@ export const Finance: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-6">
-                  <div className="bg-surface-dark/30 rounded-[32px] border border-white/5 p-6">
-                    <div className="flex items-center justify-between mb-5">
-                      <h3 className="text-xs font-black text-white uppercase tracking-widest">Medições recentes</h3>
-                      <button onClick={() => setActiveTab('billing')} className="text-[9px] text-primary font-black uppercase">Ver faturamento</button>
+                <div className="mt-6 bg-primary/5 border border-primary/15 rounded-[28px] p-5">
+                  <div className="flex gap-4">
+                    <div className="size-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Building2 size={20} />
                     </div>
-                    {measurements.length === 0 ? (
-                      <p className="text-xs text-gray-600 py-8 text-center">Nenhuma medição criada ainda.</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {measurements.slice(0, 4).map(measurement => (
-                          <div key={measurement.id} className="bg-black/20 border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="text-sm font-black text-white truncate">{measurement.client}</p>
-                              <p className="text-[9px] text-gray-500 uppercase mt-1">
-                                {formatDate(measurement.period_start)} → {formatDate(measurement.period_end)}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="text-sm font-black text-primary">{money(measurement.total_value)}</p>
-                              <p className="text-[8px] text-gray-600 uppercase">{measurement.items?.length || 0} OS</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-surface-dark/30 rounded-[32px] border border-white/5 p-6">
-                    <div className="flex items-center justify-between mb-5">
-                      <h3 className="text-xs font-black text-white uppercase tracking-widest">Movimentações recentes</h3>
-                      <button onClick={() => setActiveTab('transactions')} className="text-[9px] text-primary font-black uppercase">Ver todas</button>
-                    </div>
-                    <div className="space-y-3">
-                      {transactions.slice(0, 5).map(transaction => (
-                        <div key={transaction.id} className="flex items-center gap-3">
-                          <div className={`size-10 rounded-xl flex items-center justify-center ${
-                            transaction.type === 'income' ? 'bg-positive/10 text-positive' : 'bg-negative/10 text-negative'
-                          }`}>
-                            {transaction.type === 'income' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-white truncate">{transaction.title}</p>
-                            <p className="text-[9px] text-gray-600">{formatDate(transaction.date)} · {transaction.status === 'paid' ? 'Liquidado' : 'Pendente'}</p>
-                          </div>
-                          <p className={`text-xs font-black ${transaction.type === 'income' ? 'text-positive' : 'text-negative'}`}>
-                            {transaction.type === 'income' ? '+' : '-'} {money(transaction.amount)}
-                          </p>
-                        </div>
-                      ))}
+                    <div>
+                      <p className="font-black text-white">O TerraGes não emite NFS-e.</p>
+                      <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                        Ele organiza os dados registrados no campo, completa o cadastro do cliente e entrega o pacote pronto para o contador ou sistema fiscal da empresa.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -612,11 +704,11 @@ export const Finance: React.FC = () => {
                 <div className="bg-surface-dark/40 rounded-[30px] border border-white/5 p-5 mb-5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <p className="text-[9px] font-black text-primary uppercase tracking-widest">Medição</p>
+                      <p className="text-[9px] font-black text-primary uppercase tracking-widest">Medição consolidada</p>
                       <p className="text-sm font-black text-white mt-1">
                         {selectedOrderIds.length
                           ? `${selectedOrderIds.length} OS selecionada(s) · ${money(selectedAmount)}`
-                          : 'Selecione OS do mesmo cliente para agrupar em uma medição.'}
+                          : 'Selecione OS do mesmo cliente marcadas para contador.'}
                       </p>
                     </div>
                     <button
@@ -632,8 +724,8 @@ export const Finance: React.FC = () => {
 
                 <div className="flex items-end justify-between mb-4 px-1">
                   <div>
-                    <h2 className="text-lg font-black text-white uppercase italic">Serviços a faturar</h2>
-                    <p className="text-xs text-gray-500 mt-1">{money(toBillAmount)} aguardando decisão, documento ou cobrança.</p>
+                    <h2 className="text-lg font-black text-white uppercase italic">A faturar</h2>
+                    <p className="text-xs text-gray-500 mt-1">{money(toBillAmount)} aguardando preparo, contador ou cobrança.</p>
                   </div>
                 </div>
 
@@ -647,22 +739,26 @@ export const Finance: React.FC = () => {
                     {toBillDocuments.map(document => {
                       const order = document.service_order;
                       const measured = !!order && measuredOrderIds.has(order.id);
+                      const selectable = !!order && document.document_type === 'accountant' &&
+                        !['sent_to_accountant', 'external_invoice_recorded'].includes(document.status) && !measured;
                       const selected = !!order && selectedOrderIds.includes(order.id);
+
                       return (
                         <div key={document.id} className="bg-surface-dark/40 border border-white/5 rounded-[28px] p-5">
                           <div className="flex gap-4">
                             {order && (
                               <button
                                 onClick={() => toggleOrderSelection(document)}
-                                disabled={measured}
+                                disabled={!selectable}
                                 className={`size-6 rounded-lg border shrink-0 mt-1 flex items-center justify-center transition-all ${
-                                  selected ? 'bg-primary border-primary text-black' : measured ? 'bg-white/5 border-white/5 text-gray-700' : 'border-white/15 text-transparent hover:border-primary/50'
+                                  selected ? 'bg-primary border-primary text-black' : !selectable ? 'bg-white/5 border-white/5 text-gray-700' : 'border-white/15 text-transparent hover:border-primary/50'
                                 }`}
-                                title={measured ? 'Esta OS já está em uma medição' : 'Selecionar para medição'}
+                                title={selectable ? 'Selecionar para medição' : 'Este item não pode ser agrupado em medição'}
                               >
                                 <Check size={14} strokeWidth={4} />
                               </button>
                             )}
+
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2 mb-2">
                                 <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-primary/10 text-primary">
@@ -677,28 +773,103 @@ export const Finance: React.FC = () => {
                                   </span>
                                 )}
                               </div>
+
                               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="font-black text-white truncate">{order?.client || document.measurement?.client || 'Cliente'}</p>
+                                  <p className="font-black text-white truncate">{sourceClientName(document)}</p>
                                   <p className="text-[10px] text-gray-500 mt-1">
-                                    {order ? `OS #${order.id.slice(0, 8).toUpperCase()} · ${formatDate(order.date)}` : 'Documento de medição'}
+                                    {order
+                                      ? `OS #${order.id.slice(0, 8).toUpperCase()} · ${formatDate(order.date)}`
+                                      : document.measurement
+                                        ? `Medição #${document.measurement.id.slice(0, 8).toUpperCase()} · ${formatDate(document.measurement.period_start)} a ${formatDate(document.measurement.period_end)}`
+                                        : 'Documento de faturamento'}
                                   </p>
                                   {order?.description && <p className="text-xs text-gray-600 mt-2 line-clamp-1">{order.description}</p>}
+                                  {document.status === 'external_invoice_recorded' && (
+                                    <p className="text-[10px] text-positive mt-2">
+                                      Nota externa #{document.document_number} · {formatDate(document.external_invoice_date)}
+                                    </p>
+                                  )}
                                 </div>
                                 <p className="text-xl font-black text-white shrink-0">{money(document.amount)}</p>
                               </div>
 
                               <div className="flex flex-wrap gap-2 mt-4">
-                                {document.document_type === 'nfse' && document.status === 'awaiting_approval' && (
+                                {document.document_type === 'accountant' && document.status === 'awaiting_client_data' && (
                                   <button
-                                    onClick={() => handleApproveNfse(document)}
-                                    disabled={actionLoading === document.id}
+                                    onClick={() => openPackageModal(document)}
                                     className="h-9 px-4 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
                                   >
-                                    {actionLoading === document.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                                    Aprovar NFS-e
+                                    <UserRound size={13} />
+                                    Completar cliente e preparar
                                   </button>
                                 )}
+
+                                {document.document_type === 'accountant' && document.status === 'ready' && (
+                                  <>
+                                    <button
+                                      onClick={() => copyPackage(document)}
+                                      className="h-9 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                      <Copy size={13} /> Copiar dados
+                                    </button>
+                                    <button
+                                      onClick={() => markPackageSent(document)}
+                                      disabled={actionLoading === document.id}
+                                      className="h-9 px-4 rounded-xl bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                      {actionLoading === document.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                                      Marcar enviado
+                                    </button>
+                                    <button
+                                      onClick={() => openPackageModal(document)}
+                                      className="h-9 px-4 rounded-xl bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest"
+                                    >
+                                      Editar dados
+                                    </button>
+                                  </>
+                                )}
+
+                                {document.document_type === 'accountant' && document.status === 'sent_to_accountant' && (
+                                  <>
+                                    <button
+                                      onClick={() => copyPackage(document)}
+                                      className="h-9 px-4 rounded-xl bg-white/5 text-gray-300 text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                      <Copy size={13} /> Copiar novamente
+                                    </button>
+                                    <button
+                                      onClick={() => openInvoiceModal(document)}
+                                      className="h-9 px-4 rounded-xl bg-positive/10 border border-positive/20 text-positive text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                      <FileCheck2 size={13} /> Registrar nota emitida
+                                    </button>
+                                  </>
+                                )}
+
+                                {document.document_type === 'accountant' && document.status === 'external_invoice_recorded' && (
+                                  <button
+                                    onClick={() => openChargeModal(document)}
+                                    className="h-9 px-4 rounded-xl bg-positive/10 border border-positive/20 text-positive text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                  >
+                                    <CreditCard size={13} /> Gerar cobrança
+                                  </button>
+                                )}
+
+                                {document.document_type === 'receipt' && document.status === 'ready' && (
+                                  <>
+                                    <span className="h-9 px-4 rounded-xl bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                                      <ReceiptText size={13} /> OS/recibo pronto
+                                    </span>
+                                    <button
+                                      onClick={() => openChargeModal(document)}
+                                      className="h-9 px-4 rounded-xl bg-positive/10 border border-positive/20 text-positive text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                                    >
+                                      <CreditCard size={13} /> Gerar cobrança
+                                    </button>
+                                  </>
+                                )}
+
                                 {document.document_type === 'deferred' && document.status === 'deferred' && (
                                   <button
                                     onClick={() => handleResumeDeferred(document)}
@@ -706,22 +877,13 @@ export const Finance: React.FC = () => {
                                     className="h-9 px-4 rounded-xl bg-warning/10 border border-warning/20 text-warning text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
                                   >
                                     {actionLoading === document.id ? <Loader2 size={13} className="animate-spin" /> : <Clock3 size={13} />}
-                                    Retomar faturamento
+                                    Retomar para contador
                                   </button>
                                 )}
-                                {['ready', 'issued'].includes(document.status) && (
-                                  <button
-                                    onClick={() => openChargeModal(document)}
-                                    className="h-9 px-4 rounded-xl bg-positive/10 border border-positive/20 text-positive text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
-                                  >
-                                    <CreditCard size={13} />
-                                    Gerar cobrança
-                                  </button>
-                                )}
-                                {document.document_type === 'receipt' && document.status === 'ready' && (
-                                  <span className="h-9 px-4 rounded-xl bg-white/5 text-gray-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                                    <ReceiptText size={13} />
-                                    OS/recibo pronto
+
+                                {document.document_type === 'nfse' && (
+                                  <span className="text-[9px] text-warning bg-warning/10 px-3 py-2 rounded-xl">
+                                    Registro legado. Novas OS não usam emissão NFS-e pelo TerraGes.
                                   </span>
                                 )}
                               </div>
@@ -736,7 +898,7 @@ export const Finance: React.FC = () => {
                 <div className="mt-8">
                   <h3 className="text-xs font-black text-white uppercase tracking-[0.25em] mb-4 px-1">Medições</h3>
                   {measurements.length === 0 ? (
-                    <p className="text-xs text-gray-600 py-8 text-center">Crie a primeira medição selecionando uma ou mais OS acima.</p>
+                    <p className="text-xs text-gray-600 py-8 text-center">Crie a primeira medição selecionando OS do mesmo cliente.</p>
                   ) : (
                     <div className="grid md:grid-cols-2 gap-3">
                       {measurements.map(measurement => (
@@ -881,23 +1043,15 @@ export const Finance: React.FC = () => {
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className={`text-sm font-black ${
-                            transaction.type === 'income' ? 'text-positive' : 'text-negative'
-                          }`}>
+                          <p className={`text-sm font-black ${transaction.type === 'income' ? 'text-positive' : 'text-negative'}`}>
                             {transaction.type === 'income' ? '+' : '-'} {money(transaction.amount)}
                           </p>
                           <div className="flex justify-end gap-2 mt-2">
-                            <button
-                              onClick={() => openEditTransaction(transaction)}
-                              className="p-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white"
-                            >
+                            <button onClick={() => openEditTransaction(transaction)} className="p-1.5 rounded-lg bg-white/5 text-gray-500 hover:text-white">
                               <Pencil size={12} />
                             </button>
                             {!transaction.service_order_id && (
-                              <button
-                                onClick={() => handleDeleteTransaction(transaction.id)}
-                                className="p-1.5 rounded-lg bg-negative/5 text-negative/60 hover:text-negative"
-                              >
+                              <button onClick={() => handleDeleteTransaction(transaction.id)} className="p-1.5 rounded-lg bg-negative/5 text-negative/60 hover:text-negative">
                                 <Trash2 size={12} />
                               </button>
                             )}
@@ -913,6 +1067,126 @@ export const Finance: React.FC = () => {
         )}
       </Layout.Content>
 
+      {packageTarget && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <form onSubmit={handlePreparePackage} className="w-full max-w-3xl bg-surface-dark rounded-[32px] border border-white/10 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="sticky top-0 bg-surface-dark/95 backdrop-blur-xl p-6 border-b border-white/5 flex items-center justify-between z-10">
+              <div>
+                <p className="text-[9px] font-black text-primary uppercase tracking-widest">Dados para o contador</p>
+                <h2 className="text-xl font-black text-white mt-1">{sourceClientName(packageTarget)}</h2>
+              </div>
+              <button type="button" onClick={() => setPackageTarget(null)} className="p-2 text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4">
+                <p className="text-xs text-gray-300">
+                  Cadastre os dados reais do cliente. O TerraGes vai juntar este cadastro com OS, máquina, horas e valores. Nenhum dado fiscal será inventado e nenhuma NFS-e será emitida.
+                </p>
+              </div>
+
+              {clients.length > 0 && (
+                <div>
+                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Usar cliente já cadastrado</label>
+                  <select
+                    value={selectedClientId}
+                    onChange={event => selectExistingClient(event.target.value)}
+                    className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
+                  >
+                    <option value="" className="bg-brand-dark">Novo cadastro / preencher abaixo</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id} className="bg-brand-dark">
+                        {client.name}{client.document_number ? ` — ${client.document_number}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Nome do cliente *" value={clientForm.name || ''} onChange={value => setClientForm(v => ({ ...v, name: value }))} />
+                <Field label="Razão social" value={clientForm.legal_name || ''} onChange={value => setClientForm(v => ({ ...v, legal_name: value }))} />
+                <div>
+                  <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Tipo documento</label>
+                  <select
+                    value={clientForm.document_type || 'cnpj'}
+                    onChange={event => setClientForm(v => ({ ...v, document_type: event.target.value as ClientForm['document_type'] }))}
+                    className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
+                  >
+                    <option value="cnpj" className="bg-brand-dark">CNPJ</option>
+                    <option value="cpf" className="bg-brand-dark">CPF</option>
+                    <option value="other" className="bg-brand-dark">Outro</option>
+                  </select>
+                </div>
+                <Field label="CPF / CNPJ *" value={clientForm.document_number || ''} onChange={value => setClientForm(v => ({ ...v, document_number: value }))} />
+                <Field label="Contato do faturamento" value={clientForm.billing_contact || ''} onChange={value => setClientForm(v => ({ ...v, billing_contact: value }))} />
+                <Field label="E-mail do faturamento" type="email" value={clientForm.billing_email || ''} onChange={value => setClientForm(v => ({ ...v, billing_email: value }))} />
+                <Field label="Telefone / WhatsApp" value={clientForm.phone || ''} onChange={value => setClientForm(v => ({ ...v, phone: value }))} />
+                <Field label="E-mail geral" type="email" value={clientForm.email || ''} onChange={value => setClientForm(v => ({ ...v, email: value }))} />
+                <div className="md:col-span-2 grid md:grid-cols-[1fr_140px] gap-4">
+                  <Field label="Endereço" value={clientForm.address_line || ''} onChange={value => setClientForm(v => ({ ...v, address_line: value }))} />
+                  <Field label="Número" value={clientForm.address_number || ''} onChange={value => setClientForm(v => ({ ...v, address_number: value }))} />
+                </div>
+                <Field label="Bairro" value={clientForm.neighborhood || ''} onChange={value => setClientForm(v => ({ ...v, neighborhood: value }))} />
+                <Field label="Complemento" value={clientForm.address_complement || ''} onChange={value => setClientForm(v => ({ ...v, address_complement: value }))} />
+                <Field label="Cidade" value={clientForm.city || ''} onChange={value => setClientForm(v => ({ ...v, city: value }))} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="UF" maxLength={2} value={clientForm.state || ''} onChange={value => setClientForm(v => ({ ...v, state: value.toUpperCase() }))} />
+                  <Field label="CEP" value={clientForm.postal_code || ''} onChange={value => setClientForm(v => ({ ...v, postal_code: value }))} />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!clientForm.name || !clientForm.document_number || actionLoading === `package-${packageTarget.id}`}
+                className="w-full h-12 rounded-2xl bg-primary text-black font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                {actionLoading === `package-${packageTarget.id}` ? <Loader2 size={15} className="animate-spin" /> : <ClipboardCheck size={15} />}
+                Salvar cliente e preparar pacote
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {invoiceTarget && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-5">
+          <form onSubmit={handleRecordExternalInvoice} className="w-full max-w-md bg-surface-dark rounded-[32px] border border-white/10 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-[9px] font-black text-positive uppercase tracking-widest">Nota emitida fora do TerraGes</p>
+                <h2 className="text-lg font-black text-white mt-1">Registrar retorno do contador</h2>
+              </div>
+              <button type="button" onClick={() => setInvoiceTarget(null)} className="p-2 text-gray-500 hover:text-white"><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <Field label="Número da nota *" value={invoiceForm.number} onChange={value => setInvoiceForm(v => ({ ...v, number: value }))} />
+              <div>
+                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Data de emissão *</label>
+                <input
+                  type="date"
+                  required
+                  value={invoiceForm.date}
+                  onChange={event => setInvoiceForm(v => ({ ...v, date: event.target.value }))}
+                  className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-4">
+              Este registro apenas informa ao TerraGes que a nota foi emitida pelo contador ou sistema fiscal externo.
+            </p>
+            <button
+              type="submit"
+              disabled={!invoiceForm.number || actionLoading === `invoice-${invoiceTarget.id}`}
+              className="mt-6 w-full h-12 rounded-2xl bg-positive text-black font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              {actionLoading === `invoice-${invoiceTarget.id}` ? <Loader2 size={15} className="animate-spin" /> : <FileCheck2 size={15} />}
+              Registrar nota externa
+            </button>
+          </form>
+        </div>
+      )}
+
       {chargeTarget && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-5">
           <form onSubmit={handleCreateCharge} className="w-full max-w-md bg-surface-dark rounded-[32px] border border-white/10 p-6 shadow-2xl">
@@ -923,9 +1197,7 @@ export const Finance: React.FC = () => {
               </div>
               <button type="button" onClick={() => setChargeTarget(null)} className="p-2 text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
-            <p className="text-sm text-gray-400 mb-5">
-              {chargeTarget.service_order?.client || chargeTarget.measurement?.client} · {documentLabel(chargeTarget)}
-            </p>
+            <p className="text-sm text-gray-400 mb-5">{sourceClientName(chargeTarget)} · {documentLabel(chargeTarget)}</p>
             <div className="space-y-4">
               <div>
                 <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Vencimento</label>
@@ -934,7 +1206,7 @@ export const Finance: React.FC = () => {
                   required
                   value={chargeForm.dueDate}
                   onChange={event => setChargeForm(current => ({ ...current, dueDate: event.target.value }))}
-                  className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none focus:border-primary/50"
+                  className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
                 />
               </div>
               <div>
@@ -942,7 +1214,7 @@ export const Finance: React.FC = () => {
                 <select
                   value={chargeForm.method}
                   onChange={event => setChargeForm(current => ({ ...current, method: event.target.value as ChargeMethod }))}
-                  className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none"
+                  className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
                 >
                   <option value="pix" className="bg-brand-dark">Pix</option>
                   <option value="boleto" className="bg-brand-dark">Boleto</option>
@@ -953,9 +1225,6 @@ export const Finance: React.FC = () => {
                 </select>
               </div>
             </div>
-            <p className="text-[10px] text-gray-500 mt-5">
-              Nesta etapa o TerraGes registra a cobrança. Pix/boleto automático dependerá do conector financeiro configurado.
-            </p>
             <button
               type="submit"
               disabled={!!actionLoading}
@@ -991,7 +1260,7 @@ export const Finance: React.FC = () => {
                 onChange={event => setTransactionForm(current => ({ ...current, title: event.target.value }))}
                 placeholder="Descrição"
                 required
-                className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none"
+                className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
               />
               <div className="grid grid-cols-2 gap-3">
                 <input
@@ -1002,7 +1271,7 @@ export const Finance: React.FC = () => {
                   onChange={event => setTransactionForm(current => ({ ...current, amount: event.target.value }))}
                   placeholder="Valor"
                   required
-                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none"
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
                 />
                 <select
                   value={transactionForm.type}
@@ -1018,13 +1287,13 @@ export const Finance: React.FC = () => {
                   type="date"
                   value={transactionForm.date}
                   onChange={event => setTransactionForm(current => ({ ...current, date: event.target.value }))}
-                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none"
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
                 />
                 <input
                   value={transactionForm.category}
                   onChange={event => setTransactionForm(current => ({ ...current, category: event.target.value }))}
                   placeholder="Categoria"
-                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none"
+                  className="w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white"
                 />
               </div>
             </fieldset>
@@ -1068,7 +1337,7 @@ export const Finance: React.FC = () => {
             </div>
             <div className="p-6 overflow-y-auto text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{report}</div>
             <div className="p-5 border-t border-white/5">
-              <button onClick={copyToClipboard} className="w-full h-11 rounded-xl bg-white/5 text-gray-300 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              <button onClick={copyReport} className="w-full h-11 rounded-xl bg-white/5 text-gray-300 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
                 {copied ? <Check size={14} className="text-positive" /> : <Copy size={14} />}
                 {copied ? 'Copiado' : 'Copiar análise'}
               </button>
@@ -1079,3 +1348,22 @@ export const Finance: React.FC = () => {
     </Layout>
   );
 };
+
+const Field: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  maxLength?: number;
+}> = ({ label, value, onChange, type = 'text', maxLength }) => (
+  <div>
+    <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</label>
+    <input
+      type={type}
+      value={value}
+      maxLength={maxLength}
+      onChange={event => onChange(event.target.value)}
+      className="mt-2 w-full h-12 bg-white/[0.03] border border-white/10 rounded-2xl px-4 text-sm text-white outline-none focus:border-primary/50"
+    />
+  </div>
+);
