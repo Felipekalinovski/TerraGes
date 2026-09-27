@@ -39,6 +39,10 @@ CREATE INDEX IF NOT EXISTS field_service_entries_machine_idx
   ON public.field_service_entries(machine_id);
 CREATE INDEX IF NOT EXISTS field_service_entries_status_idx
   ON public.field_service_entries(company_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS field_service_entries_reviewed_by_idx
+  ON public.field_service_entries(reviewed_by);
+CREATE INDEX IF NOT EXISTS field_service_entries_service_order_idx
+  ON public.field_service_entries(service_order_id);
 
 CREATE OR REPLACE FUNCTION private."current_role"()
  RETURNS text
@@ -135,6 +139,8 @@ CREATE INDEX IF NOT EXISTS manager_notifications_recipient_idx
   ON public.manager_notifications(recipient_user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS manager_notifications_company_idx
   ON public.manager_notifications(company_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS manager_notifications_field_entry_idx
+  ON public.manager_notifications(field_entry_id);
 
 DROP POLICY IF EXISTS manager_notification_read ON public.manager_notifications;
 DROP POLICY IF EXISTS manager_notification_mark_read ON public.manager_notifications;
