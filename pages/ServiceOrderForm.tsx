@@ -21,6 +21,7 @@ const emptyOrder = (): ServiceOrderFormData => ({
         end_hour: 0,
         hourly_rate: 0,
         payment_method: 'Pix',
+        billing_document_type: 'receipt',
         status: 'pending',
         location: '',
         description: '',
@@ -75,7 +76,8 @@ export const ServiceOrderForm: React.FC = () => {
                         date: order.date, client: order.client, machine_id: order.machine_id,
                         operator_id: order.operator_id || '', start_hour: order.start_hour,
                         end_hour: order.end_hour, hourly_rate: order.hourly_rate,
-                        payment_method: order.payment_method, status: order.status,
+                        payment_method: order.payment_method,
+                        billing_document_type: order.billing_document_type || 'receipt', status: order.status,
                         location: order.location || '', description: order.description || '',
                         receipt_url: order.receipt_url || ''
                     });
@@ -142,7 +144,8 @@ export const ServiceOrderForm: React.FC = () => {
             if (!canComplete) { alert('Somente um gestor pode concluir a OS.'); return; }
             const validation = validateServiceOrderCompletion(formData);
             if (validation) { alert(validation); return; }
-            if (!window.confirm(`Concluir esta OS no valor de R$ ${calculateTotal()}? A receita ficará pendente no Financeiro até a confirmação do recebimento. Os dados de faturamento não poderão ser alterados após concluir.`)) return;
+            const documentLabel = formData.billing_document_type === 'nfse' ? 'NFS-e (ficará aguardando aprovação fiscal)' : formData.billing_document_type === 'receipt' ? 'OS/recibo sem emissão de NFS-e' : 'faturamento adiado';
+            if (!window.confirm(`Concluir esta OS no valor de R$ ${calculateTotal()}? Documento: ${documentLabel}. A receita ficará pendente no Financeiro até a confirmação do recebimento. Os dados de faturamento não poderão ser alterados após concluir.`)) return;
         }
         setLoading(true);
         try {
@@ -413,6 +416,22 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
 
                   <div className="group">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Documento do serviço</label>
+                    <select
+                      name="billing_document_type"
+                      required
+                      value={formData.billing_document_type}
+                      onChange={handleChange}
+                      className="w-full h-12 bg-white/[0.03] border border-white/5 rounded-2xl px-4 text-sm text-white font-medium focus:ring-2 focus:ring-primary/40 outline-none transition-all appearance-none"
+                    >
+                      <option value="receipt" className="bg-brand-dark">OS / recibo — sem emitir NFS-e agora</option>
+                      <option value="nfse" className="bg-brand-dark">Emitir NFS-e — após aprovação</option>
+                      <option value="deferred" className="bg-brand-dark">Faturar depois</option>
+                    </select>
+                    <p className="mt-2 text-xs text-gray-500">A escolha define o documento deste serviço. OS/recibo não é documento fiscal quando houver obrigação legal de NFS-e.</p>
+                  </div>
+
+                  <div className="group">
                     <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Fluxo da Ordem</label>
                     <select
                       name="status"
@@ -428,7 +447,7 @@ export const ServiceOrderForm: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente, inclusive para Pix ou dinheiro. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
+                <p className="text-sm text-gray-400">Concluir a OS gera uma receita pendente. Se escolher NFS-e, a emissão ficará aguardando aprovação fiscal; OS/recibo não dispara nota. Confirme o recebimento no Financeiro.{!canComplete && ' A conclusão deve ser feita por um gestor.'}</p>
                 <div className="group">
                   <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 px-1">Relatórios / Observações</label>
                   <textarea

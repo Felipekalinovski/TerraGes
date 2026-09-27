@@ -16,7 +16,9 @@ export interface ServiceOrder {
     total_hours: number;
     hourly_rate: number;
     total_value: number;
-    payment_method: 'Pix' | 'Cartão' | 'Boleto' | 'Faturado' | 'Dinheiro';
+    payment_method: 'Pix' | 'Cartão' | 'Boleto' | 'Faturado' | 'Dinheiro' | 'Cheque';
+    billing_document_type: 'nfse' | 'receipt' | 'deferred';
+    billing_document_status?: 'not_issued' | 'awaiting_approval' | 'ready' | 'issued' | 'deferred' | 'cancelled' | 'error';
     status: 'pending' | 'completed' | 'cancelled';
     location?: string;
     description?: string;

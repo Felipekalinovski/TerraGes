@@ -150,6 +150,10 @@ export const ServiceOrderReceipt: React.FC = () => {
                                 <span className="font-bold text-gray-800">{order.payment_method}</span>
                             </div>
                             <div className="flex justify-between text-sm text-gray-500">
+                                <span>Documento</span>
+                                <span className="font-bold text-gray-800">{order.billing_document_type === 'nfse' ? 'NFS-e' : order.billing_document_type === 'deferred' ? 'Faturar depois' : 'OS / recibo'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-gray-500">
                                 <span>Situação do serviço</span>
                                 <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${order.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                     {order.status === 'completed' ? 'CONCLUÍDO' : order.status === 'cancelled' ? 'CANCELADO' : 'PENDENTE'}
@@ -162,7 +166,7 @@ export const ServiceOrderReceipt: React.FC = () => {
                         </div>
                     </div>
 
-                    <p className="text-sm text-gray-600">Esta folha registra o serviço e não comprova quitação. A situação do recebimento deve ser consultada no Financeiro.</p>
+                    <p className="text-sm text-gray-600">Esta folha registra a execução do serviço e não comprova quitação. {order.billing_document_type === 'nfse' ? 'A NFS-e é tratada separadamente no fluxo fiscal do TerraGes.' : order.billing_document_type === 'receipt' ? 'Este OS/recibo não substitui documento fiscal quando houver obrigação legal de emissão.' : 'O faturamento deste serviço foi adiado.'} A situação do recebimento deve ser consultada no Financeiro.</p>
 
                     {/* Signatures */}
                     <div className="grid grid-cols-2 gap-16 pt-16">
