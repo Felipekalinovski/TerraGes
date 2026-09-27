@@ -128,6 +128,7 @@ export function getAllowedRoutes(role: string | undefined): string[] {
   const operatorRoutes = [
     '/field-entry',
     '/settings/profile',
+    '/settings/whatsapp',
   ];
 
   return isAdminUser(role) ? adminRoutes : operatorRoutes;
