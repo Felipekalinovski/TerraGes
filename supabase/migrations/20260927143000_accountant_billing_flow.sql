@@ -66,30 +66,7 @@ CREATE INDEX IF NOT EXISTS service_measurements_client_idx ON public.service_mea
 CREATE INDEX IF NOT EXISTS billing_documents_client_idx ON public.billing_documents(client_id);
 CREATE INDEX IF NOT EXISTS billing_documents_prepared_by_idx ON public.billing_documents(prepared_by);
 
--- Migrate terminology from planned NFS-e emission to external accountant workflow.
-UPDATE public.service_orders
-SET billing_document_type='accountant'
-WHERE billing_document_type='nfse';
-
-UPDATE public.service_orders
-SET billing_document_status=CASE billing_document_status
-  WHEN 'not_issued' THEN 'not_prepared'
-  WHEN 'awaiting_approval' THEN 'awaiting_client_data'
-  WHEN 'issued' THEN 'external_invoice_recorded'
-  ELSE billing_document_status
-END;
-
-UPDATE public.billing_documents
-SET document_type='accountant'
-WHERE document_type='nfse';
-
-UPDATE public.billing_documents
-SET status=CASE status
-  WHEN 'awaiting_approval' THEN 'awaiting_client_data'
-  WHEN 'issued' THEN 'external_invoice_recorded'
-  ELSE status
-END;
-
+-- Keep legacy rows untouched. New rows use accountant-ready terminology.
 ALTER TABLE public.service_orders DROP CONSTRAINT IF EXISTS service_orders_billing_document_type_check;
 ALTER TABLE public.service_orders ADD CONSTRAINT service_orders_billing_document_type_check
   CHECK (billing_document_type IN ('accountant','receipt','deferred'));
@@ -98,6 +75,7 @@ ALTER TABLE public.service_orders ALTER COLUMN billing_document_status SET DEFAU
 ALTER TABLE public.service_orders DROP CONSTRAINT IF EXISTS service_orders_billing_document_status_check;
 ALTER TABLE public.service_orders ADD CONSTRAINT service_orders_billing_document_status_check
   CHECK (billing_document_status IN (
+    'not_issued','awaiting_approval','issued',
     'not_prepared','awaiting_client_data','ready','sent_to_accountant',
     'external_invoice_recorded','deferred','consolidated','cancelled','error'
   ));
@@ -105,10 +83,11 @@ ALTER TABLE public.service_orders ADD CONSTRAINT service_orders_billing_document
 ALTER TABLE public.billing_documents ALTER COLUMN status SET DEFAULT 'awaiting_client_data';
 ALTER TABLE public.billing_documents DROP CONSTRAINT IF EXISTS billing_documents_document_type_check;
 ALTER TABLE public.billing_documents ADD CONSTRAINT billing_documents_document_type_check
-  CHECK (document_type IN ('accountant','receipt','deferred'));
+  CHECK (document_type IN ('nfse','accountant','receipt','deferred'));
 ALTER TABLE public.billing_documents DROP CONSTRAINT IF EXISTS billing_documents_status_check;
 ALTER TABLE public.billing_documents ADD CONSTRAINT billing_documents_status_check
   CHECK (status IN (
+    'awaiting_approval','issued',
     'awaiting_client_data','ready','sent_to_accountant',
     'external_invoice_recorded','deferred','cancelled','error'
   ));
