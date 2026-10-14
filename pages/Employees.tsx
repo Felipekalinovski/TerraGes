@@ -1,3 +1,4 @@
+import { WhatsAppOperators } from '../components/WhatsAppOperators';
 
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
@@ -38,9 +39,9 @@ export const Employees: React.FC = () => {
 
   return (
     <Layout>
-      <Layout.Header 
-        title="Gestão de Equipe" 
-        subTitle="Recursos Humanos & Operação"
+      <Layout.Header
+        title="Equipe"
+        subTitle="Pessoas e acessos da sua empresa"
         actions={
           <button
             onClick={() => navigate('/employees/new')}
@@ -53,6 +54,7 @@ export const Employees: React.FC = () => {
       />
 
       <Layout.Content>
+        <WhatsAppOperators />
         {/* Search & Filter Bar */}
         <div className="px-4 py-4 flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="relative flex-1 group">
@@ -77,7 +79,7 @@ export const Employees: React.FC = () => {
             <p className="text-xl font-black text-white">{activeCount}</p>
             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Ativos</p>
           </div>
-          
+
           <div className="bg-surface-dark/50 backdrop-blur-xl p-4 rounded-[24px] border border-white/5 shadow-md flex flex-col items-center group overflow-hidden relative">
             <UserMinus size={18} className="text-warning mb-2" />
             <p className="text-xl font-black text-white">{vacationCount}</p>
@@ -116,7 +118,7 @@ export const Employees: React.FC = () => {
               >
                 {/* Avatar with Glow */}
                 <div className="relative shrink-0">
-                  <div 
+                  <div
                     className="size-16 rounded-[24px] bg-surface-dark border border-white/10 relative z-10 shadow-sm flex items-center justify-center overflow-hidden"
                   >
                     {emp.image_url ? (
@@ -126,11 +128,11 @@ export const Employees: React.FC = () => {
                     )}
                   </div>
                   <div className={`absolute -bottom-1 -right-1 size-5 rounded-full border-2 border-surface-dark z-20 flex items-center justify-center ${
-                    emp.status === 'active' ? 'bg-positive' : 
+                    emp.status === 'active' ? 'bg-positive' :
                     emp.status === 'vacation' ? 'bg-warning' : 'bg-negative'
                   }`}>
-                    {emp.status === 'active' ? <UserCheck size={10} className="text-black" strokeWidth={3} /> : 
-                     emp.status === 'vacation' ? <UserMinus size={10} className="text-black" strokeWidth={3} /> : 
+                    {emp.status === 'active' ? <UserCheck size={10} className="text-black" strokeWidth={3} /> :
+                     emp.status === 'vacation' ? <UserMinus size={10} className="text-black" strokeWidth={3} /> :
                      <UserX size={10} className="text-black" strokeWidth={3} />}
                   </div>
                 </div>

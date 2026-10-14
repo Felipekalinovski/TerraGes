@@ -48,14 +48,14 @@ export function parseMessage(payload: any, expectedInstance: string) {
   const message = envelope.Message ?? envelope.message;
   if (!message || typeof message !== 'object') throw new IntakeError('invalid_message');
   // Do not unwrap ephemeral, view-once, edits or quoted messages into new commands.
-  const variants = [message.audioMessage, message.imageMessage, message.documentMessage,
+  const variants = [message.audioMessage, message.imageMessage, message.documentMessage, message.contactMessage,
     message.conversation ?? message.extendedTextMessage?.text].filter(v => v !== undefined && v !== null);
   if (variants.length !== 1) throw new IntakeError('unsupported_message');
   const kind = message.audioMessage ? 'audio' : message.imageMessage ? 'image' : message.documentMessage ? 'document' : 'text';
   const media = message.audioMessage ?? message.imageMessage ?? message.documentMessage;
-  const text = kind === 'text' ? (message.conversation ?? message.extendedTextMessage?.text) : (media.caption ?? '');
+  const text = kind === 'text' ? (message.contactMessage ? contactPhone(message.contactMessage) : message.conversation ?? message.extendedTextMessage?.text) : (media.caption ?? '');
   if (typeof text !== 'string' || text.length > 16000) throw new IntakeError('invalid_text');
-  return { instance, phone, jid, id, kind, text, mime: media?.mimetype };
+  return { instance, phone, jid, id, kind, text, mime: media?.mimetype, provider: envelope.Info ? 'go' : 'api', ...(media ? {mediaMessage:{[`${kind}Message`]:media}} : {}) };
 }
 export function validateMedia(base64: unknown, declaredMime: unknown, kind: string) {
   if (typeof base64 !== 'string' || base64.length > Math.ceil(MAX_MEDIA_BYTES / 3) * 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) throw new IntakeError('invalid_media_encoding');
@@ -83,4 +83,16 @@ export function validateMedia(base64: unknown, declaredMime: unknown, kind: stri
   if (!mime || mime !== (aliases[declared] ?? declared)) throw new IntakeError('media_type_mismatch');
   if ((kind === 'audio' && !mime.startsWith('audio/')) || (kind === 'image' && !mime.startsWith('image/')) || (kind === 'document' && !['application/pdf','text/plain','text/csv'].includes(mime))) throw new IntakeError('unsupported_media_type');
   return {bytes, mime, ext, base64};
+}
+
+
+/** A shared contact is data, never the sender identity. Ambiguous cards are rejected. */
+export function contactPhone(contact:any):string {
+  const card=contact?.vcard;
+  if(typeof card!=='string'||card.length>8000)throw new IntakeError('invalid_contact');
+  const phones=[...card.matchAll(/^TEL[^:\r\n]*:([+0-9 ().-]+)\r?$/gmi)]
+    .map(m=>m[1].replace(/[^0-9]/g,''));
+  const unique=[...new Set(phones)];
+  if(unique.length!==1||!/^[1-9][0-9]{7,14}$/.test(unique[0]))throw new IntakeError('ambiguous_contact');
+  return '+'+unique[0];
 }
