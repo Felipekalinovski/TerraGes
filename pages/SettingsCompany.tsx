@@ -1,177 +1,54 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Loader2, Save } from 'lucide-react';
 import { Layout } from '../components/Layout';
-import { Building, MapPin, Globe, FileText, Save, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { companyService } from '../services/companyService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const SettingsCompany: React.FC = () => {
-  const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
+  const [form, setForm] = useState({ name: '', cnpj: '', address: '', website: '' });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const [company, setCompany] = useState({
-    name: '',
-    cnpj: '',
-    address: '',
-    website: ''
-  });
+  async function load() {
+    setLoading(true); setError('');
+    const company = await companyService.getCompanyProfile();
+    if (company) {
+      setForm({ name: company.name || '', cnpj: company.cnpj || '', address: company.address || '', website: company.website || '' });
+      setLoaded(true);
+    } else setError('Não foi possível carregar os dados da empresa. Tente novamente.');
+    setLoading(false);
+  }
+  useEffect(() => { void load(); }, []);
 
-  useEffect(() => {
-    loadCompanyProfile();
-  }, []);
-
-  const loadCompanyProfile = async () => {
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setError(''); setSuccess('');
+    if (!form.name.trim()) { setError('Informe o nome da empresa.'); return; }
+    setBusy(true);
     try {
-      setLoading(true);
-      const profile = await companyService.getCompanyProfile();
-
-      if (profile) {
-        setCompany({
-          name: profile.name || '',
-          cnpj: profile.cnpj || '',
-          address: profile.address || '',
-          website: profile.website || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error loading company profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const result = await companyService.updateCompanyProfile(company);
-
-      if (result.success) {
-        alert('Dados da empresa atualizados com sucesso!');
-        navigate('/settings');
-      } else {
-        alert(`Erro ao atualizar dados: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error saving company profile:', error);
-      alert('Erro ao salvar dados');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Layout>
-        <Layout.Header title="Dados da Empresa" showBack />
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="animate-spin text-primary" size={40} />
-        </div>
-      </Layout>
-    );
+      const result = await companyService.updateCompanyProfile({ ...form, name: form.name.trim() });
+      if (!result.success) throw new Error(result.error);
+      await refreshProfile(); setSuccess('Dados da empresa salvos.');
+    } catch { setError('Não foi possível salvar. Seus dados continuam no formulário; tente novamente.'); }
+    finally { setBusy(false); }
   }
 
-  return (
-    <Layout>
-      <Layout.Header 
-        title="Dados da Empresa" 
-        subTitle="Informações corporativas e identidade visual"
-        showBack
-      />
-
-      <Layout.Content>
-        <div className="p-4 space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-          <div className="relative group p-8 rounded-[40px] bg-surface-dark/40 backdrop-blur-md border border-white/5 flex flex-col items-center gap-4 shadow-glass transition-all duration-500 hover:border-primary/20">
-            <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full opacity-50" />
-            <div className="size-24 bg-white/5 rounded-3xl flex items-center justify-center text-primary border border-white/10 relative z-10 group-hover:scale-110 transition-transform duration-500 shadow-neon">
-              <Building size={48} strokeWidth={1.5} />
-            </div>
-            <div className="text-center relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Branding</p>
-              <p className="text-[9px] font-medium text-gray-500 uppercase tracking-widest mt-1">Logo da Corporação</p>
-            </div>
-          </div>
-
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Razão Social</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={company.name}
-                  onChange={(e) => setCompany({ ...company, name: e.target.value })}
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="Nome da empresa"
-                />
-                <Building className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">CNPJ / Documentação</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={company.cnpj}
-                  onChange={(e) => setCompany({ ...company, cnpj: e.target.value })}
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="00.000.000/0000-00"
-                />
-                <FileText className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Endereço Principal</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={company.address}
-                  onChange={(e) => setCompany({ ...company, address: e.target.value })}
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="Endereço completo"
-                />
-                <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Website Corporativo</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={company.website}
-                  onChange={(e) => setCompany({ ...company, website: e.target.value })}
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="www.exemplo.com.br"
-                />
-                <Globe className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full h-16 bg-primary text-black font-black uppercase tracking-widest text-[11px] rounded-3xl shadow-neon flex items-center justify-center gap-3 hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-[0.98]"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Atualizando SGBD...
-                </>
-              ) : (
-                <>
-                  <Save size={20} strokeWidth={2.5} />
-                  Salvar Dados Corporativos
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Layout.Content>
-    </Layout>
-  );
+  return <Layout><Layout.Header title="Minha empresa" subTitle="Dados usados nos serviços e orçamentos" showBack /><Layout.Content>
+    <div className="tg-page"><form className="tg-card tg-stack" onSubmit={save}>
+      <h2>Dados da empresa</h2><p className="tg-muted">Só o nome é obrigatório. Complete os outros dados quando precisar.</p>
+      {loading ? <p role="status">Carregando…</p> : loaded && <>
+        <div className="tg-field"><label htmlFor="company-name">Nome da empresa</label><input id="company-name" required autoComplete="organization" maxLength={160} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+        <div className="tg-field"><label htmlFor="company-cnpj">CNPJ (opcional)</label><input id="company-cnpj" inputMode="numeric" value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} placeholder="00.000.000/0000-00" /></div>
+        <div className="tg-field"><label htmlFor="company-address">Endereço (opcional)</label><input id="company-address" autoComplete="street-address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+        <div className="tg-field"><label htmlFor="company-website">Site (opcional)</label><input id="company-website" autoComplete="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="www.suaempresa.com.br" /></div>
+      </>}
+      {error && <p role="alert" className="tg-error">{error}</p>}
+      {success && <p role="status" className="tg-success">{success}</p>}
+      {!loaded && !loading && <button className="tg-button tg-secondary" type="button" onClick={load}>Tentar novamente</button>}
+      {loaded && <button disabled={busy} className="tg-button tg-primary" type="submit">{busy ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}{busy ? 'Salvando…' : 'Salvar dados'}</button>}
+    </form></div>
+  </Layout.Content></Layout>;
 };

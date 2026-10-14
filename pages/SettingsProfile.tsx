@@ -1,271 +1,69 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { Camera, Loader2, Save } from 'lucide-react';
 import { Layout } from '../components/Layout';
-import { User, Mail, Phone, Camera, Save, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { userService } from '../services/userService';
+import { WhatsAppConnection } from '../components/WhatsAppConnection';
 import { useAuth } from '../contexts/AuthContext';
+import { userService } from '../services/userService';
+import { getRoleLabel } from '../services/roleService';
 
 export const SettingsProfile: React.FC = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { profile, user, refreshProfile } = useAuth();
+  const [name, setName] = useState(profile?.name || '');
+  const [avatar, setAvatar] = useState(profile?.avatar_url || '');
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: '',
-    phone: '',
-    avatar_url: 'https://picsum.photos/200'
-  });
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setError(''); setSuccess('');
+    if (!name.trim()) { setError('Informe seu nome.'); return; }
+    setBusy(true);
     try {
-      setLoading(true);
-      const profile = await userService.getCurrentProfile();
-
-      if (profile) {
-        setFormData({
-          name: profile.name || '',
-          email: profile.email || user?.email || '',
-          role: profile.role || 'Usuário',
-          phone: profile.phone || '',
-          avatar_url: profile.avatar_url || 'https://picsum.photos/200'
-        });
-      } else if (user) {
-        // If no profile exists, use auth user data
-        setFormData(prev => ({
-          ...prev,
-          email: user.email || ''
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione uma imagem válida');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 5MB');
-      return;
-    }
-
-    try {
-      setUploadingAvatar(true);
-      const result = await userService.uploadAvatar(file);
-
-      if (result.success && result.url) {
-        setFormData(prev => ({ ...prev, avatar_url: result.url! }));
-        alert('Foto de perfil atualizada com sucesso!');
-      } else {
-        alert(`Erro ao fazer upload: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      alert('Erro ao fazer upload da foto');
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
-  const formatPhone = (value: string) => {
-    const isInternational = value.startsWith('+');
-    const digits = value.replace(/\D/g, '').slice(0, 15);
-    
-    if (isInternational) {
-      return `+${digits}`;
-    }
-
-    // Padrão Brasil (sem +)
-    if (digits.length <= 11) {
-      if (digits.length <= 2) return digits;
-      if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-    }
-
-    return digits;
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    setFormData(prev => ({ ...prev, phone: formatted }));
-  };
-
-  const getRawPhone = () => {
-    return formData.phone.replace(/\D/g, '');
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const result = await userService.updateProfile({
-        name: formData.name,
-      });
-
-      if (result.success) {
-        alert('Perfil atualizado com sucesso!');
-        navigate('/settings');
-      } else {
-        alert(`Erro ao atualizar perfil: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      alert('Erro ao salvar alterações');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Layout>
-        <Layout.Header title="Perfil do Usuário" showBack />
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="animate-spin text-primary" size={40} />
-        </div>
-      </Layout>
-    );
+      const result = await userService.updateProfile({ name: name.trim() });
+      if (!result.success) throw new Error(result.error);
+      await refreshProfile(); setSuccess('Dados salvos.');
+    } catch { setError('Não foi possível salvar. Seus dados continuam no formulário; tente novamente.'); }
+    finally { setBusy(false); }
   }
 
-  return (
-    <Layout>
-      <Layout.Header 
-        title="Perfil do Usuário" 
-        subTitle="Mantenha seus dados de contato e foto atualizados"
-        showBack 
-      />
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError(''); setSuccess('');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setError('Escolha uma foto JPG, PNG ou WebP de até 5 MB.'); return;
+    }
+    setUploading(true);
+    try {
+      const result = await userService.uploadAvatar(file);
+      if (!result.success || !result.url) throw new Error(result.error);
+      setAvatar(result.url); await refreshProfile(); setSuccess('Foto atualizada.');
+    } catch { setError('Não foi possível atualizar a foto. Tente novamente.'); }
+    finally { setUploading(false); }
+  }
 
-      <Layout.Content>
-        <button className="m-4 text-primary underline" onClick={() => navigate('/settings/whatsapp')}>Vincular meu WhatsApp com segurança</button>
-        <div className="p-4 space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* Avatar Upload */}
-          <div className="flex flex-col items-center gap-4 py-8 relative">
-            <div className="absolute inset-0 bg-primary/5 blur-[100px] rounded-full -z-10" />
-            <div className="relative group">
-              <div
-                className="size-32 rounded-full bg-surface-dark/80 bg-cover bg-center border-2 border-white/10 shadow-2xl transition-transform duration-500 group-hover:scale-105"
-                style={{ backgroundImage: `url('${formData.avatar_url}')` }}
-              >
-                {uploadingAvatar && (
-                  <div className="absolute inset-0 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                    <Loader2 className="animate-spin text-primary" size={24} />
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={handleAvatarClick}
-                disabled={uploadingAvatar}
-                className="absolute bottom-1 right-1 p-3 bg-primary text-black rounded-2xl shadow-neon hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-90"
-              >
-                <Camera size={18} strokeWidth={2.5} />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-            </div>
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl font-black text-white tracking-tight">{formData.name || 'Usuário'}</h2>
-              <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 inline-block">
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">{formData.role}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">Nome Completo</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="Nome completo"
-                />
-                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">E-mail Corporativo</label>
-              <div className="relative group">
-                <input
-                  type="email"
-                  value={formData.email}
-                  disabled
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-white/[0.02] border border-white/5 text-gray-500 outline-none cursor-not-allowed italic"
-                />
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-700" size={20} />
-              </div>
-              <p className="text-[9px] font-medium text-gray-600 ml-4 uppercase tracking-tighter">O e-mail não pode ser alterado por segurança</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-4">WhatsApp verificado</label>
-              <div className="relative group">
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  readOnly
-                  className="w-full h-14 pl-14 pr-4 rounded-3xl bg-surface-dark/40 backdrop-blur-md border border-white/5 text-white focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder="+55 (11) 99999-9999"
-                />
-                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
-              </div>
-              <p className="text-[9px] font-medium text-gray-600 ml-4 uppercase tracking-tighter">Use o formato internacional com +DDI (ex: +55) para ativar o Bot</p>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full h-16 bg-primary text-black font-black uppercase tracking-widest text-[11px] rounded-3xl shadow-neon flex items-center justify-center gap-3 hover:bg-primary-hover transition-all disabled:opacity-50 active:scale-[0.98]"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Sincronizando...
-                </>
-              ) : (
-                <>
-                  <Save size={20} strokeWidth={2.5} />
-                  Salvar Perfil
-                </>
-              )}
-            </button>
-          </div>
+  return <Layout>
+    <Layout.Header title="Meu perfil" subTitle="Seus dados e sua conexão" showBack />
+    <Layout.Content><div className="tg-page tg-stack">
+      <form className="tg-card tg-stack" onSubmit={save}>
+        <div className="tg-row">
+          <button type="button" className="tg-avatar" aria-label="Alterar foto de perfil" onClick={() => fileInput.current?.click()} disabled={uploading || busy}>
+            {avatar ? <img src={avatar} alt="Sua foto" onError={() => setAvatar('')} /> : <span>{(profile?.name || 'U').trim().slice(0, 1).toUpperCase()}</span>}
+            <span className="tg-avatar-badge">{uploading ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}</span>
+          </button>
+          <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} hidden />
+          <div className="tg-grow"><h2>Dados pessoais</h2><p className="tg-muted">{getRoleLabel(profile?.role)} · Foto opcional</p></div>
         </div>
-      </Layout.Content>
-    </Layout>
-  );
+        <div className="tg-field"><label htmlFor="profile-name">Seu nome</label><input id="profile-name" autoComplete="name" maxLength={120} required value={name} onChange={e => setName(e.target.value)} /></div>
+        <div className="tg-field"><label htmlFor="profile-email">E-mail de acesso</label><input id="profile-email" type="email" readOnly value={profile?.email || user?.email || ''} aria-describedby="email-help" /><p id="email-help" className="tg-muted">Este é o e-mail usado para entrar na sua conta.</p></div>
+        {error && <p className="tg-error" role="alert">{error}</p>}
+        {success && <p className="tg-success" role="status">{success}</p>}
+        <button disabled={busy || uploading} className="tg-button tg-primary" type="submit">{busy ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}{busy ? 'Salvando…' : 'Salvar alterações'}</button>
+      </form>
+      <WhatsAppConnection />
+    </div></Layout.Content>
+  </Layout>;
 };

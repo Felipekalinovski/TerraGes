@@ -36,6 +36,7 @@ import { Orcamento } from './pages/Orcamento';
 import { OrcamentoForm } from './pages/OrcamentoForm';
 import { HoraMaquinaPage } from './pages/HoraMaquina';
 import { RelatorioCliente } from './pages/RelatorioCliente';
+import { GettingStarted } from './pages/GettingStarted';
 import { Onboarding } from './pages/Onboarding';
 import { WhatsAppInbox } from './pages/WhatsAppInbox';
 import { OperatorFieldEntry } from './pages/OperatorFieldEntry';
@@ -50,7 +51,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   requiredRole,
   requireAccess = false
 }) => {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, refreshProfile, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -63,19 +64,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
 
   if (!session) return <Navigate to="/login" replace />;
 
-  if (!profile) return <div className="p-8 text-white">Não foi possível carregar seu perfil. Recarregue a página para tentar novamente.</div>;
-  if (!profile.company_id && location.pathname !== '/settings/profile') return <div className="p-8 text-white">Seu vínculo com a empresa precisa ser verificado pelo responsável do TerraGes. Seus dados permanecem preservados.</div>;
-
-  if (profile && profile.onboarding_completed === false && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
+  if (!profile || (!profile.company_id && !['/settings/profile', '/help'].includes(location.pathname))) {
+    return <div className="tg-welcome"><section className="tg-card tg-stack tg-welcome-shell">
+      <h1>{!profile ? 'Vamos recuperar seu acesso' : 'Falta confirmar sua empresa'}</h1>
+      <p>{!profile ? 'Não foi possível carregar seu cadastro. Tente novamente.' : 'Peça ao responsável pela empresa que confira o vínculo do seu cadastro. Depois, tente novamente.'}</p>
+      <button className="tg-button tg-primary" onClick={() => void refreshProfile()}>Tentar novamente</button>
+      <button className="tg-button tg-secondary" onClick={() => void signOut()}>Sair e entrar com outra conta</button>
+    </section></div>;
   }
-  
-  if (profile && profile.onboarding_completed !== false && location.pathname === '/onboarding') {
-    return <Navigate to={canViewData(profile?.role) ? '/dashboard' : '/field-entry'} replace />;
+
+  if (profile.onboarding_completed !== true && !['/onboarding', '/help'].includes(location.pathname)) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   // Operador é write-only: fora do perfil, sua única tela de negócio é o envio de campo.
-  if (!canViewData(profile?.role) && !['/field-entry', '/settings/profile', '/settings/whatsapp'].includes(location.pathname)) {
+  if (!canViewData(profile?.role) && !['/field-entry', '/settings/profile', '/settings/whatsapp', '/onboarding', '/help'].includes(location.pathname)) {
     return <Navigate to="/field-entry" replace />;
   }
 
@@ -104,6 +107,8 @@ const App: React.FC = () => {
 
           {/* ── Onboarding ── */}
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+
+          <Route path="/help" element={<ProtectedRoute><GettingStarted /></ProtectedRoute>} />
 
           {/* ── Dashboard ── */}
           <Route path="/dashboard" element={<ProtectedRoute requireAccess><Dashboard /></ProtectedRoute>} />

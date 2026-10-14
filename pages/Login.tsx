@@ -66,7 +66,7 @@ export const Login: React.FC = () => {
             <Truck className="text-primary" size={36} strokeWidth={1.5} />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tighter uppercase mb-1">TerraGes <span className="text-primary italic">OS</span></h1>
-          <p className="text-[10px] text-accent font-bold uppercase tracking-[0.3em]">Sistemas de Gestão de Ativos</p>
+          <p className="text-[10px] text-accent font-bold uppercase tracking-[0.3em]">Sua empresa e seus serviços em um só lugar</p>
         </div>
 
         <div className="bg-surface-dark border border-white/5 p-8 rounded-[32px] shadow-xl relative group">
@@ -89,7 +89,7 @@ export const Login: React.FC = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full h-14 pl-14 pr-6 rounded-[20px] bg-white/5 border border-white/5 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all placeholder:text-gray-700 text-sm font-medium"
-                    placeholder="exemplo@engeman.com"
+                    placeholder="voce@exemplo.com.br" autoComplete="email"
                   />
                 </div>
               </div>
@@ -99,7 +99,7 @@ export const Login: React.FC = () => {
                 <div className="relative">
                   <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-600 focus-within:text-primary transition-colors" size={18} />
                   <input
-                    type="password"
+                    type="password" autoComplete="current-password"
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}

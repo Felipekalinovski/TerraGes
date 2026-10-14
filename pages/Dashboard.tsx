@@ -332,6 +332,14 @@ function AdminDashboard() {
       <Layout.Content>
         <div className="pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
+          <section className="tg-card tg-stack m-4">
+            <h2>O que vamos fazer hoje?</h2>
+            <div className="flex flex-wrap gap-2">
+              <button className="tg-button tg-primary" onClick={() => navigate('/service-orders/new')}>Novo serviço</button>
+              <button className="tg-button tg-secondary" onClick={() => navigate('/help')}>Primeiros passos e ajuda</button>
+            </div>
+          </section>
+
           {/* ── Hero - Saldo Líquido ─────────────────────────────────────────── */}
           <div className="relative overflow-hidden mx-4 mt-4 rounded-3xl border border-white/5 bg-surface-dark/50 p-6">
             {/* Glow decorativo */}
