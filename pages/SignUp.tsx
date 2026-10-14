@@ -1,170 +1,62 @@
-
 import React, { useState } from 'react';
-import { Truck, User, Mail, Lock, ArrowRight, Loader2, Chrome } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Loader2, Truck } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export const SignUp: React.FC = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+  const [show, setShow] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      alert("As senhas não coincidem.");
-      return;
-    }
-
-    setIsLoading(true);
-
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setError('');
+    if (!form.name.trim()) { setError('Informe seu nome.'); return; }
+    setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-          },
-        },
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email.trim(), password: form.password,
+        options: { data: { name: form.name.trim() }, emailRedirectTo: `${window.location.origin}/onboarding` },
       });
-
       if (error) throw error;
+      if (data.session) navigate('/onboarding', { replace: true });
+      else setSent(true);
+    } catch (err: any) {
+      setError(err.code === 'weak_password' ? 'Escolha uma senha mais forte, com letras, números e símbolos.' : err.code === 'over_email_send_rate_limit' ? 'Aguarde alguns minutos antes de tentar novamente.' : 'Não foi possível criar sua conta. Confira os dados ou entre se já tiver cadastro.');
+    } finally { setBusy(false); }
+  }
 
-      alert("Conta criada com sucesso! Verifique seu e-mail para confirmar.");
-      navigate('/login');
-    } catch (error) {
-      alert('Erro ao criar conta: ' + (error as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
+  async function google() {
+    setBusy(true); setError('');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/onboarding` } });
       if (error) throw error;
-    } catch (error) {
-      alert('Erro ao cadastrar com Google: ' + (error as Error).message);
-    }
-  };
+    } catch { setError('Não foi possível continuar com Google. Tente o cadastro por e-mail.'); setBusy(false); }
+  }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-gradient p-4 animate-in fade-in duration-500">
-      <div className="w-full max-w-md bg-surface-dark/90 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/10">
-        <div className="flex flex-col items-center mb-6">
-          <div className="size-14 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/10 flex items-center justify-center mb-3 shadow-lg shadow-primary/10">
-            <Truck className="text-primary" size={28} strokeWidth={1.5} />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Criar Conta</h1>
-          <p className="text-gray-400 text-sm">Junte-se ao TerraGes</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">Nome Completo</label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
-                placeholder="Seu nome"
-              />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">E-mail</label>
-            <div className="relative">
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
-                placeholder="seu@email.com"
-              />
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">Senha</label>
-            <div className="relative">
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
-                placeholder="••••••••"
-              />
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1">Confirmar Senha</label>
-            <div className="relative">
-              <input
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full h-11 pl-10 pr-4 rounded-lg bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-primary outline-none transition-all placeholder:text-white/30 text-sm"
-                placeholder="••••••••"
-              />
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={18} />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-12 bg-primary hover:bg-primary-hover text-white font-bold rounded-lg transition-all shadow-lg shadow-primary/20 mt-6 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isLoading ? <Loader2 size={20} className="animate-spin" /> : "Cadastrar"}
-            {!isLoading && <ArrowRight size={20} />}
-          </button>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-surface-dark text-gray-400">ou</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleSignUp}
-            className="w-full h-12 bg-white hover:bg-gray-100 text-gray-900 font-semibold rounded-lg transition-all shadow-lg flex items-center justify-center gap-3 group"
-          >
-            <Chrome size={20} className="text-blue-600" />
-            <span>Continuar com Google</span>
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-400">
-          Já tem uma conta? <button onClick={() => navigate('/login')} className="text-primary font-bold hover:underline">Faça Login</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="tg-welcome"><div className="tg-welcome-shell tg-stack">
+    <div className="tg-row"><Link to="/login" className="tg-brand tg-grow"><Truck size={25} />TerraGes</Link><ThemeToggle /></div>
+    {sent ? <section className="tg-card tg-stack">
+      <CheckCircle2 className="text-positive" size={32} /><h1>Confira seu e-mail</h1>
+      <p>Se o cadastro precisar de confirmação, enviaremos um link para <strong className="tg-wrap">{form.email.trim()}</strong>. Abra o link para continuar.</p>
+      <p className="tg-muted">Confira também o spam. Se você já tem uma conta, entre com sua senha.</p>
+      <Link to="/login" className="tg-button tg-primary">Ir para o login</Link>
+      <button className="tg-link" onClick={() => setSent(false)}>Corrigir meu e-mail</button>
+    </section> : <>
+      <div><p className="tg-eyebrow">Primeiro acesso</p><h1>Crie sua conta</h1><p className="tg-muted">Comece com seu nome, e-mail e uma senha. Depois, vamos organizar sua empresa juntos.</p></div>
+      <form className="tg-card tg-stack" onSubmit={submit}>
+        <div className="tg-field"><label htmlFor="signup-name">Seu nome</label><input id="signup-name" autoComplete="name" required maxLength={120} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Como podemos chamar você?" /></div>
+        <div className="tg-field"><label htmlFor="signup-email">E-mail</label><input id="signup-email" autoComplete="email" type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="voce@exemplo.com.br" /></div>
+        <div className="tg-field"><label htmlFor="signup-password">Crie uma senha</label><div className="tg-password"><input id="signup-password" autoComplete="new-password" type={show ? 'text' : 'password'} minLength={8} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} aria-describedby="password-hint" /><button type="button" aria-label={show ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShow(!show)}>{show ? <EyeOff size={20} /> : <Eye size={20} />}</button></div><p id="password-hint" className="tg-muted">Use pelo menos 8 caracteres.</p></div>
+        {error && <p role="alert" className="tg-error">{error}</p>}
+        <button disabled={busy} type="submit" className="tg-button tg-primary">{busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}Criar conta e continuar</button>
+        <div className="tg-divider">ou</div>
+        <button type="button" disabled={busy} onClick={google} className="tg-button tg-secondary">Continuar com Google</button>
+      </form>
+      <p className="tg-muted">Já usa o TerraGes? <Link className="tg-link" to="/login">Entrar na minha conta</Link></p>
+    </>}
+  </div></div>;
 };

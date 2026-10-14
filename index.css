@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Common */
   --primary: #F97316;
@@ -287,3 +291,59 @@ body {
   to   { transform: rotate(360deg); }
 }
 .animate-spin { animation: spin 1s linear infinite; }
+/* First access and account screens: compact, readable, and theme-aware. */
+.tg-page { width: 100%; max-width: 680px; margin: 0 auto; padding: 20px 16px 36px; }
+.tg-stack { display: flex; flex-direction: column; gap: 18px; }
+.tg-card { padding: 22px; background: var(--surface); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 20px; }
+.tg-card h2 { font-size: 18px; line-height: 1.35; font-weight: 700; margin: 0; }
+.tg-card p, .tg-welcome p { font-size: 14px; line-height: 1.6; margin: 0; }
+.tg-muted { color: var(--text-muted); font-size: 13px !important; line-height: 1.5; }
+.tg-row { display: flex; align-items: center; gap: 14px; }
+.tg-grow { flex: 1; min-width: 0; }
+.tg-field { display: flex; flex-direction: column; gap: 7px; }
+.tg-field label { font-size: 14px; font-weight: 600; }
+.tg-field input { width: 100%; min-width: 0; height: 48px; padding: 10px 13px; font: inherit; font-size: 16px; color: var(--text-main); background: var(--bg-app); border: 1px solid var(--border-glass); border-radius: 10px; }
+.tg-field input[readonly] { color: var(--text-muted); }
+.tg-field input:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+.tg-button { min-height: 46px; padding: 11px 16px; border-radius: 11px; display: inline-flex; justify-content: center; align-items: center; gap: 9px; font-size: 14px; line-height: 1.4; font-weight: 600; text-align: center; text-decoration: none; }
+.tg-primary { background: var(--primary); color: #15100a; border: 1px solid transparent; }
+.tg-primary:hover { background: #fb923c; }
+.tg-secondary { background: var(--surface-light); color: var(--text-main); border: 1px solid var(--border-glass); }
+.tg-button:disabled, .tg-choice:disabled, .tg-link:disabled { opacity: .55; cursor: wait; }
+.tg-button:focus-visible, .tg-choice:focus-visible, .tg-link:focus-visible, summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.tg-link { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; padding: 8px 0; }
+.tg-error, .tg-success { padding: 12px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+.tg-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.4); color: var(--text-main); }
+.tg-success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.4); color: var(--text-main); }
+.tg-avatar { position: relative; width: 62px; height: 62px; border-radius: 50%; background: var(--surface-light); flex: 0 0 62px; display: grid; place-items: center; font-size: 24px; font-weight: 700; border: 1px solid var(--border-glass); }
+.tg-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.tg-avatar-badge { position: absolute; right: -3px; bottom: -1px; padding: 5px; background: var(--primary); color: #111; border-radius: 9px; }
+.tg-details { color: var(--text-main); font-size: 14px; border-top: 1px solid var(--border-glass); padding-top: 12px; }
+.tg-details summary { cursor: pointer; min-height: 36px; font-weight: 600; }
+.tg-details p { margin: 8px 0 14px; line-height: 1.65; color: var(--text-muted); }
+.tg-instructions { margin: 0; padding-left: 22px; font-size: 14px; line-height: 1.6; }
+.tg-instructions li + li { margin-top: 10px; }
+.tg-code { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--bg-app); border-radius: 12px; }
+.tg-code code { overflow-wrap: anywhere; user-select: all; font-size: 16px; }
+.tg-welcome { min-height: 100dvh; background: var(--bg-app); color: var(--text-main); padding: 28px 16px; display: flex; justify-content: center; align-items: center; }
+.tg-welcome-shell { width: 100%; max-width: 480px; }
+.tg-welcome h1 { font-size: clamp(24px, 6vw, 30px); font-weight: 700; letter-spacing: -.03em; line-height: 1.2; margin: 6px 0 10px; }
+.tg-brand { display: flex; gap: 10px; align-items: center; font-size: 21px; font-weight: 800; text-decoration: none; color: var(--text-main); }
+.tg-brand svg { color: var(--primary); }
+.tg-eyebrow { color: var(--primary); font-weight: 600; font-size: 12px !important; }
+.tg-progress { list-style: none; padding: 0; margin: 6px 0; display: flex; gap: 12px; }
+.tg-progress li { display: flex; align-items: center; gap: 7px; flex: 1; color: var(--text-muted); font-size: 12px; }
+.tg-progress li > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-light); }
+.tg-progress li[data-active='true'] { color: var(--text-main); font-weight: 600; }
+.tg-progress li[data-active='true'] > span { background: var(--primary); color: #111; }
+.tg-choice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px; border: 1px solid var(--border-glass); border-radius: 12px; color: var(--text-main); text-align: left; text-decoration: none; background: var(--bg-app); }
+.tg-choice strong { display: block; font-size: 14px; line-height: 1.4; }
+.tg-choice small { display: block; font-size: 13px; line-height: 1.5; color: var(--text-muted); margin-top: 4px; }
+.tg-choice svg { flex-shrink: 0; color: var(--primary); }
+.tg-password { position: relative; }
+.tg-password input { padding-right: 48px; }
+.tg-password button { position: absolute; right: 1px; top: 1px; width: 46px; height: 46px; display: grid; place-items: center; color: var(--text-muted); }
+.tg-divider { text-align: center; color: var(--text-muted); font-size: 13px; }
+.tg-wrap { overflow-wrap: anywhere; }
+@media (max-width: 360px) { .tg-card { padding: 16px; } .tg-progress { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

@@ -66,7 +66,7 @@ class UserService {
                     ...(updates.onboarding_completed !== undefined ? {onboarding_completed:updates.onboarding_completed} : {}),
                     updated_at: new Date().toISOString(),
                 })
-                .eq('id', user.id);
+                .eq('id', user.id).select('id').single();
 
             if (error) throw error;
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { userService, UserProfile } from '../services/userService';
+import { UserProfile } from '../services/userService';
 import { whatsappService } from '../services/whatsappService';
 import {
   LayoutDashboard,
@@ -24,7 +24,9 @@ import {
   Settings,
   FileText,
   Clock,
-  Phone
+  Phone,
+  CircleHelp,
+  UserRound
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { ManagerNotifications } from './ManagerNotifications';
@@ -61,13 +63,9 @@ export const Layout: React.FC<LayoutProps> & {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { profile: userProfile } = useAuth();
 
-  useEffect(() => {
-    userService.getCurrentProfile().then(setUserProfile);
-  }, []);
-
-  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isActive = (path: string) => path === '/settings' ? location.pathname === path : location.pathname === path || location.pathname.startsWith(path + '/');
 
   const contextValue = {
     isSidebarOpen,
@@ -82,7 +80,7 @@ export const Layout: React.FC<LayoutProps> & {
 
   return (
     <LayoutContext.Provider value={contextValue}>
-      <div className="flex h-screen bg-brand-dark text-white w-full overflow-hidden font-sans">
+      <div className="flex h-dvh bg-brand-dark text-white w-full overflow-hidden font-sans">
 
         <Layout.Sidebar />
 
@@ -107,37 +105,38 @@ Layout.Header = ({ title, subTitle, showBack, actions }) => {
   const { setIsSidebarOpen, navigate, userProfile } = useLayout();
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between p-4 bg-brand-dark/80 border-b border-white/5 h-18 backdrop-blur-md">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-2 px-4 py-3 bg-brand-dark/80 border-b border-white/5 min-h-16 backdrop-blur-md">
+      <div className="flex items-center gap-2 min-w-0">
         {showBack ? (
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+          <button aria-label="Voltar" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <ChevronLeft size={24} />
           </button>
         ) : (
-          <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+          <button aria-label="Abrir menu" onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
             <Menu size={24} />
           </button>
         )}
-        <div>
-          <h1 className="text-xl font-heading font-black tracking-tight uppercase leading-none text-white">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold leading-tight text-white">
             {title}
           </h1>
-          {subTitle && <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5">{subTitle}</p>}
+          {subTitle && <p className="text-xs text-gray-400 mt-1">{subTitle}</p>}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {actions}
         {isAdminUser(userProfile?.role) && <ManagerNotifications />}
         <ThemeToggle />
         <button
+          aria-label="Meu perfil"
           onClick={() => navigate('/settings/profile')}
           className="size-9 rounded-full border-2 border-white/10 hover:border-primary/50 transition-all overflow-hidden p-0.5 bg-surface-dark"
         >
-          <img
-            src={userProfile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.name || 'U')}&background=00E599&color=000`}
+          {userProfile?.avatar_url ? <img
+            src={userProfile.avatar_url}
             className="size-full rounded-full object-cover"
-            alt="Profile"
-          />
+            alt="Sua foto"
+          /> : <span className="flex size-full items-center justify-center text-sm font-semibold text-primary">{(userProfile?.name || 'U').trim().slice(0, 1).toUpperCase()}</span>}
         </button>
       </div>
     </header>
@@ -214,6 +213,20 @@ Layout.Sidebar = () => {
     );
   }
 
+  navItems.push(
+    { icon: <UserRound size={20} />, label: 'Meu perfil', path: '/settings/profile' },
+    { icon: <Phone size={20} />, label: 'Meu WhatsApp', path: '/settings/whatsapp' },
+    { icon: <CircleHelp size={20} />, label: 'Como usar', path: '/help' },
+  );
+
+  const accountPaths = ['/settings', '/settings/profile', '/settings/whatsapp', '/help'];
+  const dailyPaths = ['/dashboard', '/field-entry', '/service-orders', '/orcamentos', '/schedule', '/rdo', '/hora-maquina', '/field-entries'];
+  const groups = [
+    { label: 'Dia a dia', items: navItems.filter(item => dailyPaths.includes(item.path)) },
+    { label: 'Gestão da empresa', items: navItems.filter(item => !dailyPaths.includes(item.path) && !accountPaths.includes(item.path)) },
+    { label: 'Minha conta e ajuda', items: navItems.filter(item => accountPaths.includes(item.path)) },
+  ];
+
   return (
     <>
       {isSidebarOpen && (
@@ -234,7 +247,9 @@ Layout.Sidebar = () => {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-          {navItems.map((item) => (
+          {groups.filter(group => group.items.length > 0).map(group => <div key={group.label} className="mb-5">
+            <p className="px-4 pb-2 text-xs font-semibold text-gray-500">{group.label}</p>
+            {group.items.map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
@@ -243,9 +258,10 @@ Layout.Sidebar = () => {
                 : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
             >
               <span className={isActive(item.path) ? 'text-primary' : 'text-gray-500 group-hover:text-primary transition-colors'}>{item.icon}</span>
-              <span className="text-sm font-bold tracking-tight uppercase">{item.label}</span>
+              <span className="text-sm font-medium">{item.label}</span>
             </button>
           ))}
+          </div>)}
 
           {/* Caixa de entrada administrativa do WhatsApp. */}
           {canView && userRole && (
@@ -260,7 +276,7 @@ Layout.Sidebar = () => {
               <span className={isActive('/whatsapp-inbox') ? 'text-green-400' : 'text-gray-500 group-hover:text-green-400 transition-colors'}>
                 <Phone size={20} />
               </span>
-              <span className="text-sm font-bold tracking-tight uppercase flex-1">WhatsApp Bot</span>
+              <span className="text-sm font-medium flex-1">Envios do WhatsApp</span>
               {whatsappPending > 0 && (
                 <span className="size-5 rounded-full bg-yellow-500 text-black text-[9px] font-black flex items-center justify-center">
                   {whatsappPending}
@@ -292,34 +308,34 @@ Layout.Navigation = () => {
   const isAdmin = isAdminUser(profile?.role);
 
   return (
-    <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-6 py-4 flex justify-between items-center shadow-lg">
+    <nav className="fixed md:hidden bottom-0 left-0 right-0 z-30 bg-surface-dark border-t border-white/5 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex justify-between items-center shadow-lg">
       {!isAdmin && (
-        <button onClick={() => navigate('/field-entry')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/field-entry') ? 'text-primary scale-105' : 'text-gray-500'}`}>
+        <button onClick={() => navigate('/field-entry')} className={`flex flex-1 min-h-12 justify-center flex-col items-center gap-1 transition-all ${isActive('/field-entry') ? 'text-primary scale-105' : 'text-gray-500'}`}>
           <ClipboardList size={22} strokeWidth={isActive('/field-entry') ? 3 : 2} />
-          <span className="text-[8px] font-black uppercase tracking-tighter text-current">Registrar</span>
+          <span className="text-[10px] font-medium text-current">Registrar</span>
         </button>
       )}
-      {isAdmin && <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
+      {isAdmin && <button onClick={() => navigate('/dashboard')} className={`flex flex-1 min-h-12 justify-center flex-col items-center gap-1 transition-all ${isActive('/dashboard') ? 'text-primary scale-105' : 'text-gray-500'}`}>
         <LayoutDashboard size={22} strokeWidth={isActive('/dashboard') ? 3 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Início</span>
+        <span className="text-[10px] font-medium text-current">Início</span>
       </button>}
-      {isAdmin && <button onClick={() => navigate('/orcamentos')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
+      {isAdmin && <button onClick={() => navigate('/orcamentos')} className={`flex flex-1 min-h-12 justify-center flex-col items-center gap-1 transition-all ${isActive('/orcamentos') ? 'text-primary' : 'text-gray-500'}`}>
         <FileText size={22} strokeWidth={isActive('/orcamentos') ? 2.5 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Orçamentos</span>
+        <span className="text-[10px] font-medium text-current">Orçamentos</span>
       </button>}
-      {isAdmin && <button onClick={() => navigate('/service-orders')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
+      {isAdmin && <button onClick={() => navigate('/service-orders')} className={`flex flex-1 min-h-12 justify-center flex-col items-center gap-1 transition-all ${isActive('/service-orders') ? 'text-primary' : 'text-gray-500'}`}>
         <ClipboardList size={22} strokeWidth={isActive('/service-orders') ? 2.5 : 2} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Serviços</span>
+        <span className="text-[10px] font-medium text-current">Serviços</span>
       </button>}
       {isAdmin && (
-        <button onClick={() => navigate('/finance')} className={`flex flex-col items-center gap-1 transition-all ${isActive('/finance') ? 'text-primary' : 'text-gray-500'}`}>
+        <button onClick={() => navigate('/finance')} className={`flex flex-1 min-h-12 justify-center flex-col items-center gap-1 transition-all ${isActive('/finance') ? 'text-primary' : 'text-gray-500'}`}>
           <Wallet size={22} strokeWidth={isActive('/finance') ? 2.5 : 2} />
-          <span className="text-[8px] font-black uppercase tracking-tighter text-current">Dinheiro</span>
+          <span className="text-[10px] font-medium text-current">Dinheiro</span>
         </button>
       )}
-      <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-1 text-gray-500 hover:text-primary transition-colors">
+      <button onClick={() => setIsSidebarOpen(true)} className="flex flex-1 min-h-12 justify-center flex-col items-center gap-1 text-gray-500 hover:text-primary transition-colors">
         <Menu size={22} />
-        <span className="text-[8px] font-black uppercase tracking-tighter text-current">Mais</span>
+        <span className="text-[10px] font-medium text-current">Mais</span>
       </button>
     </nav>
   );
