@@ -5,13 +5,13 @@ import {createWorkerHandler} from '../../supabase/functions/_shared/whatsapp-wor
 const event={id:'a5000000-0000-4000-8000-000000000001',company_id:'company-a',user_id:'user-a'};
 function processor(kind='text',extra:any={}){
  const calls:any[]=[];let downloads=0,uploads=0;
- const db={rpc:async(name:string,args:any)=>{calls.push({name,args});return {data:name==='claim_whatsapp_job'?{event:{...event,...extra},input:{kind,text:'Texto sintético',mime:'audio/ogg'},token:'lease'}:true};},storage:{from:()=>({download:async()=>{downloads++;return {data:new Blob(['OggS synthetic'])}},upload:async()=>{uploads++;return {error:null}}})}};
+ const db={rpc:async(name:string,args:any)=>{calls.push({name,args});if(name==='whatsapp_operator_team_turn')return {data:{handled:false}};if(name==='get_whatsapp_action_context')return {data:{role:'operator'}};if(name==='save_whatsapp_query_response')return {data:{delivery_state:'sent'}};return {data:name==='claim_whatsapp_job'?{event:{...event,...extra},input:{kind,text:'Texto sintético',mime:'audio/ogg'},token:'lease'}:true};},storage:{from:()=>({download:async()=>{downloads++;return {data:new Blob(['OggS synthetic'])}},upload:async()=>{uploads++;return {error:null}}})}};
  return {db,calls,downloads:()=>downloads,uploads:()=>uploads};
 }
 test('persisted audio resumes without redownloading from WhatsApp or uploading again',async()=>{
  const s=processor('audio',{media_path:`company-a/user-a/${event.id}-old.ogg`,media_mime:'audio/ogg'});const urls:string[]=[];
  const result=await processWhatsAppJob({db:s.db,env:key=>key==='GROQ_API_KEY'?'test-key':undefined,fetcher:async(url)=>{urls.push(String(url));return new Response('Operação de teste');}});
- assert.equal(result.status,'needs_review');assert.equal(s.downloads(),1);assert.equal(s.uploads(),0);assert.deepEqual(urls,['https://api.groq.com/openai/v1/audio/transcriptions']);assert.equal(s.calls.at(-1).args.p_text,'Operação de teste');
+ assert.equal(result.status,'responded');assert.equal(s.downloads(),1);assert.equal(s.uploads(),0);assert.deepEqual(urls,['https://api.groq.com/openai/v1/audio/transcriptions']);assert.equal(s.calls.find(c=>c.name==='finish_whatsapp_job').args.p_text,'Operação de teste');
 });
 test('transient provider failure schedules retry without raw error leakage',async()=>{
  const s=processor('audio');const result=await processWhatsAppJob({db:s.db,env:()=>undefined});assert.equal(result.status,'retry_scheduled');assert.equal(s.calls.at(-1).args.p_retryable,true);assert.equal(s.calls.at(-1).args.p_error,'media_provider_not_configured');
